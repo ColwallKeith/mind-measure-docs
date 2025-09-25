@@ -1,0 +1,22 @@
+{
+  "index": "Overview",
+  "architecture": "Architecture", 
+  "mobile": "Mobile App",
+  "backend": "Backend",
+  "database": "Database & RLS",
+  "methodology": "Assessment Methodology",
+  "deployment": "Deployment",
+  "privacy": "Privacy & Legal",
+  "development": "Development",
+  "adr": "ADRs",
+  "playbooks": "Playbooks",
+  "admin-ui": "Admin UI",
+  "api": "API",
+  "cms": "CMS Documentation",
+  "aurora-serverless-v2": "Aurora Serverless v2",
+  "authentication-aws": "AWS Authentication Guide",
+  "medical-grade-security": "Medical-Grade Security",
+  "phase2-advanced-security": "Phase 2: Advanced Security",
+  "phase3-final-security": "Phase 3: Final Security",
+  "how-to-add-documentation": "Documentation Guide"
+}

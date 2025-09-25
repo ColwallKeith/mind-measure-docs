@@ -1,0 +1,17 @@
+import nextra from 'nextra';
+
+const withNextra = nextra({ 
+  theme: 'nextra-theme-docs', 
+  themeConfig: './theme.config.tsx' 
+});
+
+export default withNextra({
+  output: 'export',
+  distDir: 'out',
+  reactStrictMode: true,
+  basePath: '',
+  images: {
+    unoptimized: true
+  },
+  trailingSlash: true
+});
