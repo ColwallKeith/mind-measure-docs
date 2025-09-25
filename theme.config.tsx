@@ -26,7 +26,7 @@ export default {
     key: 'main-app-link',
     text: (
       <a href="https://app.mindmeasure.co.uk" target="_blank" rel="noopener noreferrer">
-        🚀 Access the Mind Measure Platform →
+        Access the Mind Measure Platform →
       </a>
     )
   },

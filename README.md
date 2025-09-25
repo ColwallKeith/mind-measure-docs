@@ -2,11 +2,11 @@
 
 Official documentation for the Mind Measure platform - a comprehensive mental health monitoring and support system for educational institutions.
 
-## 🚀 Quick Start
+## Quick Start
 
 Visit the live documentation: **[mindmeasuredocs.vercel.app](https://mindmeasuredocs.vercel.app)**
 
-## 🏗️ Development
+## Development
 
 ### Prerequisites
 - Node.js 18+
@@ -34,7 +34,7 @@ mind-measure-docs/
 └── package.json          # Dependencies and scripts
 ```
 
-## 📚 Documentation Sections
+## Documentation Sections
 
 - **[Overview](/)** - Platform introduction and quick start
 - **[Architecture](/architecture)** - System design and technical overview
@@ -42,19 +42,19 @@ mind-measure-docs/
 - **[Deployment](/deployment)** - Production deployment guide
 - **[Security](/medical-grade-security)** - Comprehensive security documentation
 
-## 🔗 Platform Links
+## Platform Links
 
 - **Main Application**: [app.mindmeasure.co.uk](https://app.mindmeasure.co.uk)
 - **Superuser Dashboard**: [app.mindmeasure.co.uk/superuser](https://app.mindmeasure.co.uk/superuser)
 - **Documentation**: [mindmeasuredocs.vercel.app](https://mindmeasuredocs.vercel.app)
 
-## 🛠️ Built With
+## Built With
 
 - **[Next.js](https://nextjs.org/)** - React framework
 - **[Nextra](https://nextra.site/)** - Documentation framework
 - **[Vercel](https://vercel.com/)** - Deployment platform
 
-## 📝 Contributing
+## Contributing
 
 To add or update documentation:
 
@@ -63,6 +63,6 @@ To add or update documentation:
 3. Test locally with `npm run dev`
 4. Deploy automatically via Vercel
 
-## 📄 License
+## License
 
 © 2024 Mind Measure. All rights reserved.
