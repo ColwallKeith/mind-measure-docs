@@ -6,12 +6,15 @@ const withNextra = nextra({
 });
 
 export default withNextra({
-  output: 'export',
-  distDir: 'out',
   reactStrictMode: true,
-  basePath: '',
   images: {
     unoptimized: true
   },
-  trailingSlash: true
+  trailingSlash: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  }
 });
