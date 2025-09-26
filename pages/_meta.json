@@ -5,6 +5,7 @@
   "backend": "Backend",
   "database": "Database & RLS",
   "methodology": "Assessment Methodology",
+  "authentication-aws": "AWS Authentication Guide",
   "deployment": "Deployment",
   "privacy": "Privacy & Legal",
   "development": "Development",
