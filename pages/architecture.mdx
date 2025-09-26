@@ -7,20 +7,20 @@ Mind Measure is built on a modern, scalable architecture designed for enterprise
 ```mermaid
 graph TB
     subgraph "Frontend Layer"
-        WEB[Web Application<br/>React/Vite]
-        MOBILE[Mobile App<br/>Capacitor/Ionic]
-        ADMIN[Admin Dashboard<br/>Superuser Portal]
+        WEB[Web Application - React/Vite]
+        MOBILE[Mobile App - Capacitor/Ionic]
+        ADMIN[Admin Dashboard - Superuser Portal]
     end
     
     subgraph "API Layer"
-        API[API Gateway<br/>Vercel Functions]
-        AUTH[AWS Cognito<br/>Authentication]
+        API[API Gateway - Vercel Functions]
+        AUTH[AWS Cognito - Authentication]
     end
     
     subgraph "Backend Services"
-        AURORA[Aurora Serverless v2<br/>PostgreSQL]
-        S3[S3 Storage<br/>File Management]
-        LAMBDA[Lambda Functions<br/>Processing]
+        AURORA[Aurora Serverless v2 - PostgreSQL]
+        S3[S3 Storage - File Management]
+        LAMBDA[Lambda Functions - Processing]
     end
     
     subgraph "Security Layer"

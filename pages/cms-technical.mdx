@@ -1,6 +1,6 @@
 # Mind Measure CMS - Technical Documentation
 
-## ó Architecture Overview
+## ÔøΩ Architecture Overview
 
 The Mind Measure CMS is built as a React-based single-page application with a Supabase backend, designed for scalability and maintainability.
 
@@ -24,36 +24,36 @@ The Mind Measure CMS is built as a React-based single-page application with a Su
 - **University-scoped access control**
 - **Email domain validation**
 
-## Å Project Structure
+## ÔøΩ Project Structure
 
 ```
 src/
  components/
-Ç    institutional/
-Ç   Ç    UniversityScopedCMS.tsx          # Main CMS interface
-Ç   Ç    cms/
-Ç   Ç        UniversityOnboarding.tsx     # 7-step system
-Ç   Ç        DemographicsManager.tsx      # Demographics with toggle
-Ç   Ç        AcademicStructureManager.tsx # Faculties/schools
-Ç   Ç        EmergencyServicesManager.tsx # Emergency resources
-Ç   Ç        WellbeingContentLibrary.tsx  # Content management
-Ç   Ç        ReportsAnalyticsConfig.tsx   # Reports system
-Ç   Ç        AuthorizedUsersManager.tsx   # User management
-Ç   Ç        ContentManager.tsx           # Article management
-Ç   Ç        EmergencyResourcesManager.tsx # Emergency contacts
-Ç    ui/                                  # Reusable UI components
-Ç    UniversitySpecificLogin.tsx          # Authentication
+ÔøΩ    institutional/
+ÔøΩ   ÔøΩ    UniversityScopedCMS.tsx          # Main CMS interface
+ÔøΩ   ÔøΩ    cms/
+ÔøΩ   ÔøΩ        UniversityOnboarding.tsx     # 7-step system
+ÔøΩ   ÔøΩ        DemographicsManager.tsx      # Demographics with toggle
+ÔøΩ   ÔøΩ        AcademicStructureManager.tsx # Faculties/schools
+ÔøΩ   ÔøΩ        EmergencyServicesManager.tsx # Emergency resources
+ÔøΩ   ÔøΩ        WellbeingContentLibrary.tsx  # Content management
+ÔøΩ   ÔøΩ        ReportsAnalyticsConfig.tsx   # Reports system
+ÔøΩ   ÔøΩ        AuthorizedUsersManager.tsx   # User management
+ÔøΩ   ÔøΩ        ContentManager.tsx           # Article management
+ÔøΩ   ÔøΩ        EmergencyResourcesManager.tsx # Emergency contacts
+ÔøΩ    ui/                                  # Reusable UI components
+ÔøΩ    UniversitySpecificLogin.tsx          # Authentication
  contexts/
-Ç    AdminAuthContext.tsx                 # Authentication context
+ÔøΩ    AdminAuthContext.tsx                 # Authentication context
  services/
-Ç    adminAuth.ts                         # Authentication service
+ÔøΩ    adminAuth.ts                         # Authentication service
  features/
-Ç    cms/
-Ç        data.ts                          # Data access layer
+ÔøΩ    cms/
+ÔøΩ        data.ts                          # Data access layer
  Router.tsx                               # Application routing
 ```
 
-## ó Database Schema
+## ÔøΩ Database Schema
 
 ### Core Tables
 
@@ -361,8 +361,8 @@ interface UniversityScopedCMSProps {
 type CMSSection = 'dashboard' | 'profile' | 'emergency' | 'content' | 'users';
 
 export function UniversityScopedCMS({ universitySlug }: UniversityScopedCMSProps) {
-  const [activeSection, setActiveSection] = useState<CMSSection>('dashboard');
-  const [university, setUniversity] = useState<University | null>(null);
+  const [activeSection, setActiveSection] = useState('dashboard');
+  const [university, setUniversity] = useState(null);
   const [loading, setLoading] = useState(true);
   
   // Component renders different sections based on activeSection
