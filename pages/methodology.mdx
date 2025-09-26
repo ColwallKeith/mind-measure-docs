@@ -1,0 +1,259 @@
+# MindMeasure Assessment Methodology
+
+## Executive Summary
+
+The MindMeasure platform employs a multi-modal assessment approach combining audio, visual, and text analysis to generate wellness scores. This document provides a comprehensive technical specification of the methodology, statistical foundations, and quality control measures.
+
+## Assessment Pipeline Overview
+
+```
+User Session → Multi-Modal Data Collection → Feature Extraction → Baseline Normalization → Score Fusion → Final Wellness Score
+```
+
+### 1. Data Collection Modalities
+
+#### 1.1 Audio Analysis
+**Collection Method**: Real-time audio recording during conversation sessions
+**Technical Specifications**:
+- Sample rate: Variable (browser-dependent)
+- Format: WebM/MP4 audio
+- Duration: Session-dependent (typically 5-15 minutes)
+
+**Features Extracted**:
+- **Fundamental Frequency (F0)**: Mean pitch frequency
+- **Speech Rate**: Words per second calculation
+- **Pause Ratio**: Percentage of silence vs. speech
+- **Filler Words**: Frequency of "um", "uh", "like" usage
+- **Repetition Count**: Word/phrase repetition frequency
+- **Energy Levels**: RMS energy across frequency bands
+
+**Analysis Process**:
+1. Whisper API transcription (OpenAI)
+2. Prosodic feature extraction from transcription
+3. GPT-4o-mini emotional marker analysis
+4. Quality control validation (minimum speech duration, clarity)
+
+#### 1.2 Visual Analysis
+**Collection Method**: Periodic still image capture during sessions
+**Technical Specifications**:
+- Resolution: Variable (camera-dependent)
+- Frequency: ~1 frame per 2-3 seconds
+- Format: JPEG/PNG base64 encoded
+
+**Features Extracted**:
+- **Face Detection**: Presence and quality metrics
+- **Brightness**: Mean luminance values
+- **Variance**: Image sharpness/focus quality
+- **Edge Density**: Structural complexity
+- **Emotional Expressions**: AWS Rekognition emotion detection
+- **Micro-expressions**: Subtle facial movement analysis
+
+**Analysis Process**:
+1. AWS Rekognition face/emotion detection
+2. Image quality metrics calculation
+3. Feature aggregation across session frames
+4. Quality control validation (face presence, image quality)
+
+#### 1.3 Text Analysis
+**Collection Method**: Conversation transcripts and user responses
+**Technical Specifications**:
+- Source: Audio transcription + direct text input
+- Processing: Real-time and batch analysis
+
+**Features Extracted**:
+- **Sentiment Analysis**: Positive/negative emotion ratios
+- **Linguistic Patterns**: Word choice, sentence structure
+- **Cognitive Markers**: Absolutist thinking, self-reference frequency
+- **Emotional Markers**: Stress indicators, emotional vocabulary
+
+**Analysis Process**:
+1. Text preprocessing and tokenization
+2. Feature extraction using predefined dictionaries
+3. GPT-4o-mini deep semantic analysis
+4. Sentiment and cognitive pattern scoring
+
+## 2. Statistical Methodology
+
+### 2.1 Feature Normalization
+All raw features undergo Z-score normalization against user-specific baselines:
+
+```
+z = (x - μ) / σ
+```
+
+Where:
+- `x` = current feature value
+- `μ` = user baseline mean
+- `σ` = user baseline standard deviation
+
+### 2.2 Modality-Specific Scoring
+
+#### Audio Head Calculation
+```typescript
+audioHead = 0.3 * f0Norm + 0.25 * speechRateNorm + 0.2 * pauseRatioNorm + 
+           0.15 * fillerWordNorm + 0.1 * repetitionNorm
+```
+
+#### Video Head Calculation
+```typescript
+videoHead = 0.4 * faceQualityNorm + 0.3 * brightnessNorm + 0.2 * varianceNorm + 
+           0.1 * edgeDensityNorm
+```
+
+### 2.3 Probability Calibration (Platt Scaling)
+Raw logit scores are converted to probabilities using Platt scaling:
+
+```
+P(worse|features) = 1 / (1 + exp(a * logit + b))
+```
+
+Where `a` and `b` are calibration parameters learned from user data.
+
+### 2.4 Multi-Modal Fusion
+Probabilities from different modalities are fused using reliability weighting:
+
+```typescript
+fusedProb = (pVideo * reliabVideo + pAudio * reliabAudio + pPassive * reliabPassive) / 
+           (reliabVideo + reliabAudio + reliabPassive)
+```
+
+Reliability weights:
+- Video: 1.0 (if QC pass), 0 (if QC fail)
+- Audio: 1.0 (if QC pass), 0 (if QC fail)  
+- Passive: 0.5 (when available), 0 (when not)
+
+### 2.5 Final Score Calculation
+```typescript
+score = Math.round((1 - fusedProb) * 100)
+smoothedScore = alpha * score + (1 - alpha) * previousScore
+```
+
+Smoothing factor `alpha = 0.3` provides temporal stability.
+
+## 3. Baseline Establishment
+
+### 3.1 Initial Assessment Protocol
+- **Minimum Sessions**: 3 baseline sessions required
+- **Session Types**: Structured conversation + validated scales
+- **Temporal Distribution**: Sessions spread over 7-14 days
+- **Quality Requirements**: Each session must pass QC thresholds
+
+### 3.2 Baseline Evolution
+Baselines are updated using weighted averaging:
+
+```typescript
+newBaseline = (currentBaseline * confidenceWeight + newScore * (1 - confidenceWeight))
+```
+
+Confidence weight increases with sample size and decreases with time since last update.
+
+## 4. Quality Control Measures
+
+### 4.1 Audio Quality Control
+- **Minimum Duration**: 30 seconds of speech
+- **SNR Threshold**: Signal-to-noise ratio > -10dB
+- **Speech Coverage**: >70% comprehensible speech
+- **Transcription Quality**: Confidence score > 0.7
+
+### 4.2 Visual Quality Control
+- **Face Detection**: Face present in >60% of frames
+- **Image Quality**: Brightness 20-240, variance > 100
+- **Focus Quality**: Edge density above minimum threshold
+- **Temporal Consistency**: Smooth transitions between frames
+
+### 4.3 Text Quality Control
+- **Minimum Length**: 50 words minimum
+- **Coherence Check**: Logical sentence structure
+- **Relevance Validation**: Content related to wellness topics
+- **Language Detection**: English language confirmation
+
+## 5. Validated Scales Integration
+
+### 5.1 Implemented Scales
+- **PHQ-2**: Depression screening (0-6 scale)
+- **GAD-2**: Anxiety screening (0-6 scale)
+- **Life Satisfaction**: Single-item scale (1-10)
+- **Social Connection**: Single-item scale (1-10)
+- **Stress Resilience**: Single-item scale (1-10)
+
+### 5.2 Score Interpretation
+Each scale includes evidence-based cutoff points:
+- **PHQ-2**: ≥3 indicates possible depression
+- **GAD-2**: ≥3 indicates possible anxiety
+- **Single-item scales**: <5 indicates below-average functioning
+
+## 6. Research Foundation & Validation Needs
+
+### 6.1 Current Research Gaps
+1. **Lack of Clinical Validation**: No peer-reviewed studies validating the specific algorithm
+2. **Feature Weight Justification**: Weights based on assumed importance, not empirical data
+3. **Population Norms**: No established norms for multi-modal feature distributions
+4. **Reliability Studies**: No test-retest reliability data
+5. **Convergent Validity**: No validation against established clinical measures
+
+### 6.2 Required Validation Studies
+1. **Construct Validity**: Compare scores with validated clinical assessments
+2. **Reliability**: Test-retest and inter-rater reliability studies
+3. **Sensitivity Analysis**: ROC curves for clinical cutoff determination
+4. **Population Norms**: Large-scale normative data collection
+5. **Longitudinal Validation**: Track score changes over time with clinical outcomes
+
+### 6.3 Immediate Research Priorities
+1. **Correlation Studies**: Validate against PHQ-9, GAD-7, DASS-21
+2. **Clinical Population Testing**: Test with diagnosed mental health conditions
+3. **Healthy Population Norms**: Establish baseline distributions
+4. **Feature Importance Analysis**: Statistical validation of feature weights
+5. **Threshold Validation**: Optimize cutoff points for clinical significance
+
+## 7. Limitations & Considerations
+
+### 7.1 Technical Limitations
+- **Browser Dependency**: Audio/video quality varies by device
+- **Network Requirements**: Requires stable internet for AI processing
+- **Privacy Constraints**: Limited to client-side processing where possible
+- **Standardization**: No control over recording environment
+
+### 7.2 Statistical Limitations
+- **Small Sample Sizes**: Individual baselines based on 3-5 sessions
+- **Overfitting Risk**: Complex models with limited validation data
+- **Temporal Instability**: Features may change with external factors
+- **Cultural Bias**: Algorithm trained primarily on English speakers
+
+### 7.3 Clinical Limitations
+- **Not Diagnostic**: Tool is for monitoring, not clinical diagnosis
+- **Professional Oversight**: Requires clinical interpretation
+- **Crisis Detection**: May miss acute mental health crises
+- **Medication Effects**: May not account for psychiatric medication impact
+
+## 8. Ethical Considerations
+
+### 8.1 Data Privacy
+- All processing uses minimal data retention
+- User data encrypted in transit and at rest
+- No personal data shared with third parties
+- User consent required for all data collection
+
+### 8.2 Algorithmic Fairness
+- Need for diverse population validation
+- Bias testing across demographic groups
+- Regular algorithm auditing requirements
+- Transparency in score calculation methods
+
+## 9. Recommendations for Defensibility
+
+### 9.1 Immediate Actions Required
+1. **Implement Debug Mode**: Full transparency in score calculation
+2. **Create Validation Framework**: Systematic testing against gold standards
+3. **Document Algorithm Changes**: Version control for all scoring modifications
+4. **Establish IRB Protocol**: Ethics review for research activities
+5. **Create Data Export Tools**: Enable external validation studies
+
+### 9.2 Long-term Research Goals
+1. **Peer Review Publication**: Validate methodology in academic literature
+2. **Clinical Trial Integration**: Test within healthcare settings
+3. **Regulatory Compliance**: Prepare for potential FDA/CE marking requirements
+4. **Multi-site Validation**: Test across diverse populations and settings
+
+---
+
+*This document represents the current state of the MindMeasure assessment methodology as of January 2025. Regular updates are required as the system evolves and validation studies are completed.*
