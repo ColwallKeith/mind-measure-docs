@@ -1,6 +1,6 @@
 # Mind Measure CMS - Technical Documentation
 
-## 🏗️ Architecture Overview
+## � Architecture Overview
 
 The Mind Measure CMS is built as a React-based single-page application with a Supabase backend, designed for scalability and maintainability.
 
@@ -24,36 +24,36 @@ The Mind Measure CMS is built as a React-based single-page application with a Su
 - **University-scoped access control**
 - **Email domain validation**
 
-## 📁 Project Structure
+## � Project Structure
 
 ```
 src/
-├── components/
-│   ├── institutional/
-│   │   ├── UniversityScopedCMS.tsx          # Main CMS interface
-│   │   └── cms/
-│   │       ├── UniversityOnboarding.tsx     # 7-step system
-│   │       ├── DemographicsManager.tsx      # Demographics with toggle
-│   │       ├── AcademicStructureManager.tsx # Faculties/schools
-│   │       ├── EmergencyServicesManager.tsx # Emergency resources
-│   │       ├── WellbeingContentLibrary.tsx  # Content management
-│   │       ├── ReportsAnalyticsConfig.tsx   # Reports system
-│   │       ├── AuthorizedUsersManager.tsx   # User management
-│   │       ├── ContentManager.tsx           # Article management
-│   │       └── EmergencyResourcesManager.tsx # Emergency contacts
-│   ├── ui/                                  # Reusable UI components
-│   └── UniversitySpecificLogin.tsx          # Authentication
-├── contexts/
-│   └── AdminAuthContext.tsx                 # Authentication context
-├── services/
-│   └── adminAuth.ts                         # Authentication service
-├── features/
-│   └── cms/
-│       └── data.ts                          # Data access layer
-└── Router.tsx                               # Application routing
+ components/
+�    institutional/
+�   �    UniversityScopedCMS.tsx          # Main CMS interface
+�   �    cms/
+�   �        UniversityOnboarding.tsx     # 7-step system
+�   �        DemographicsManager.tsx      # Demographics with toggle
+�   �        AcademicStructureManager.tsx # Faculties/schools
+�   �        EmergencyServicesManager.tsx # Emergency resources
+�   �        WellbeingContentLibrary.tsx  # Content management
+�   �        ReportsAnalyticsConfig.tsx   # Reports system
+�   �        AuthorizedUsersManager.tsx   # User management
+�   �        ContentManager.tsx           # Article management
+�   �        EmergencyResourcesManager.tsx # Emergency contacts
+�    ui/                                  # Reusable UI components
+�    UniversitySpecificLogin.tsx          # Authentication
+ contexts/
+�    AdminAuthContext.tsx                 # Authentication context
+ services/
+�    adminAuth.ts                         # Authentication service
+ features/
+�    cms/
+�        data.ts                          # Data access layer
+ Router.tsx                               # Application routing
 ```
 
-## 🗄️ Database Schema
+## � Database Schema
 
 ### Core Tables
 
@@ -276,7 +276,7 @@ CREATE TABLE settings (
 );
 ```
 
-## 🔐 Row Level Security (RLS)
+##  Row Level Security (RLS)
 
 ### University Data Access
 ```sql
@@ -349,7 +349,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-## 🔧 Component Architecture
+##  Component Architecture
 
 ### Main CMS Interface (`UniversityScopedCMS.tsx`)
 
@@ -419,7 +419,7 @@ const DemographicsManager: React.FC = () => {
 };
 ```
 
-## 🔌 Data Access Layer (`features/cms/data.ts`)
+##  Data Access Layer (`features/cms/data.ts`)
 
 ### University Operations
 ```typescript
@@ -503,7 +503,7 @@ export async function isUserAuthorized(universityId: string, email: string): Pro
 }
 ```
 
-## 🎨 Styling System
+##  Styling System
 
 ### Tailwind Configuration
 ```javascript
@@ -541,7 +541,7 @@ const getStatusColor = (status: string) => {
 const gridClasses = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4";
 ```
 
-## 🔄 State Management
+##  State Management
 
 ### Authentication Context
 ```typescript
@@ -582,7 +582,7 @@ const updateFormData = (updates: Partial<UniversityFormData>) => {
 const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 ```
 
-## 🚀 Deployment
+##  Deployment
 
 ### Environment Variables
 ```env
@@ -638,7 +638,7 @@ export default defineConfig({
 }
 ```
 
-## 🧪 Testing
+##  Testing
 
 ### Component Testing
 ```typescript
@@ -672,7 +672,7 @@ SELECT * FROM universities WHERE id = 'test-uni';
 -- Should return the test university
 ```
 
-## 📊 Performance Considerations
+##  Performance Considerations
 
 ### Code Splitting
 ```typescript
@@ -717,7 +717,7 @@ const useUniversity = (slug: string) => {
 };
 ```
 
-## 🔍 Monitoring & Debugging
+##  Monitoring & Debugging
 
 ### Error Handling
 ```typescript
@@ -754,7 +754,7 @@ logger.info('University loaded', { universityId, slug });
 logger.error('Failed to save university', error);
 ```
 
-## 🔧 Development Workflow
+##  Development Workflow
 
 ### Local Development
 ```bash
@@ -800,7 +800,7 @@ npm run format
 
 ---
 
-## 📚 Additional Resources
+##  Additional Resources
 
 - **Supabase Documentation:** https://supabase.com/docs
 - **React Documentation:** https://react.dev

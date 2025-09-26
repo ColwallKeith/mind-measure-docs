@@ -9,7 +9,7 @@ This guide explains how to safely add new documentation to the Mind Measure docu
 - **Repository Structure**: Documentation lives in `/docs/` folder of the main repository
 - **Domain**: `mindmeasuredocs.vercel.app` points to the `docs` Vercel project
 
-## ⚠️ IMPORTANT: What NOT to Do
+##  IMPORTANT: What NOT to Do
 1. **Never add emojis or icons** to documentation headers - keep it professional
 2. **Never create duplicate files** (e.g., `architecture 3.mdx`)
 3. **Never add authentication code** to the docs site
@@ -20,16 +20,16 @@ This guide explains how to safely add new documentation to the Mind Measure docu
 ### 1. Understanding the Structure
 ```
 docs/
-├── pages/
-│   ├── _meta.json          # Main navigation structure
-│   ├── index.mdx           # Homepage
-│   ├── architecture.mdx    # Individual pages
-│   └── cms/                # Section folders
-│       ├── _meta.json      # Section navigation
-│       ├── index.mdx       # Section landing page
-│       └── user-guide.mdx  # Section pages
-├── theme.config.tsx        # Site configuration
-└── package.json           # Dependencies
+ pages/
+�    _meta.json          # Main navigation structure
+�    index.mdx           # Homepage
+�    architecture.mdx    # Individual pages
+�    cms/                # Section folders
+�        _meta.json      # Section navigation
+�        index.mdx       # Section landing page
+�        user-guide.mdx  # Section pages
+ theme.config.tsx        # Site configuration
+ package.json           # Dependencies
 ```
 
 ### 2. Adding a New Section
@@ -144,8 +144,8 @@ git push
 ### Issue: Emojis appearing in navigation
 **Solution**: Remove all emojis from MDX headers:
 ```markdown
-# ❌ Bad: 📚 User Guide
-# ✅ Good: User Guide
+#  Bad:  User Guide
+#  Good: User Guide
 ```
 
 ### Issue: Site broken after deployment
@@ -213,26 +213,26 @@ Additional content...
 ## Best Practices
 
 ### Content
-- ✅ Use clear, professional language
-- ✅ Include code examples where relevant
-- ✅ Add cross-references to related pages
-- ✅ Keep sections focused and concise
-- ❌ Don't use emojis or unprofessional icons
-- ❌ Don't duplicate existing content
+-  Use clear, professional language
+-  Include code examples where relevant
+-  Add cross-references to related pages
+-  Keep sections focused and concise
+-  Don't use emojis or unprofessional icons
+-  Don't duplicate existing content
 
 ### Structure
-- ✅ Use logical folder organization
-- ✅ Keep file names lowercase with hyphens
-- ✅ Update navigation files (`_meta.json`)
-- ❌ Don't create deeply nested structures
-- ❌ Don't use spaces in file names
+-  Use logical folder organization
+-  Keep file names lowercase with hyphens
+-  Update navigation files (`_meta.json`)
+-  Don't create deeply nested structures
+-  Don't use spaces in file names
 
 ### Testing
-- ✅ Always test locally before deploying
-- ✅ Check all navigation links work
-- ✅ Verify mobile responsiveness
-- ❌ Don't deploy untested changes
-- ❌ Don't skip the local development step
+-  Always test locally before deploying
+-  Check all navigation links work
+-  Verify mobile responsiveness
+-  Don't deploy untested changes
+-  Don't skip the local development step
 
 ## Emergency Rollback
 
