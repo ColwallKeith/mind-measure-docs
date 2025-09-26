@@ -1,0 +1,87 @@
+# API Documentation
+
+## Overview
+
+The Mind Measure API provides access to student wellbeing data and analytics through secure, authenticated endpoints.
+
+## Authentication
+
+All API requests require authentication using JWT tokens obtained through AWS Cognito.
+
+```bash
+Authorization: Bearer <jwt-token>
+```
+
+## Base URL
+
+```
+Production: https://api.mindmeasure.co.uk
+Development: http://localhost:3001/api
+```
+
+## Endpoints
+
+### Universities
+
+**GET /api/universities**
+- List all universities
+- Requires: Admin authentication
+- Returns: Array of university objects
+
+**GET /api/universities/\{id\}**
+- Get specific university details
+- Requires: Admin or university-scoped authentication
+- Returns: University object with analytics
+
+### Students  
+
+**GET /api/students**
+- List students (filtered by university scope)
+- Requires: University-scoped authentication
+- Returns: Array of anonymized student data
+
+**GET /api/students/\{id\}**
+- Get specific student analytics
+- Requires: University-scoped authentication
+- Returns: Student wellbeing metrics
+
+### Analytics
+
+**GET /api/analytics/wellbeing**
+- Get aggregated wellbeing analytics
+- Requires: University-scoped authentication
+- Returns: Wellbeing trend data
+
+**GET /api/analytics/trends**
+- Get historical trend analysis
+- Requires: University-scoped authentication
+- Returns: Time-series analytics data
+
+## Response Format
+
+All API responses follow this structure:
+
+```json
+{
+  "data": {},
+  "error": null,
+  "timestamp": "2025-01-01T00:00:00Z"
+}
+```
+
+## Error Handling
+
+Standard HTTP status codes are used:
+
+- `200` - Success
+- `400` - Bad Request
+- `401` - Unauthorized
+- `403` - Forbidden
+- `404` - Not Found
+- `500` - Internal Server Error
+
+## Rate Limiting
+
+API requests are limited to:
+- 1000 requests per hour per authenticated user
+- 100 requests per minute per IP address
