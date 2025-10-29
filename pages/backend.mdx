@@ -1,273 +1,901 @@
 # Backend
 
-The Mind Measure Core backend is built on Aurora Serverless v2 with AWS services, providing a secure, scalable, and HIPAA-compliant foundation for the institutional mental health platform.
+# Mind Measure Backend Architecture
 
-## Aurora AWS Architecture
+## Overview
 
-### Core Components
+The Mind Measure backend is built on AWS serverless architecture, providing scalable, secure, and cost-effective services for mental health data processing and management.
 
-- **Aurora Serverless v2 PostgreSQL** - Auto-scaling database with 99.99% uptime
-- **AWS Cognito** - Enterprise authentication and user management
-- **AWS RDS Security** - Database-level encryption and access control
-- **AWS Lambda Functions** - Serverless backend logic
-- **API Gateway** - Real-time data access
-- **AWS S3** - Encrypted file and media storage
+## Architecture Components
 
-### Aurora Database Configuration
+### AWS Lambda Functions
 
-All applications use a unified Aurora database configuration:
+#### Core Analysis Functions
 
+**analyze-audio**
 ```typescript
-// src/services/database/BackendServiceFactory.ts
-import { BackendServiceFactory } from './BackendServiceFactory'
+// Purpose: Process voice patterns and emotional tone analysis
+// Runtime: Node.js 18.x
+// Memory: 1024 MB
+// Timeout: 30 seconds
 
-// Aurora Serverless v2 configuration
-const config = BackendServiceFactory.getEnvironmentConfig()
-export const backendService = BackendServiceFactory.createService(config)
+interface AudioAnalysisRequest {
+  sessionId: string;
+  audioData: {
+    conversation_duration: number;
+    speech_rate: number;
+    voice_quality: string;
+    emotional_tone: string;
+    mood_score_1_10: number;
+    transcript_length: number;
+  };
+}
 
-// Current production setup
-// VITE_BACKEND_PROVIDER=aws-rds
-// VITE_DB_HOST=mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com
+interface AudioAnalysisResponse {
+  sessionId: string;
+  analysis: {
+    vocal_stress_indicators: number;
+    speech_pattern_analysis: object;
+    emotional_markers: string[];
+    confidence_score: number;
+  };
+  processing_time: number;
+}
 ```
 
-## AWS Lambda Functions
-
-AWS Lambda Functions provide serverless backend logic for operations that require elevated privileges or complex processing.
-
-### Function Categories
-
-1. **Authentication & Authorization**
-   - User role management
-   - Institution membership handling
-   - Permission validation
-
-2. **Data Processing**
-   - Assessment scoring and analysis
-   - Feature extraction from user data
-   - Analytics computation
-
-3. **Institutional Operations**
-   - Bulk user management
-   - Institution setup and configuration
-   - Report generation
-
-4. **System Administration**
-   - Health checks and monitoring
-   - Data migration and cleanup
-   - Backup and recovery operations
-
-### Edge Function Structure
-
+**analyze-visual**
 ```typescript
-// supabase/functions/example-function/index.ts
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// Purpose: Facial emotion recognition via AWS Rekognition
+// Runtime: Node.js 18.x
+// Memory: 2048 MB
+// Timeout: 60 seconds
 
-serve(async (req) => {
+interface VisualAnalysisRequest {
+  sessionId: string;
+  imageData: string; // Base64 encoded image
+  visualSummary: {
+    samples_captured: number;
+    face_detection_rate: number;
+    avg_brightness: number;
+    quality_score: number;
+    engagement_level: string;
+  };
+}
+
+interface VisualAnalysisResponse {
+  sessionId: string;
+  rekognition_results: {
+    emotions: Array<{
+      emotion: string;
+      confidence: number;
+    }>;
+    face_details: object;
+    quality_assessment: object;
+  };
+  analysis_summary: {
+    primary_emotion: string;
+    emotional_stability: number;
+    engagement_score: number;
+  };
+}
+```
+
+**analyze-text**
+```typescript
+// Purpose: Natural language processing of conversation transcripts
+// Runtime: Node.js 18.x
+// Memory: 512 MB
+// Timeout: 15 seconds
+
+interface TextAnalysisRequest {
+  sessionId: string;
+  conversationText: string;
+}
+
+interface TextAnalysisResponse {
+  sessionId: string;
+  analysis: {
+    sentiment_analysis: {
+      overall_sentiment: 'positive' | 'negative' | 'neutral';
+      confidence: number;
+      emotional_indicators: string[];
+    };
+    linguistic_patterns: {
+      complexity_score: number;
+      coherence_score: number;
+      emotional_language_usage: number;
+    };
+    key_themes: string[];
+    risk_indicators: string[];
+  };
+}
+```
+
+**calculate-mind-measure**
+```typescript
+// Purpose: Multi-modal fusion algorithm for wellness scoring
+// Runtime: Node.js 18.x
+// Memory: 1024 MB
+// Timeout: 45 seconds
+
+interface FusionRequest {
+  sessionId: string;
+}
+
+interface FusionResponse {
+  sessionId: string;
+  fusion_score: {
+    final_score: number; // 0-100
+    confidence: number;
+    component_scores: {
+      audio_score: number;
+      visual_score: number;
+      text_score: number;
+    };
+    risk_assessment: {
+      level: 'low' | 'medium' | 'high';
+      indicators: string[];
+      recommendations: string[];
+    };
+  };
+}
+```
+
+### Lambda Function Implementation
+
+#### Function Structure
+```typescript
+// Standard Lambda function structure
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { verifyJWTToken } from './auth';
+import { connectToDatabase } from './database';
+
+export const handler = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
   try {
-    // Initialize Supabase client with service role
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-
-    // Function logic here
-    const result = await processRequest(req, supabase)
-
-    return new Response(JSON.stringify(result), {
-      headers: { 'Content-Type': 'application/json' },
-    })
+    // 1. Verify authentication
+    const token = event.headers.Authorization?.replace('Bearer ', '');
+    const user = await verifyJWTToken(token);
+    
+    // 2. Parse request body
+    const body = JSON.parse(event.body || '{}');
+    
+    // 3. Validate input
+    if (!body.sessionId) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'sessionId is required' })
+      };
+    }
+    
+    // 4. Process request
+    const result = await processAnalysis(body);
+    
+    // 5. Return response
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify(result)
+    };
+    
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    console.error('Lambda function error:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ 
+        error: 'Internal server error',
+        message: error.message 
+      })
+    };
   }
-})
+};
 ```
 
-## Environment Configuration
+#### Error Handling & Resilience
+```typescript
+// Robust error handling with fallback
+export async function processWithFallback<T>(
+  primaryFunction: () => Promise<T>,
+  fallbackFunction: () => Promise<T>,
+  functionName: string
+): Promise<T> {
+  try {
+    console.log(`🚀 Executing ${functionName}`);
+    const result = await primaryFunction();
+    console.log(`✅ ${functionName} completed successfully`);
+    return result;
+  } catch (error) {
+    console.warn(`⚠️ ${functionName} failed, using fallback:`, error);
+    return await fallbackFunction();
+  }
+}
 
-### Environment Variables
+// Usage in analysis pipeline
+const analysisResults = await Promise.allSettled([
+  processWithFallback(
+    () => analyzeAudio(sessionId, audioData),
+    () => generateFallbackAudioAnalysis(audioData),
+    'Audio Analysis'
+  ),
+  processWithFallback(
+    () => analyzeVisual(sessionId, imageData),
+    () => generateFallbackVisualAnalysis(),
+    'Visual Analysis'
+  ),
+  processWithFallback(
+    () => analyzeText(sessionId, textData),
+    () => generateFallbackTextAnalysis(textData),
+    'Text Analysis'
+  )
+]);
+```
 
-**Public Variables** (Safe for client-side)
+### API Gateway Configuration
+
+#### Endpoint Structure
+```yaml
+Base URL: https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev
+
+Endpoints:
+  POST /analyze-audio:
+    Description: Process audio analysis
+    Authentication: Required (JWT)
+    Rate Limit: 10 requests/minute
+    
+  POST /analyze-visual:
+    Description: Process visual analysis
+    Authentication: Required (JWT)
+    Rate Limit: 5 requests/minute
+    
+  POST /analyze-text:
+    Description: Process text analysis
+    Authentication: Required (JWT)
+    Rate Limit: 20 requests/minute
+    
+  POST /calculate-mind-measure:
+    Description: Calculate fusion score
+    Authentication: Required (JWT)
+    Rate Limit: 10 requests/minute
+```
+
+#### CORS Configuration
+```json
+{
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
+  "Access-Control-Allow-Methods": "POST,OPTIONS",
+  "Access-Control-Max-Age": "86400"
+}
+```
+
+### Database Integration
+
+#### Aurora Serverless v2 Connection
+```typescript
+// Database connection pool
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  host: process.env.RDS_HOST,
+  port: parseInt(process.env.RDS_PORT || '5432'),
+  database: process.env.RDS_DATABASE,
+  user: process.env.RDS_USERNAME,
+  password: process.env.RDS_PASSWORD,
+  ssl: { rejectUnauthorized: false },
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+});
+
+// Database operations
+export class DatabaseService {
+  async insertAnalysisResult(sessionId: string, analysisType: string, data: any) {
+    const query = `
+      UPDATE assessment_sessions 
+      SET ${analysisType}_data = $2, updated_at = NOW()
+      WHERE id = $1
+    `;
+    await pool.query(query, [sessionId, JSON.stringify(data)]);
+  }
+  
+  async getFusionInputs(sessionId: string) {
+    const query = `
+      SELECT text_data, audio_data, visual_data
+      FROM assessment_sessions
+      WHERE id = $1
+    `;
+    const result = await pool.query(query, [sessionId]);
+    return result.rows[0];
+  }
+  
+  async storeFusionResult(sessionId: string, userId: string, fusionData: any) {
+    const query = `
+      INSERT INTO fusion_outputs (
+        session_id, user_id, score, final_score, 
+        analysis, topics, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+    `;
+    await pool.query(query, [
+      sessionId, userId, fusionData.score, fusionData.final_score,
+      JSON.stringify(fusionData.analysis), JSON.stringify(fusionData.topics)
+    ]);
+  }
+}
+```
+
+### Vercel API Functions
+
+#### Database Operations API
+```typescript
+// /api/database/select.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { DatabaseService } from '@/services/database/AWSService';
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const { table, columns, filters, orderBy, limit } = req.body;
+    
+    const dbService = new DatabaseService();
+    const result = await dbService.select(table, {
+      columns,
+      filters,
+      orderBy,
+      limit
+    });
+    
+    res.status(200).json({
+      data: result.data,
+      count: result.count,
+      error: null
+    });
+    
+  } catch (error) {
+    console.error('Database select error:', error);
+    res.status(500).json({
+      data: null,
+      count: 0,
+      error: error.message
+    });
+  }
+}
+```
+
+#### Storage Operations API
+```typescript
+// /api/storage/upload.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
+import formidable from 'formidable';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const form = formidable({
+      maxFileSize: 10 * 1024 * 1024, // 10MB limit
+    });
+
+    const [fields, files] = await form.parse(req);
+    const file = Array.isArray(files.file) ? files.file[0] : files.file;
+    const universityId = Array.isArray(fields.university_id) 
+      ? fields.university_id[0] 
+      : fields.university_id;
+
+    if (!file || !universityId) {
+      return res.status(400).json({ error: 'File and university_id required' });
+    }
+
+    const bucketName = `mindmeasure-${universityId}-assets`;
+    const key = `uploads/${Date.now()}-${file.originalFilename}`;
+
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      Body: require('fs').createReadStream(file.filepath),
+      ContentType: file.mimetype || 'application/octet-stream',
+    });
+
+    await s3Client.send(command);
+
+    const fileUrl = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+
+    res.status(200).json({
+      success: true,
+      url: fileUrl,
+      key: key
+    });
+
+  } catch (error) {
+    console.error('File upload error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'File upload failed'
+    });
+  }
+}
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+```
+
+### Authentication Integration
+
+#### JWT Token Verification
+```typescript
+// JWT token verification for Lambda functions
+import jwt from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
+
+const client = jwksClient({
+  jwksUri: `https://cognito-idp.${process.env.AWS_REGION}.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}/.well-known/jwks.json`
+});
+
+function getKey(header: any, callback: any) {
+  client.getSigningKey(header.kid, (err, key) => {
+    const signingKey = key?.getPublicKey();
+    callback(null, signingKey);
+  });
+}
+
+export async function verifyJWTToken(token: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, getKey, {
+      audience: process.env.COGNITO_CLIENT_ID,
+      issuer: `https://cognito-idp.${process.env.AWS_REGION}.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}`,
+      algorithms: ['RS256']
+    }, (err, decoded) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(decoded);
+      }
+    });
+  });
+}
+```
+
+#### Cognito Integration
+```typescript
+// AWS Cognito user management
+import {
+  CognitoIdentityProviderClient,
+  AdminGetUserCommand,
+  AdminUpdateUserAttributesCommand
+} from '@aws-sdk/client-cognito-identity-provider';
+
+const cognitoClient = new CognitoIdentityProviderClient({
+  region: process.env.AWS_REGION
+});
+
+export class CognitoService {
+  async getUser(username: string) {
+    const command = new AdminGetUserCommand({
+      UserPoolId: process.env.COGNITO_USER_POOL_ID,
+      Username: username
+    });
+    
+    return await cognitoClient.send(command);
+  }
+  
+  async updateUserAttributes(username: string, attributes: any[]) {
+    const command = new AdminUpdateUserAttributesCommand({
+      UserPoolId: process.env.COGNITO_USER_POOL_ID,
+      Username: username,
+      UserAttributes: attributes
+    });
+    
+    return await cognitoClient.send(command);
+  }
+}
+```
+
+### AI/ML Integration
+
+#### AWS Rekognition Integration
+```typescript
+// Visual analysis using AWS Rekognition
+import {
+  RekognitionClient,
+  DetectFacesCommand,
+  DetectModerationLabelsCommand
+} from '@aws-sdk/client-rekognition';
+
+const rekognitionClient = new RekognitionClient({
+  region: process.env.AWS_REGION
+});
+
+export class VisualAnalysisService {
+  async analyzeFacialEmotions(imageBase64: string) {
+    const imageBuffer = Buffer.from(imageBase64, 'base64');
+    
+    const command = new DetectFacesCommand({
+      Image: { Bytes: imageBuffer },
+      Attributes: ['ALL']
+    });
+    
+    const result = await rekognitionClient.send(command);
+    
+    return {
+      faces: result.FaceDetails?.map(face => ({
+        emotions: face.Emotions?.map(emotion => ({
+          type: emotion.Type,
+          confidence: emotion.Confidence
+        })),
+        quality: {
+          brightness: face.Quality?.Brightness,
+          sharpness: face.Quality?.Sharpness
+        },
+        pose: {
+          roll: face.Pose?.Roll,
+          yaw: face.Pose?.Yaw,
+          pitch: face.Pose?.Pitch
+        }
+      })) || []
+    };
+  }
+}
+```
+
+#### ElevenLabs Integration
+```typescript
+// ElevenLabs conversation processing
+export class ConversationService {
+  async processConversationData(conversationData: any) {
+    return {
+      transcript: conversationData.transcript || '',
+      duration: conversationData.duration || 0,
+      emotional_markers: this.extractEmotionalMarkers(conversationData),
+      speech_patterns: this.analyzeSpeechPatterns(conversationData),
+      engagement_level: this.calculateEngagement(conversationData)
+    };
+  }
+  
+  private extractEmotionalMarkers(data: any): string[] {
+    // Extract emotional indicators from conversation
+    const markers = [];
+    
+    if (data.tone_analysis) {
+      markers.push(...data.tone_analysis.emotions);
+    }
+    
+    if (data.speech_rate && data.speech_rate < 0.8) {
+      markers.push('slow_speech');
+    }
+    
+    if (data.voice_quality && data.voice_quality.includes('strain')) {
+      markers.push('vocal_strain');
+    }
+    
+    return markers;
+  }
+}
+```
+
+### Monitoring & Logging
+
+#### CloudWatch Integration
+```typescript
+// CloudWatch metrics and logging
+import {
+  CloudWatchClient,
+  PutMetricDataCommand
+} from '@aws-sdk/client-cloudwatch';
+
+const cloudWatchClient = new CloudWatchClient({
+  region: process.env.AWS_REGION
+});
+
+export class MonitoringService {
+  async recordMetric(metricName: string, value: number, unit: string = 'Count') {
+    const command = new PutMetricDataCommand({
+      Namespace: 'MindMeasure/Lambda',
+      MetricData: [{
+        MetricName: metricName,
+        Value: value,
+        Unit: unit,
+        Timestamp: new Date()
+      }]
+    });
+    
+    await cloudWatchClient.send(command);
+  }
+  
+  async recordAnalysisMetrics(functionName: string, duration: number, success: boolean) {
+    await Promise.all([
+      this.recordMetric(`${functionName}.Duration`, duration, 'Milliseconds'),
+      this.recordMetric(`${functionName}.Invocations`, 1),
+      this.recordMetric(`${functionName}.${success ? 'Success' : 'Errors'}`, 1)
+    ]);
+  }
+}
+
+// Usage in Lambda functions
+const monitoring = new MonitoringService();
+
+export const handler = async (event: any) => {
+  const startTime = Date.now();
+  let success = false;
+  
+  try {
+    // Function logic here
+    const result = await processAnalysis(event);
+    success = true;
+    return result;
+  } catch (error) {
+    console.error('Function error:', error);
+    throw error;
+  } finally {
+    const duration = Date.now() - startTime;
+    await monitoring.recordAnalysisMetrics('analyze-audio', duration, success);
+  }
+};
+```
+
+### Performance Optimization
+
+#### Connection Pooling
+```typescript
+// Optimized database connection pooling
+class ConnectionPool {
+  private static instance: Pool;
+  
+  static getInstance(): Pool {
+    if (!this.instance) {
+      this.instance = new Pool({
+        host: process.env.RDS_HOST,
+        port: parseInt(process.env.RDS_PORT || '5432'),
+        database: process.env.RDS_DATABASE,
+        user: process.env.RDS_USERNAME,
+        password: process.env.RDS_PASSWORD,
+        ssl: { rejectUnauthorized: false },
+        max: 20, // Maximum connections
+        min: 2,  // Minimum connections
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+        acquireTimeoutMillis: 60000,
+      });
+    }
+    
+    return this.instance;
+  }
+}
+```
+
+#### Caching Strategy
+```typescript
+// In-memory caching for Lambda functions
+class CacheService {
+  private static cache = new Map<string, { data: any; expiry: number }>();
+  
+  static set(key: string, data: any, ttlSeconds: number = 300) {
+    const expiry = Date.now() + (ttlSeconds * 1000);
+    this.cache.set(key, { data, expiry });
+  }
+  
+  static get(key: string): any | null {
+    const cached = this.cache.get(key);
+    if (!cached) return null;
+    
+    if (Date.now() > cached.expiry) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return cached.data;
+  }
+}
+```
+
+### Deployment Configuration
+
+#### Serverless Framework Configuration
+```yaml
+# serverless.yml
+service: mindmeasure-lambda-functions
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-west-2
+  stage: ${opt:stage, 'dev'}
+  
+  environment:
+    RDS_HOST: ${env:RDS_HOST}
+    RDS_DATABASE: ${env:RDS_DATABASE}
+    RDS_USERNAME: ${env:RDS_USERNAME}
+    RDS_PASSWORD: ${env:RDS_PASSWORD}
+    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
+    COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
+
+functions:
+  analyzeAudio:
+    handler: src/analyze-audio.handler
+    timeout: 30
+    memorySize: 1024
+    events:
+      - http:
+          path: /analyze-audio
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref ApiGatewayAuthorizer
+
+  analyzeVisual:
+    handler: src/analyze-visual.handler
+    timeout: 60
+    memorySize: 2048
+    events:
+      - http:
+          path: /analyze-visual
+          method: post
+          cors: true
+
+  analyzeText:
+    handler: src/analyze-text.handler
+    timeout: 15
+    memorySize: 512
+    events:
+      - http:
+          path: /analyze-text
+          method: post
+          cors: true
+
+  calculateMindMeasure:
+    handler: src/calculate-mind-measure.handler
+    timeout: 45
+    memorySize: 1024
+    events:
+      - http:
+          path: /calculate-mind-measure
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    ApiGatewayAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: CognitoUserPoolAuthorizer
+        Type: COGNITO_USER_POOLS
+        ProviderARNs:
+          - !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${env:COGNITO_USER_POOL_ID}
+        RestApiId: !Ref ApiGatewayRestApi
+```
+
+### Environment Configuration
+
+#### Environment Variables
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+# Production Environment Variables
+RDS_HOST=mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com
+RDS_PORT=5432
+RDS_DATABASE=mindmeasure
+RDS_USERNAME=mindmeasure_admin
+RDS_PASSWORD=<secure-password>
+
+COGNITO_USER_POOL_ID=eu-west-2_ClAG4fQXR
+COGNITO_CLIENT_ID=7vu03ppv6alkpphs1ksopll8us
+
+AWS_REGION=eu-west-2
+AWS_ACCESS_KEY_ID=<access-key>
+AWS_SECRET_ACCESS_KEY=<secret-key>
+
+# Lambda-specific
+LAMBDA_BASE_URL=https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev
 ```
 
-**Private Variables** (Server-side only)
-```bash
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-SUPABASE_JWT_SECRET=your_jwt_secret
+### Testing & Quality Assurance
+
+#### Unit Testing
+```typescript
+// Lambda function unit tests
+import { handler } from '../src/analyze-audio';
+
+describe('analyze-audio Lambda function', () => {
+  test('should process valid audio data', async () => {
+    const event = {
+      body: JSON.stringify({
+        sessionId: 'test-session-123',
+        audioData: {
+          conversation_duration: 120,
+          speech_rate: 1.2,
+          voice_quality: 'clear',
+          emotional_tone: 'neutral',
+          mood_score_1_10: 7,
+          transcript_length: 150
+        }
+      }),
+      headers: {
+        Authorization: 'Bearer valid-jwt-token'
+      }
+    };
+
+    const result = await handler(event as any);
+    
+    expect(result.statusCode).toBe(200);
+    const body = JSON.parse(result.body);
+    expect(body.sessionId).toBe('test-session-123');
+    expect(body.analysis).toBeDefined();
+  });
+
+  test('should return 400 for missing sessionId', async () => {
+    const event = {
+      body: JSON.stringify({ audioData: {} }),
+      headers: { Authorization: 'Bearer valid-jwt-token' }
+    };
+
+    const result = await handler(event as any);
+    
+    expect(result.statusCode).toBe(400);
+    const body = JSON.parse(result.body);
+    expect(body.error).toBe('sessionId is required');
+  });
+});
 ```
 
-### Environment Rules
-
-1. **Never expose service role keys** in client-side code
-2. **Use environment-specific configurations** for different deployments
-3. **Validate all environment variables** at startup
-4. **Use TypeScript types** for environment variable validation
-
-## Security Architecture
-
-### Authentication Flow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Frontend
-    participant Supabase
-    participant Database
-
-    User->>Frontend: Login Request
-    Frontend->>Supabase: Auth Request
-    Supabase->>Database: Verify Credentials
-    Database-->>Supabase: User Data
-    Supabase-->>Frontend: JWT Token
-    Frontend-->>User: Authenticated Session
+#### Integration Testing
+```typescript
+// End-to-end integration tests
+describe('Assessment Pipeline Integration', () => {
+  test('should complete full analysis pipeline', async () => {
+    // 1. Create assessment session
+    const session = await createTestSession();
+    
+    // 2. Run parallel analysis
+    const [audioResult, visualResult, textResult] = await Promise.all([
+      callLambdaFunction('analyze-audio', { sessionId: session.id, audioData: mockAudioData }),
+      callLambdaFunction('analyze-visual', { sessionId: session.id, imageData: mockImageData }),
+      callLambdaFunction('analyze-text', { sessionId: session.id, conversationText: mockTextData })
+    ]);
+    
+    // 3. Calculate fusion score
+    const fusionResult = await callLambdaFunction('calculate-mind-measure', { sessionId: session.id });
+    
+    // 4. Verify results
+    expect(audioResult.statusCode).toBe(200);
+    expect(visualResult.statusCode).toBe(200);
+    expect(textResult.statusCode).toBe(200);
+    expect(fusionResult.statusCode).toBe(200);
+    
+    const fusionData = JSON.parse(fusionResult.body);
+    expect(fusionData.fusion_score.final_score).toBeGreaterThan(0);
+    expect(fusionData.fusion_score.final_score).toBeLessThanOrEqual(100);
+  });
+});
 ```
 
-### Row Level Security (RLS)
+---
 
-RLS policies enforce data access at the database level:
+This backend architecture provides a robust, scalable, and maintainable foundation for the Mind Measure platform, leveraging AWS serverless technologies for optimal performance and cost-effectiveness.
 
-```sql
--- Example RLS Policy
-CREATE POLICY "Users can view own profile" ON profiles
-  FOR SELECT USING (auth.uid() = id);
-
-CREATE POLICY "Admins can view institution users" ON profiles
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM memberships 
-      WHERE user_id = auth.uid() 
-      AND institution_id = profiles.institution_id
-      AND role IN ('admin', 'superadmin')
-    )
-  );
-```
-
-### API Security
-
-1. **JWT Token Validation** - All requests validated against Supabase Auth
-2. **Rate Limiting** - Prevent abuse and DoS attacks
-3. **Input Validation** - Sanitize all user inputs
-4. **CORS Configuration** - Restrict cross-origin requests
-5. **Audit Logging** - Track all administrative actions
-
-## Data Processing Pipeline
-
-### Assessment Processing
-
-```mermaid
-graph LR
-    Mobile[Mobile App] --> Collect[Data Collection]
-    Collect --> Extract[Feature Extraction]
-    Extract --> Analyze[Analysis Engine]
-    Analyze --> Score[Scoring Algorithm]
-    Score --> Store[Database Storage]
-    Store --> Dashboard[Admin Dashboard]
-```
-
-### Feature Extraction
-
-The backend processes multi-modal data from the mobile app:
-
-1. **Audio Analysis** - Speech patterns and emotional indicators
-2. **Text Analysis** - Sentiment and content analysis
-3. **Behavioral Data** - Usage patterns and engagement metrics
-4. **Assessment Responses** - Structured questionnaire data
-
-### Analytics Engine
-
-- **Real-time Processing** - Immediate insights for administrators
-- **Batch Processing** - Comprehensive reports and trends
-- **Privacy-Preserving Analytics** - Aggregated data without individual identification
-- **Institutional Comparisons** - Benchmarking against peer institutions
-
-## Performance Optimization
-
-### Database Optimization
-
-1. **Indexing Strategy** - Optimized queries for common access patterns
-2. **Connection Pooling** - Efficient database connections
-3. **Query Optimization** - Minimize database load
-4. **Caching** - Frequently accessed data caching
-
-### Edge Function Optimization
-
-1. **Cold Start Minimization** - Optimize function startup time
-2. **Memory Management** - Efficient resource usage
-3. **Timeout Handling** - Graceful handling of long-running operations
-4. **Error Recovery** - Robust error handling and retry logic
-
-## Monitoring and Observability
-
-### Application Monitoring
-
-- **Error Tracking** - Comprehensive error logging and alerting
-- **Performance Metrics** - Response times and throughput monitoring
-- **Usage Analytics** - Privacy-compliant usage statistics
-- **Health Checks** - System status monitoring
-
-### Security Monitoring
-
-- **Authentication Events** - Login attempts and security events
-- **Access Patterns** - Unusual access pattern detection
-- **Data Breach Detection** - Automated security incident detection
-- **Compliance Reporting** - Audit trails for regulatory compliance
-
-## Backup and Recovery
-
-### Data Protection
-
-1. **Automated Backups** - Regular database snapshots
-2. **Point-in-Time Recovery** - Restore to specific timestamps
-3. **Cross-Region Replication** - Geographic data redundancy
-4. **Disaster Recovery** - Complete system restoration procedures
-
-### Business Continuity
-
-- **High Availability** - 99.9% uptime SLA
-- **Load Balancing** - Automatic traffic distribution
-- **Failover Procedures** - Seamless service continuation
-- **Recovery Time Objectives** - Defined recovery timeframes
-
-## Development and Testing
-
-### Local Development
-
-```bash
-# Start Supabase locally
-supabase start
-
-# Run migrations
-supabase db reset
-
-# Generate types
-supabase gen types typescript --local > packages/supabase/types/database.ts
-```
-
-### Testing Strategy
-
-1. **Unit Tests** - Individual function testing
-2. **Integration Tests** - End-to-end workflow testing
-3. **Security Tests** - Penetration testing and vulnerability scanning
-4. **Performance Tests** - Load testing and optimization validation
-
-## Deployment and Scaling
-
-### Production Deployment
-
-- **Supabase Cloud** - Managed infrastructure
-- **Automatic Scaling** - Dynamic resource allocation
-- **Global CDN** - Worldwide content delivery
-- **SSL/TLS** - Encrypted data transmission
-
-### Scaling Considerations
-
-- **Database Scaling** - Vertical and horizontal scaling options
-- **Function Scaling** - Automatic concurrency handling
-- **Storage Scaling** - Unlimited storage capacity
-- **Performance Monitoring** - Continuous optimization
+**Last Updated**: October 28, 2025  
+**Version**: 2.0 (AWS Migration)  
+**Next Review**: November 28, 2025

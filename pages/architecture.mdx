@@ -1,299 +1,491 @@
-# System Architecture
+# Architecture
 
-Mind Measure is built on a modern, scalable architecture designed for enterprise-grade mental health monitoring in educational institutions.
+# Mind Measure System Architecture
 
-## High-Level Architecture
+## Overview
 
-```mermaid
-graph TB
-    subgraph "Frontend Layer"
-        WEB[Web Application - React/Vite]
-        MOBILE[Mobile App - Capacitor/Ionic]
-        ADMIN[Admin Dashboard - Superuser Portal]
-    end
-    
-    subgraph "API Layer"
-        API[API Gateway - Vercel Functions]
-        AUTH[AWS Cognito - Authentication]
-    end
-    
-    subgraph "Backend Services"
-        AURORA[Aurora Serverless v2 - PostgreSQL]
-        S3[S3 Storage - File Management]
-        LAMBDA[Lambda Functions - Processing]
-    end
-    
-    subgraph "Security Layer"
-        MFA[Multi-Factor Auth]
-        ENCRYPT[Field Encryption]
-        AUDIT[Audit Logging]
-        BACKUP[Automated Backups]
-    end
-    
-    WEB --> API
-    MOBILE --> API
-    ADMIN --> API
-    API --> AUTH
-    API --> AURORA
-    API --> S3
-    API --> LAMBDA
-    
-    AUTH --> MFA
-    AURORA --> ENCRYPT
-    AURORA --> AUDIT
-    AURORA --> BACKUP
+Mind Measure is built on a modern, cloud-native architecture using AWS services to provide a scalable, secure, and compliant mental health monitoring platform for educational institutions.
+
+## System Architecture
+
+### High-Level Architecture
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
+│   Mobile App    │    │   Admin Portal   │    │   Documentation    │
+│ (Capacitor/iOS) │    │  (React/Vercel)  │    │    (Static Site)   │
+└─────────┬───────┘    └─────────┬────────┘    └─────────────────────┘
+          │                      │
+          └──────────────────────┼─────────────────────────────────────┐
+                                 │                                     │
+                    ┌────────────▼─────────────┐                      │
+                    │      CloudFront CDN      │                      │
+                    │    (Global Distribution) │                      │
+                    └────────────┬─────────────┘                      │
+                                 │                                     │
+                    ┌────────────▼─────────────┐                      │
+                    │     API Gateway          │                      │
+                    │   (Request Routing)      │                      │
+                    └────────────┬─────────────┘                      │
+                                 │                                     │
+                    ┌────────────▼─────────────┐                      │
+                    │    AWS Cognito           │                      │
+                    │   (Authentication)       │                      │
+                    └────────────┬─────────────┘                      │
+                                 │                                     │
+                    ┌────────────▼─────────────┐                      │
+                    │    Lambda Functions      │                      │
+                    │   (Business Logic)       │                      │
+                    └────────────┬─────────────┘                      │
+                                 │                                     │
+        ┌────────────────────────┼─────────────────────────────────────┤
+        │                        │                                     │
+┌───────▼────────┐    ┌─────────▼──────────┐    ┌─────────▼──────────┐
+│ Aurora Serverless│   │      S3 Storage    │    │   AWS Rekognition  │
+│   (Database)     │   │   (File Storage)   │    │  (Visual Analysis) │
+└──────────────────┘   └────────────────────┘    └────────────────────┘
 ```
 
-## Core Components
+### Core Components
 
-### Frontend Applications
+#### **Frontend Applications**
 
-#### Web Application
-- **Technology**: React 18 + Vite + TypeScript
-- **Styling**: Tailwind CSS with custom Mind Measure theme
-- **State Management**: React Context + Custom hooks
-- **Routing**: React Router with protected routes
-- **Deployment**: Vercel with automatic deployments
+**Mobile Application**
+- **Technology**: React + Capacitor + TypeScript
+- **Deployment**: iOS App Store, Android Play Store
+- **Domain**: mobile.mindmeasure.app
+- **Features**: Student assessments, dashboard, buddy system
 
-#### Mobile Application
-- **Technology**: Capacitor + Ionic React
-- **Platforms**: iOS and Android native apps
-- **Offline Support**: Local storage with sync capabilities
-- **Push Notifications**: Native notification system
-- **App Store**: Distributed through official app stores
+**Admin Portal**
+- **Technology**: React + Vite + TypeScript
+- **Deployment**: Vercel
+- **Domain**: admin.mindmeasure.co.uk
+- **Features**: University management, analytics, CMS
 
-#### Admin Dashboard
-- **Superuser Portal**: Complete system administration
-- **University Dashboards**: Institution-specific management
-- **Security Console**: Real-time security monitoring
-- **CMS Interface**: Content management system
+**Documentation Site**
+- **Technology**: Static site generator
+- **Deployment**: Vercel
+- **Domain**: docs.mindmeasure.co.uk
+- **Features**: Technical documentation, API reference
 
-### Backend Infrastructure
+#### **Authentication & Authorization**
 
-#### Database Layer
-- **Primary Database**: AWS Aurora Serverless v2 (PostgreSQL)
-- **Auto-scaling**: 0.5 to 16 ACUs based on demand
-- **High Availability**: Multi-AZ deployment with 99.99% uptime
-- **Backup Strategy**: Automated daily backups with point-in-time recovery
-- **Encryption**: At-rest and in-transit encryption
+**AWS Cognito User Pools**
+- **User Pool ID**: `eu-west-2_ClAG4fQXR`
+- **Client ID**: `7vu03ppv6alkpphs1ksopll8us`
+- **Region**: `eu-west-2` (London)
+- **Features**: 
+  - Multi-factor authentication
+  - Password policies
+  - Email verification
+  - JWT token generation
 
-#### Authentication & Authorization
-- **Service**: AWS Cognito User Pools
-- **Multi-Factor Authentication**: TOTP and SMS support
-- **Role-Based Access Control**: Granular permission system
-- **Session Management**: Secure token-based authentication
-- **Password Policy**: Enterprise-grade password requirements
+**Authentication Flow**
+```typescript
+// Mobile App Authentication
+const { signIn } = useAuth();
+const result = await signIn(email, password);
 
-#### File Storage
-- **Service**: AWS S3 with intelligent tiering
-- **Encryption**: Server-side encryption with KMS
-- **Access Control**: Pre-signed URLs for secure access
-- **CDN**: CloudFront for global content delivery
-- **Backup**: Cross-region replication
+// JWT Token for API calls
+const session = await fetchAuthSession();
+const token = session.tokens?.accessToken?.toString();
+```
+
+#### **API Layer**
+
+**AWS API Gateway**
+- **Base URL**: `https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev`
+- **Authentication**: JWT Bearer tokens
+- **Rate Limiting**: 100 requests/minute per user
+- **CORS**: Configured for all domains
+
+**Lambda Functions**
+```yaml
+analyze-audio:
+  Runtime: Node.js 18.x
+  Memory: 1024 MB
+  Timeout: 30 seconds
+  Purpose: Voice pattern analysis
+
+analyze-visual:
+  Runtime: Node.js 18.x
+  Memory: 2048 MB
+  Timeout: 60 seconds
+  Purpose: Facial emotion recognition
+
+analyze-text:
+  Runtime: Node.js 18.x
+  Memory: 512 MB
+  Timeout: 15 seconds
+  Purpose: Natural language processing
+
+calculate-mind-measure:
+  Runtime: Node.js 18.x
+  Memory: 1024 MB
+  Timeout: 45 seconds
+  Purpose: Multi-modal fusion scoring
+```
+
+**Vercel API Functions**
+```yaml
+Database Operations:
+  - POST /api/database/select
+  - POST /api/database/insert
+  - POST /api/database/update
+  - POST /api/database/delete
+
+Storage Operations:
+  - POST /api/storage/upload
+  - GET /api/storage/download
+  - DELETE /api/storage/delete
+
+Authentication:
+  - POST /api/auth/signin
+  - POST /api/auth/signup
+  - POST /api/auth/refresh
+```
+
+#### **Data Layer**
+
+**Amazon Aurora Serverless v2**
+- **Engine**: PostgreSQL 15.4
+- **Cluster**: `mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com`
+- **Region**: `eu-west-2` (London)
+- **Scaling**: 0.5 - 16 ACUs (Auto-scaling)
+- **Features**:
+  - Automatic scaling
+  - Point-in-time recovery
+  - Encrypted at rest
+  - Multi-AZ deployment
+
+**Connection Architecture**
+```typescript
+// Server-side connection
+const pool = new Pool({
+  host: 'mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com',
+  port: 5432,
+  database: 'mindmeasure',
+  user: 'mindmeasure_admin',
+  password: process.env.RDS_PASSWORD,
+  ssl: { rejectUnauthorized: false },
+  max: 20,
+  idleTimeoutMillis: 30000
+});
+
+// Browser-side API calls
+const response = await fetch('/api/database/select', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ table: 'profiles', filters: { user_id } })
+});
+```
+
+#### **Storage Layer**
+
+**Amazon S3**
+- **Bucket Structure**: `mindmeasure-{university-id}-assets`
+- **Regions**: `eu-west-2` (London)
+- **Encryption**: AES-256 (SSE-S3)
+- **Access**: Private with signed URLs
+
+**File Upload Flow**
+```typescript
+// Client-side upload
+const formData = new FormData();
+formData.append('file', file);
+formData.append('university_id', universityId);
+
+const response = await fetch('/api/storage/upload', {
+  method: 'POST',
+  body: formData
+});
+```
+
+#### **AI/ML Services**
+
+**AWS Rekognition**
+- **Purpose**: Facial emotion analysis
+- **Features**: Emotion detection, face analysis
+- **Integration**: Lambda function calls
+
+**ElevenLabs Integration**
+- **Purpose**: Conversational AI for assessments
+- **Agent ID**: `agent_9301k22s8e94f7qs5e704ez02npe`
+- **Features**: Voice-to-text, conversation management
+
+**Custom AI Pipeline**
+```typescript
+// Multi-modal analysis flow
+const analysisResults = await Promise.allSettled([
+  analyzeAudio(sessionId, audioData),
+  analyzeVisual(sessionId, imageData),
+  analyzeText(sessionId, transcriptData)
+]);
+
+const fusionScore = await calculateMindMeasure(sessionId);
+```
+
+## Data Flow Architecture
+
+### Assessment Data Pipeline
+
+```
+Student Assessment → ElevenLabs Widget → Conversation Data
+                                              ↓
+                                    Session Creation (Database)
+                                              ↓
+                              ┌─────────────────────────────────┐
+                              │     Parallel Analysis           │
+                              │                                 │
+                    ┌─────────▼─────────┐  ┌─────────▼─────────┐
+                    │  Audio Analysis   │  │  Visual Analysis  │
+                    │   (Lambda)        │  │   (Lambda +       │
+                    │                   │  │   Rekognition)    │
+                    └─────────┬─────────┘  └─────────┬─────────┘
+                              │                      │
+                              └──────────┬───────────┘
+                                         │
+                                ┌────────▼────────┐
+                                │  Text Analysis  │
+                                │    (Lambda)     │
+                                └────────┬────────┘
+                                         │
+                                ┌────────▼────────┐
+                                │ Fusion Algorithm│
+                                │    (Lambda)     │
+                                └────────┬────────┘
+                                         │
+                                ┌────────▼────────┐
+                                │ Score Storage   │
+                                │   (Database)    │
+                                └─────────────────┘
+```
+
+### University Data Flow
+
+```
+University Admin → CMS Interface → API Gateway → Lambda Functions
+                                                        ↓
+                                              Aurora Database
+                                                        ↓
+                                              Student Dashboard
+```
 
 ## Security Architecture
 
-### Medical-Grade Security Implementation
+### Network Security
 
-#### Data Protection
-- **Field-Level Encryption**: PHI data encrypted at the field level
-- **Key Management**: AWS KMS with automatic key rotation
-- **Data Classification**: Automated PII/PHI identification
-- **Data Minimization**: Only necessary data collected and stored
+**VPC Configuration**
+- **Private Subnets**: Lambda functions, RDS
+- **Public Subnets**: NAT Gateway, Load Balancer
+- **Security Groups**: Restrictive rules
+- **NACLs**: Network-level access control
 
-#### Access Control
-- **Zero Trust Model**: Every request authenticated and authorized
-- **Role-Based Permissions**: Granular access control system
-- **Session Security**: Secure session management with timeout
-- **API Security**: Rate limiting and request validation
+**WAF (Web Application Firewall)**
+- **OWASP Top 10 Protection**
+- **Rate Limiting**
+- **Geographic Restrictions**
+- **SQL Injection Prevention**
 
-#### Compliance Framework
-- **HIPAA Compliance**: Full Business Associate Agreement compliance
-- **GDPR Compliance**: EU data residency and privacy rights
-- **SOC 2 Type II**: Comprehensive security controls audit
-- **ISO 27001**: Information security management system
+### Data Security
 
-### Security Monitoring
+**Encryption at Rest**
+- **Database**: AES-256 encryption
+- **S3 Storage**: SSE-S3 encryption
+- **Lambda Environment**: KMS encryption
 
-#### Audit Logging
-- **Comprehensive Logging**: All user actions and system events
-- **Real-time Monitoring**: Automated threat detection
-- **Log Retention**: 7-year retention for compliance
-- **SIEM Integration**: Security information and event management
+**Encryption in Transit**
+- **TLS 1.3**: All communications
+- **Certificate Pinning**: Mobile apps
+- **HTTPS Everywhere**: All endpoints
 
-#### Vulnerability Management
-- **Automated Scanning**: Daily vulnerability assessments
-- **Penetration Testing**: Quarterly third-party security testing
-- **Dependency Scanning**: Automated library vulnerability checks
-- **Security Patches**: Automated security update deployment
+### Identity Security
 
-## Data Architecture
+**Multi-Factor Authentication**
+- **Available for**: Admin users
+- **Methods**: SMS, TOTP, Email
+- **Enforcement**: Configurable per user pool
 
-### Data Flow
+**JWT Token Security**
+- **Expiration**: 1 hour access tokens
+- **Refresh**: 30-day refresh tokens
+- **Validation**: Every API request
+- **Revocation**: Immediate logout capability
 
-```mermaid
-graph LR
-    subgraph "Data Collection"
-        MOBILE[Mobile App]
-        WEB[Web App]
-        API_GW[API Gateway]
-    end
-    
-    subgraph "Data Processing"
-        VALIDATE[Validation Layer]
-        ENCRYPT[Encryption Layer]
-        AUDIT[Audit Layer]
-    end
-    
-    subgraph "Data Storage"
-        AURORA[Aurora Database]
-        S3[File Storage]
-        BACKUP[Backup Storage]
-    end
-    
-    subgraph "Data Analytics"
-        AGGREGATE[Aggregation Engine]
-        INSIGHTS[AI Insights]
-        REPORTS[Reporting Engine]
-    end
-    
-    MOBILE --> API_GW
-    WEB --> API_GW
-    API_GW --> VALIDATE
-    VALIDATE --> ENCRYPT
-    ENCRYPT --> AUDIT
-    AUDIT --> AURORA
-    AUDIT --> S3
-    AURORA --> BACKUP
-    AURORA --> AGGREGATE
-    AGGREGATE --> INSIGHTS
-    INSIGHTS --> REPORTS
-```
+## Scalability & Performance
 
-### Database Schema
+### Auto-Scaling Components
 
-#### Core Tables
-- **Users**: Student and admin user accounts
-- **Profiles**: Extended user profile information
-- **Assessments**: Daily check-in responses
-- **Fusion Outputs**: AI-processed wellbeing scores
-- **Universities**: Institution configuration
-- **Resources**: Mental health resources and contacts
+**Aurora Serverless v2**
+- **Scaling Range**: 0.5 - 16 ACUs
+- **Scale Up**: Seconds
+- **Scale Down**: Minutes
+- **Cost**: Pay per use
 
-#### Security Tables
-- **Audit Logs**: Comprehensive activity logging
-- **Security Incidents**: Automated threat detection records
-- **Access Tokens**: Secure session management
-- **Encryption Keys**: Field-level encryption key management
-
-#### Analytics Tables
-- **Aggregated Metrics**: Privacy-preserving analytics
-- **Trend Analysis**: Historical wellbeing trends
-- **Risk Indicators**: Early intervention triggers
-- **Compliance Reports**: Automated compliance reporting
-
-## Deployment Architecture
-
-### Production Environment
-
-#### Frontend Deployment
-- **Platform**: Vercel with global CDN
-- **Domain**: app.mindmeasure.co.uk
-- **SSL**: Automatic HTTPS with certificate management
-- **Performance**: Edge caching and optimization
-- **Monitoring**: Real-time performance monitoring
-
-#### Backend Deployment
-- **Region**: EU-West-2 (London) for GDPR compliance
-- **Infrastructure**: AWS with Infrastructure as Code
-- **Scaling**: Auto-scaling based on demand
-- **Monitoring**: CloudWatch with custom metrics
-- **Alerting**: Automated incident response
-
-### Development Environment
-
-#### Local Development
-- **Database**: Local PostgreSQL with test data
-- **Authentication**: Development Cognito pool
-- **File Storage**: Local file system
-- **API**: Local development server
-- **Hot Reload**: Instant development feedback
-
-#### Staging Environment
-- **Purpose**: Pre-production testing and validation
-- **Data**: Anonymized production data subset
-- **Security**: Production-equivalent security controls
-- **Testing**: Automated integration testing
-- **Approval**: Required for production deployment
-
-## Performance & Scalability
+**Lambda Functions**
+- **Concurrent Executions**: 1000 (configurable)
+- **Cold Start**: <2 seconds
+- **Auto-scaling**: Automatic
+- **Cost**: Pay per invocation
 
 ### Performance Optimization
 
-#### Frontend Performance
-- **Code Splitting**: Lazy loading of components
-- **Bundle Optimization**: Tree shaking and minification
-- **Caching Strategy**: Aggressive caching with cache invalidation
-- **Image Optimization**: Automatic image compression and WebP
-- **Performance Monitoring**: Real-time performance metrics
+**Database Optimization**
+- **Connection Pooling**: PgBouncer
+- **Read Replicas**: Available
+- **Indexing**: Optimized queries
+- **Caching**: Application-level
 
-#### Backend Performance
-- **Database Optimization**: Query optimization and indexing
-- **Connection Pooling**: Efficient database connection management
-- **Caching Layer**: Redis for frequently accessed data
-- **API Optimization**: Response compression and pagination
-- **Load Balancing**: Automatic traffic distribution
+**CDN & Caching**
+- **CloudFront**: Global distribution
+- **Edge Caching**: Static assets
+- **API Caching**: Configurable
+- **Browser Caching**: Optimized headers
 
-### Scalability Design
+## Monitoring & Observability
 
-#### Horizontal Scaling
-- **Stateless Design**: No server-side session storage
-- **Microservices**: Loosely coupled service architecture
-- **Auto-scaling**: Automatic resource scaling based on demand
-- **Load Distribution**: Geographic load balancing
-- **Database Scaling**: Aurora auto-scaling capabilities
+### CloudWatch Integration
 
-#### Vertical Scaling
-- **Resource Optimization**: Efficient resource utilization
-- **Performance Tuning**: Continuous performance optimization
-- **Capacity Planning**: Proactive capacity management
-- **Cost Optimization**: Intelligent resource allocation
-- **Monitoring**: Comprehensive performance monitoring
+**Metrics Collected**
+- **Database**: CPU, connections, queries
+- **Lambda**: Invocations, duration, errors
+- **API Gateway**: Requests, latency, errors
+- **Application**: Custom business metrics
 
-## Integration Architecture
+**Alerting**
+- **Database**: High CPU, connection limits
+- **Lambda**: Error rates, timeouts
+- **API**: High latency, error rates
+- **Security**: Failed authentication attempts
 
-### External Integrations
+### Logging Strategy
 
-#### University Systems
-- **Student Information Systems**: Secure data exchange
-- **Learning Management Systems**: Integration capabilities
-- **Identity Providers**: SSO integration support
-- **Notification Systems**: Email and SMS integration
-- **Reporting Systems**: Automated report generation
+**Log Aggregation**
+- **Application Logs**: CloudWatch Logs
+- **Database Logs**: Aurora logs
+- **Security Logs**: CloudTrail
+- **Performance Logs**: X-Ray tracing
 
-#### Third-Party Services
-- **AI/ML Services**: External AI processing capabilities
-- **Analytics Platforms**: Advanced analytics integration
-- **Monitoring Services**: External monitoring and alerting
-- **Backup Services**: Third-party backup solutions
-- **Security Services**: External security scanning
+**Log Retention**
+- **Operational**: 30 days
+- **Security**: 1 year
+- **Compliance**: 7 years
+- **Debug**: 7 days
 
-### API Architecture
+## Disaster Recovery
 
-#### RESTful APIs
-- **Design**: RESTful API design principles
-- **Documentation**: Comprehensive API documentation
-- **Versioning**: Semantic API versioning
-- **Rate Limiting**: API usage controls
-- **Authentication**: OAuth 2.0 with JWT tokens
+### Backup Strategy
 
-#### GraphQL APIs
-- **Flexible Queries**: Client-specific data fetching
-- **Real-time Updates**: Subscription-based updates
-- **Type Safety**: Strong typing with schema validation
-- **Performance**: Efficient data fetching
-- **Developer Experience**: Excellent tooling support
+**Database Backups**
+- **Automated**: Daily backups
+- **Retention**: 35 days
+- **Point-in-time**: 5-minute granularity
+- **Cross-region**: Enabled
+
+**Application Backups**
+- **Code**: Git repositories
+- **Infrastructure**: CloudFormation templates
+- **Configuration**: Environment variables
+- **Data**: S3 cross-region replication
+
+### Recovery Procedures
+
+**RTO (Recovery Time Objective)**
+- **Database**: < 4 hours
+- **Application**: < 2 hours
+- **Full Service**: < 6 hours
+
+**RPO (Recovery Point Objective)**
+- **Database**: < 15 minutes
+- **Files**: < 1 hour
+- **Configuration**: < 5 minutes
+
+## Deployment Architecture
+
+### CI/CD Pipeline
+
+**Frontend Deployment**
+```yaml
+GitHub → Vercel Build → Production Deployment
+         ↓
+    Automatic Testing → Preview Deployments
+```
+
+**Backend Deployment**
+```yaml
+GitHub → AWS CodeBuild → Lambda Deployment
+         ↓
+    Unit Tests → Integration Tests → Production
+```
+
+### Environment Management
+
+**Environments**
+- **Development**: Local development
+- **Staging**: Pre-production testing
+- **Production**: Live system
+
+**Configuration Management**
+- **Environment Variables**: Vercel/AWS
+- **Secrets**: AWS Secrets Manager
+- **Feature Flags**: Application-level
+- **Database Migrations**: Automated
+
+## Cost Optimization
+
+### Resource Optimization
+
+**Aurora Serverless v2**
+- **Auto-pause**: 5 minutes inactivity
+- **Scaling**: Based on demand
+- **Reserved Capacity**: For predictable workloads
+
+**Lambda Functions**
+- **Memory Optimization**: Right-sized
+- **Timeout Optimization**: Minimal values
+- **Provisioned Concurrency**: Critical functions only
+
+### Cost Monitoring
+
+**Billing Alerts**
+- **Monthly Budgets**: Per service
+- **Anomaly Detection**: Unusual spending
+- **Cost Allocation**: Per university
+- **Optimization Reports**: Monthly reviews
+
+## Technology Stack Summary
+
+### Frontend
+- **React 18**: UI framework
+- **TypeScript**: Type safety
+- **Vite**: Build tool
+- **Capacitor**: Mobile deployment
+- **Tailwind CSS**: Styling
+
+### Backend
+- **Node.js 18**: Runtime
+- **PostgreSQL 15**: Database
+- **AWS Lambda**: Serverless functions
+- **API Gateway**: API management
+- **Cognito**: Authentication
+
+### Infrastructure
+- **AWS**: Cloud provider
+- **Vercel**: Frontend hosting
+- **CloudFormation**: Infrastructure as code
+- **GitHub Actions**: CI/CD
+- **CloudWatch**: Monitoring
+
+### Security & Compliance
+- **HIPAA**: Healthcare compliance
+- **GDPR**: Privacy compliance
+- **SOC 2**: Security standards
+- **AWS BAA**: Business associate agreement
 
 ---
 
-This architecture provides a robust, secure, and scalable foundation for the Mind Measure platform, ensuring reliable mental health monitoring and support for educational institutions.
+This architecture provides a robust, scalable, and compliant foundation for the Mind Measure platform, supporting multiple universities while maintaining strict security and privacy standards.
+
+**Last Updated**: October 28, 2025  
+**Version**: 2.0 (AWS Migration)  
+**Next Review**: November 28, 2025

@@ -1,0 +1,285 @@
+# ADR-001: Migration from Supabase to AWS
+
+## Status
+**ACCEPTED** - Implemented October 2025
+
+## Context
+
+Mind Measure was initially built on Supabase for rapid prototyping and development. As the platform matured and expanded to serve multiple universities with sensitive mental health data, we identified several limitations that required a migration to a more robust, compliant infrastructure.
+
+### Problems with Supabase Architecture
+
+1. **HIPAA Compliance Limitations**
+   - Limited Business Associate Agreement (BAA) coverage
+   - Insufficient audit logging capabilities
+   - Limited control over data residency and encryption
+
+2. **Scalability Concerns**
+   - Fixed pricing model not suitable for variable university loads
+   - Limited auto-scaling capabilities for compute resources
+   - Connection pooling limitations for high-concurrency scenarios
+
+3. **Multi-tenancy Challenges**
+   - Difficult to implement university-specific data isolation
+   - Limited customization for different compliance requirements
+   - Complex backup and recovery for individual universities
+
+4. **Integration Limitations**
+   - Limited AI/ML service integrations
+   - Restricted serverless function capabilities
+   - Limited real-time processing options
+
+## Decision
+
+**We will migrate from Supabase to AWS serverless architecture** consisting of:
+
+- **AWS Cognito** for authentication and user management
+- **Amazon Aurora Serverless v2** for PostgreSQL database
+- **AWS Lambda** for serverless business logic
+- **Amazon S3** for file storage with university-specific buckets
+- **AWS API Gateway** for API management and rate limiting
+- **AWS Rekognition** for visual analysis capabilities
+
+## Rationale
+
+### 1. **HIPAA Compliance**
+- AWS provides comprehensive BAA coverage for all services
+- Advanced encryption at rest and in transit
+- Detailed audit logging with CloudTrail
+- Data residency control (EU-West-2 for GDPR compliance)
+
+### 2. **Scalability & Cost Optimization**
+- Aurora Serverless v2: Pay-per-use scaling (0.5-16 ACUs)
+- Lambda functions: Pay-per-invocation with automatic scaling
+- S3: Cost-effective storage with lifecycle policies
+- Predictable costs that scale with actual usage
+
+### 3. **Multi-tenancy Support**
+- University-specific S3 buckets for data isolation
+- Row-level security (RLS) policies in Aurora
+- Configurable compliance settings per university
+- Independent backup and recovery capabilities
+
+### 4. **Advanced Capabilities**
+- Native AI/ML integrations (Rekognition, Comprehend)
+- Serverless architecture for complex processing pipelines
+- Real-time capabilities with API Gateway WebSockets
+- Advanced monitoring and alerting with CloudWatch
+
+### 5. **Operational Excellence**
+- Infrastructure as Code with CloudFormation
+- Automated backup and disaster recovery
+- Multi-region deployment capabilities
+- Enterprise-grade support and SLAs
+
+## Implementation Plan
+
+### Phase 1: Infrastructure Setup (Week 1)
+- [x] AWS account setup and IAM configuration
+- [x] Aurora Serverless v2 cluster deployment
+- [x] Cognito User Pool configuration
+- [x] S3 buckets creation with encryption
+- [x] Lambda function deployment pipeline
+
+### Phase 2: Data Migration (Week 2)
+- [x] Schema migration from Supabase to Aurora
+- [x] Data export and transformation
+- [x] User migration to Cognito
+- [x] File migration to S3
+- [x] Data integrity verification
+
+### Phase 3: Application Updates (Week 3)
+- [x] Frontend authentication updates (Cognito integration)
+- [x] API endpoint updates (Lambda functions)
+- [x] Database connection updates (Aurora)
+- [x] File upload/download updates (S3)
+- [x] Error handling and fallback mechanisms
+
+### Phase 4: Testing & Validation (Week 4)
+- [x] End-to-end testing of all user flows
+- [x] Performance testing and optimization
+- [x] Security testing and penetration testing
+- [x] Compliance validation and documentation
+- [x] Disaster recovery testing
+
+## Architecture Comparison
+
+### Before (Supabase)
+```
+Frontend → Supabase (PostgreSQL + Auth + Storage) → Edge Functions
+```
+
+### After (AWS)
+```
+Frontend → CloudFront → API Gateway → AWS Cognito (Auth)
+                                   ↓
+                              Lambda Functions
+                                   ↓
+                    Aurora Serverless v2 (Database)
+                                   ↓
+                              S3 (Storage)
+                                   ↓
+                         Rekognition (AI/ML)
+```
+
+## Technical Specifications
+
+### Database Migration
+```sql
+-- Aurora Serverless v2 Configuration
+Engine: PostgreSQL 15.4
+Cluster: mindmeasure-aurora
+Region: eu-west-2 (London)
+Scaling: 0.5 - 16 ACUs (Auto-scaling)
+Backup: 35-day retention, encrypted
+Multi-AZ: Enabled
+```
+
+### Authentication Migration
+```yaml
+# Cognito User Pool
+User Pool ID: eu-west-2_ClAG4fQXR
+Client ID: 7vu03ppv6alkpphs1ksopll8us
+Region: eu-west-2
+Features:
+  - Email verification
+  - Password policies
+  - MFA support
+  - JWT tokens
+```
+
+### Lambda Functions
+```yaml
+analyze-audio:
+  Runtime: Node.js 18.x
+  Memory: 1024 MB
+  Timeout: 30 seconds
+
+analyze-visual:
+  Runtime: Node.js 18.x
+  Memory: 2048 MB
+  Timeout: 60 seconds
+
+analyze-text:
+  Runtime: Node.js 18.x
+  Memory: 512 MB
+  Timeout: 15 seconds
+
+calculate-mind-measure:
+  Runtime: Node.js 18.x
+  Memory: 1024 MB
+  Timeout: 45 seconds
+```
+
+## Consequences
+
+### Positive
+- **Enhanced Security**: HIPAA-compliant infrastructure with comprehensive audit logging
+- **Improved Scalability**: Auto-scaling database and serverless functions
+- **Cost Optimization**: Pay-per-use model reduces costs during low usage periods
+- **Advanced Capabilities**: Native AI/ML integrations for enhanced analysis
+- **Better Compliance**: EU data residency and comprehensive compliance features
+- **Operational Excellence**: Enterprise-grade monitoring, backup, and disaster recovery
+
+### Negative
+- **Increased Complexity**: More services to manage and monitor
+- **Learning Curve**: Team needs to learn AWS-specific services and best practices
+- **Migration Risk**: Potential data loss or service disruption during migration
+- **Vendor Lock-in**: Increased dependency on AWS ecosystem
+- **Initial Costs**: Higher setup and migration costs
+
+### Neutral
+- **Development Workflow**: Similar development patterns with different service providers
+- **API Interfaces**: Maintained similar API structures for minimal frontend changes
+- **Data Models**: Preserved existing database schema and relationships
+
+## Monitoring & Success Metrics
+
+### Performance Metrics
+- **Database Response Time**: < 100ms for 95% of queries
+- **Lambda Cold Start**: < 2 seconds for 95% of invocations
+- **API Response Time**: < 500ms for 95% of requests
+- **Uptime**: > 99.9% availability
+
+### Cost Metrics
+- **Database Costs**: 30-50% reduction compared to fixed Supabase pricing
+- **Compute Costs**: Pay-per-use Lambda functions reduce idle costs
+- **Storage Costs**: S3 lifecycle policies optimize long-term storage costs
+
+### Security Metrics
+- **Compliance**: 100% HIPAA compliance across all services
+- **Audit Coverage**: Complete audit trail for all data access
+- **Encryption**: 100% data encrypted at rest and in transit
+- **Access Control**: Granular IAM policies and RLS implementation
+
+## Rollback Plan
+
+### Emergency Rollback (< 4 hours)
+1. **DNS Failover**: Point domains back to Supabase infrastructure
+2. **Database Sync**: Restore from last Supabase backup
+3. **Authentication**: Revert to Supabase Auth
+4. **File Storage**: Redirect to Supabase Storage
+
+### Planned Rollback (< 24 hours)
+1. **Data Synchronization**: Full data sync from AWS to Supabase
+2. **Application Revert**: Deploy previous application version
+3. **DNS Update**: Update all DNS records
+4. **Verification**: Complete end-to-end testing
+
+## Risk Mitigation
+
+### Data Loss Prevention
+- **Dual-write Period**: 48-hour overlap with both systems active
+- **Continuous Backup**: Real-time backup during migration
+- **Data Validation**: Automated data integrity checks
+- **Rollback Capability**: Immediate rollback to Supabase if issues detected
+
+### Service Disruption Minimization
+- **Blue-Green Deployment**: Zero-downtime migration approach
+- **Gradual Traffic Shift**: Progressive traffic migration (10%, 50%, 100%)
+- **Health Monitoring**: Continuous monitoring during migration
+- **Automated Alerts**: Immediate notification of any issues
+
+### Compliance Continuity
+- **BAA Activation**: AWS BAA signed before migration start
+- **Audit Trail**: Continuous audit logging throughout migration
+- **Data Residency**: Maintained EU data residency requirements
+- **Security Validation**: Security testing before production deployment
+
+## Lessons Learned
+
+### What Went Well
+- **Comprehensive Planning**: Detailed migration plan prevented major issues
+- **Automated Testing**: Extensive test coverage caught issues early
+- **Gradual Migration**: Phased approach minimized risk
+- **Team Preparation**: AWS training prepared team for new architecture
+
+### What Could Be Improved
+- **Migration Timeline**: Could have been completed 1 week faster with more resources
+- **Documentation**: Some AWS-specific documentation was incomplete initially
+- **Cost Estimation**: Initial cost estimates were 20% lower than actual costs
+- **User Communication**: Could have provided better user communication during migration
+
+### Recommendations for Future Migrations
+- **Start Earlier**: Begin AWS training 2 months before migration
+- **Allocate Buffer**: Add 25% buffer to timeline estimates
+- **Enhance Monitoring**: Implement comprehensive monitoring before migration
+- **User Testing**: Conduct more extensive user acceptance testing
+
+## Related ADRs
+- [ADR-002: Lambda Function Architecture](#adr-002-lambda-function-architecture)
+- [ADR-003: Aurora Serverless v2 Configuration](#adr-003-aurora-serverless-v2-configuration)
+- [ADR-004: Multi-University Data Isolation](#adr-004-multi-university-data-isolation)
+
+## References
+- [AWS HIPAA Compliance Guide](https://aws.amazon.com/compliance/hipaa-compliance/)
+- [Aurora Serverless v2 Documentation](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.html)
+- [AWS Lambda Best Practices](https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html)
+- [Mind Measure AWS Migration Plan](./AWS_MIGRATION_COMPREHENSIVE_GUIDE.md)
+
+---
+
+**Author**: Development Team  
+**Date**: October 15, 2025  
+**Status**: Accepted and Implemented  
+**Last Updated**: October 28, 2025
