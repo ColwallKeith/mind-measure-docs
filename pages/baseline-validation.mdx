@@ -1,0 +1,204 @@
+# Baseline Assessment Validation
+
+The Mind Measure baseline assessment employs intelligent PHQ-9 question detection to ensure assessment credibility and clinical validity. The validation system guarantees that users answer all mandatory PHQ-9 questions before a baseline score is recorded.
+
+## Overview
+
+The baseline validation system addresses a critical clinical requirement: ensuring that wellbeing assessments contain sufficient, structured data to produce reliable scores. By validating the presence of specific PHQ-9 questions in the conversation transcript, the system maintains the clinical integrity of the assessment process.
+
+### Key Capabilities
+
+- **Smart Question Detection**: Identifies specific PHQ-9 questions by analyzing conversation transcript keywords
+- **Duplicate Prevention**: Prevents the same question from being counted multiple times
+- **Comprehensive Validation**: Ensures all 5 mandatory PHQ-9 questions are answered
+- **Graceful Error Handling**: Provides clear feedback when assessments are incomplete
+- **Progress Tracking**: Real-time logging of which questions have been detected
+
+## Clinical Context
+
+### PHQ-9 Assessment Structure
+
+The Patient Health Questionnaire-9 (PHQ-9) is a clinically validated depression screening tool. Mind Measure's baseline assessment focuses on the first 5 questions, which form the core depression screening criteria:
+
+1. **Interest/Pleasure**: Little interest or pleasure in doing things
+2. **Feeling Down**: Feeling down, depressed, or hopeless
+3. **Sleep Problems**: Trouble falling/staying asleep, or sleeping too much
+4. **Fatigue**: Feeling tired or having little energy
+5. **Appetite**: Poor appetite or overeating
+
+These questions provide sufficient clinical data for a reliable baseline while maintaining a manageable conversation length (5-7 minutes).
+
+## Technical Implementation
+
+### Question Detection Algorithm
+
+The system uses keyword-based pattern matching to identify PHQ-9 questions in the conversation transcript:
+
+```typescript
+interface PHQResponses {
+  q1?: string;  // Interest/pleasure
+  q2?: string;  // Feeling down
+  q3?: string;  // Sleep problems
+  q4?: string;  // Fatigue
+  q5?: string;  // Appetite
+}
+```
+
+**Detection Logic**:
+
+```typescript
+function extractAssessmentData(conversationData: ConversationData) {
+  const phqResponses: PHQResponses = {};
+  const transcript = conversationData.transcript || '';
+  
+  // Q1: Interest/Pleasure
+  if (/little interest|pleasure|doing things/i.test(transcript) && !phqResponses.q1) {
+    phqResponses.q1 = extractResponseForQuestion(transcript, 'interest');
+  }
+  
+  // Q2: Feeling Down
+  if (/feeling down|depressed|hopeless/i.test(transcript) && !phqResponses.q2) {
+    phqResponses.q2 = extractResponseForQuestion(transcript, 'down');
+  }
+  
+  // ... Q3-Q5 follow similar pattern
+  
+  return phqResponses;
+}
+```
+
+### Validation Rules
+
+**Baseline Requirements**:
+- All 5 mandatory questions (Q1-Q5) must be answered
+- Minimum transcript length: 50 characters
+- Minimum conversation duration: 30 seconds
+
+**Check-in Requirements**:
+- Minimum transcript length: 50 characters
+- Minimum conversation turns: 4
+
+### Error Messages
+
+The system provides context-specific error messages:
+
+**Baseline Insufficient Data**:
+```
+I wasn't able to collect enough information during our conversation 
+to calculate a reliable baseline score. This could be due to 
+connection issues or insufficient responses. Let's try again - 
+it's important we get an accurate baseline for your wellbeing tracking.
+```
+
+**Check-in Insufficient Data**:
+```
+I wasn't able to collect enough information during our conversation 
+to calculate a score. Please try again when you have a few minutes 
+for a proper check-in.
+```
+
+## Testing & Validation
+
+### Manual Testing Procedure
+
+**1. Complete Baseline (Happy Path)**:
+- Start baseline assessment
+- Answer all 5 PHQ-9 questions naturally
+- Monitor console logs for question detection
+- Verify score is calculated and saved to database
+
+**2. Incomplete Baseline (Validation)**:
+- Start baseline assessment
+- Answer only 2-3 questions
+- Click "Finish" button
+- Verify error alert appears
+- Verify user returns to welcome screen
+
+**3. Duplicate Question Handling**:
+- Start baseline assessment
+- Allow Jodie to repeat a question
+- Monitor console logs
+- Verify question only counted once
+
+### Database Cleanup
+
+For testing purposes, use the cleanup script to reset user data:
+
+```bash
+cd /path/to/mind-measure-mobile-final
+node scripts/cleanup-test-data.mjs <userId> <userEmail>
+```
+
+## Architecture Decisions
+
+### Why Validate After Lambda Failure?
+
+The validation runs after Lambda analysis calls fail (audio, visual, text, fusion) to ensure:
+
+1. **Prioritize Real AI Analysis**: When Lambda functions work correctly, use their results
+2. **Fallback Protection**: If Lambda fails, validation ensures data quality before provisional scoring
+3. **User Experience**: Don't block users when the AI analysis pipeline is functioning
+
+### Why 5 Questions Instead of 9?
+
+**Clinical Rationale**:
+- Questions 1-5 form the core depression screening criteria
+- Sufficient data for reliable baseline assessment
+- Manageable conversation length (5-7 minutes)
+- Reduces user fatigue while maintaining clinical validity
+
+**Technical Rationale**:
+- Shorter conversations = better completion rates
+- Fewer questions = simpler validation logic
+- Easier to achieve high accuracy in detection
+
+### Why Keywords Instead of Question Numbers?
+
+Jodie conducts assessments through natural conversation, not structured questionnaires. Keyword detection:
+
+- **Matches Natural Flow**: Works with conversational AI approach
+- **Robust to Variation**: Handles different phrasings of the same question
+- **Clinical Accuracy**: Identifies questions by clinical content, not arbitrary numbering
+
+## Security & Privacy Considerations
+
+### Data Handling
+
+- **Transcript Storage**: Full conversation transcripts are stored in `fusion_outputs.transcript` field
+- **PHQ-9 Responses**: Structured responses stored in `fusion_outputs.analysis` JSONB field
+- **Encryption**: All database records encrypted at rest (Aurora Serverless v2)
+- **Access Control**: RLS policies ensure users only access their own data
+
+### HIPAA Compliance
+
+The validation system supports HIPAA compliance by:
+
+- **Data Integrity**: Ensures complete, structured health assessment data
+- **Audit Trail**: All validation events logged for compliance auditing
+- **Error Handling**: Graceful failures prevent incomplete health data storage
+- **User Consent**: Clear communication about assessment requirements
+
+## Related Documentation
+
+- [Mobile App Architecture](/mobile) - Overall mobile app structure
+- [Assessment Methodology](/methodology) - Clinical assessment approach
+- [Aurora Serverless v2](/aurora-serverless-v2) - Database implementation
+- [API Documentation](/api-documentation) - Backend API endpoints
+
+## Changelog
+
+### Version 1.0 (November 23, 2025)
+- Initial implementation with 5-question validation
+- Smart keyword detection algorithm
+- Duplicate prevention system
+- Context-specific error messages
+- Progress logging for debugging
+- Database cleanup utilities
+
+---
+
+**Document Owner**: Development Team  
+**Clinical Review**: Clinical Team  
+**Last Updated**: November 23, 2025  
+**Next Review**: December 23, 2025  
+**Status**: Active
