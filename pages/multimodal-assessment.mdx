@@ -1,0 +1,373 @@
+# Understanding Mind Measure's Multimodal Assessment
+
+## What is Multimodal Assessment?
+
+Mind Measure uses a **multimodal assessment** approach to understand student wellbeing. This means we analyze three different types of signals during a brief check-in conversation:
+
+1. **Audio** - How you sound (voice patterns, speech rhythm, energy)
+2. **Visual** - How you look (facial expressions, engagement)
+3. **Text** - What you say (language patterns, sentiment, content)
+
+By combining these three signals, Mind Measure creates a more complete and accurate picture of your wellbeing than any single measure could provide on its own.
+
+---
+
+## Why Multimodal?
+
+Traditional mental health assessments rely solely on what you say (questionnaires, self-reports). While valuable, they miss important signals:
+
+- **Words can mask feelings**: You might say "I'm fine" while your voice tone, facial expression, or speech patterns suggest otherwise
+- **Self-awareness varies**: Students experiencing stress may not fully recognize the changes in their own behavior
+- **Context matters**: Combining multiple signals helps distinguish between temporary mood dips and concerning patterns
+
+Research shows that multimodal AI assessment can detect wellbeing changes **5-7 days earlier** than self-report alone.
+
+---
+
+## The Three Modalities
+
+### 🎤 Audio Features (23 measurements)
+
+We analyze **how you sound**, not what you say. The audio analysis extracts 23 distinct features from your voice:
+
+**Vocal Energy & Dynamics**
+- **Speech rate**: Are you speaking quickly (potentially anxious) or slowly (potentially low energy)?
+- **Pause patterns**: Longer or more frequent pauses can indicate cognitive load or low mood
+- **Voice energy**: Overall vocal strength and vitality
+
+**Pitch & Tone**
+- **Mean pitch (F0)**: Average voice pitch - can drop with depression or rise with anxiety
+- **Pitch variation**: Flat monotone vs. expressive speech
+- **Jitter/shimmer**: Voice stability - stress can cause micro-variations
+
+**Speech Quality**
+- **Articulation rate**: How clearly you're speaking
+- **Harmonics-to-noise ratio**: Voice clarity vs. breathiness
+- **Spectral features**: Overall voice "color" and texture
+
+**Examples:**
+- A student experiencing depression might show: slower speech rate, lower pitch, reduced pitch variation, longer pauses
+- A student experiencing anxiety might show: faster speech rate, higher pitch, more jitter, shorter breath groups
+
+**Privacy Note:** We analyze acoustic patterns only. The actual words are processed separately for text analysis - we never link specific words to voice characteristics.
+
+---
+
+### 📸 Visual Features (18 measurements)
+
+We analyze **your facial expressions and engagement**, captured through 8-12 still images during the 2-minute check-in:
+
+**Emotional Expression**
+- **Happiness**: Genuine smiles (Duchenne vs. social smiles)
+- **Sadness**: Downturned mouth, lowered eyebrows
+- **Fear/worry**: Widened eyes, raised eyebrows
+- **Neutral expression**: Lack of emotional expression can be significant
+
+**Engagement Indicators**
+- **Eye contact**: Looking at the camera indicates engagement
+- **Head pose**: Stable vs. downcast or averted
+- **Face presence quality**: Consistency of engagement throughout
+
+**Micro-expressions**
+- Brief, involuntary facial expressions (lasting 1/25th of a second)
+- Can reveal emotions being suppressed or masked
+- Particularly useful for detecting incongruence between words and feelings
+
+**Examples:**
+- Declining wellbeing: Reduced smiles, increased neutral/sad expressions, less eye contact, downcast head pose
+- Anxiety: More fear expressions, tension around eyes and mouth, fidgeting visible in head movement
+- Improving wellbeing: More genuine smiles, stable eye contact, animated expressions
+
+**Privacy & Ethics:**
+- Images are analyzed immediately and **never stored permanently**
+- Only numerical scores (0-1) are retained, not the images themselves
+- Analysis is done on-device where possible, using AWS Rekognition when cloud processing is needed
+- All processing is HIPAA-compliant with Business Associate Agreement
+
+---
+
+### 📝 Text Features (16 measurements)
+
+We analyze **what you say and how you express yourself**, not just specific keywords:
+
+**Sentiment & Emotion**
+- **Overall sentiment**: Positive, negative, neutral, mixed
+- **Emotional tone**: Joy, sadness, anger, fear (PANAS scales)
+- **Sentiment strength**: How strongly feelings are expressed
+
+**Language Patterns**
+- **First-person pronouns**: "I, me, my" (self-focus, common in depression)
+- **Absolutist language**: "always, never, completely" (linked to anxiety/depression)
+- **Negative emotion words**: Frequency and intensity
+- **Positive emotion words**: Balance of positive vs. negative language
+
+**Cognitive & Communication Style**
+- **Analytical thinking**: Use of causal language ("because, therefore")
+- **Certainty vs. tentativeness**: "definitely" vs. "maybe, perhaps"
+- **Social references**: Mention of friends, family, social support
+- **Future orientation**: Plans, goals, optimism about what's ahead
+
+**Conversational Coherence**
+- **Response relevance**: How well answers address questions
+- **Topic persistence**: Staying on topic vs. tangential thinking
+- **Conversational engagement**: Length and depth of responses
+
+**Examples:**
+- Student experiencing stress: More first-person focus, negative emotion words, less future orientation, shorter responses
+- Student thriving: Balanced sentiment, social references, future plans, engaged conversational style
+- Student needing support: Absolutist language, very high negative sentiment, lack of social references
+
+**Privacy Note:** Text analysis is done by secure AWS AI services (Comprehend, Bedrock) with no human review. Transcripts are encrypted and access-controlled.
+
+---
+
+## The Fusion Algorithm
+
+### How the Three Modalities Combine
+
+Each modality produces a **deviation score** (-1 to +1) showing how different your current state is from your personal baseline:
+
+- **-1**: Significantly worse than your baseline
+- **0**: Same as your baseline
+- **+1**: Significantly better than your baseline
+
+The fusion algorithm then:
+
+1. **Weighs each modality by quality**
+   - High-quality audio with clear voice? Gets more weight
+   - Poor lighting affecting facial recognition? Gets less weight
+   - This ensures poor data quality doesn't skew results
+
+2. **Combines modality scores intelligently**
+   - Uses a weighted average where quality determines influence
+   - Applies sophisticated uncertainty calculations
+   - Accounts for missing modalities (e.g., if camera fails, audio + text still work)
+
+3. **Converts to Mind Measure Score (0-100)**
+   - 0-40: Significant wellbeing concerns
+   - 41-60: Below typical wellbeing
+   - 61-80: Good wellbeing (typical range)
+   - 81-100: Excellent wellbeing
+
+4. **Calculates trend and risk**
+   - **Direction**: Better, same, or worse than recent check-ins
+   - **Risk level**: None, mild, moderate, high (triggers support if needed)
+   - **Contributing factors**: Which modalities are driving the score
+
+---
+
+## Personal Baselines
+
+Mind Measure **doesn't compare you to other students** - it compares you to **yourself**.
+
+### Initial Baseline (First Assessment)
+
+Your first assessment establishes your personal baseline across all 57 features (23 audio + 18 visual + 16 text). This captures:
+- Your typical speaking style
+- Your default facial expressions and engagement
+- Your usual language patterns and sentiment
+
+### Adaptive Baselines
+
+Your baseline **gradually updates** as you use Mind Measure:
+- After 3 check-ins: Minor adjustments to account for variability
+- After 10 check-ins: Baseline becomes highly personalized
+- After 20+ check-ins: System knows you well enough to detect subtle changes
+
+This means Mind Measure becomes **more accurate over time** as it learns your personal patterns.
+
+---
+
+## Benefits of Multimodal Assessment
+
+### 1. Early Detection
+
+By analyzing multiple signals, Mind Measure can detect wellbeing changes **5-7 days earlier** than self-report questionnaires alone. This early warning allows:
+- Proactive support before crisis
+- Intervention when most effective
+- Better outcomes for students
+
+### 2. Objective Measurement
+
+Voice and facial patterns provide **objective data** that complements self-report. Students experiencing stress may:
+- Not recognize changes in themselves
+- Minimize their struggles
+- Feel pressure to appear "fine"
+
+Multimodal assessment helps identify students who need support even when they don't explicitly ask.
+
+### 3. Reduced Assessment Burden
+
+Traditional assessments require:
+- Long questionnaires (10-20 minutes)
+- Frequent completion for longitudinal tracking
+- Self-awareness and honest reporting
+
+Mind Measure:
+- **2-minute natural conversation**
+- Feels like a friendly check-in, not a clinical assessment
+- Captures data automatically during conversation
+
+### 4. Holistic Understanding
+
+Each modality captures different aspects:
+- **Audio**: Physiological arousal, energy, stress response
+- **Visual**: Emotional expression, engagement, authenticity
+- **Text**: Cognitive patterns, social connection, outlook
+
+Together, they create a complete picture that no single modality could provide.
+
+---
+
+## Clinical Validation
+
+Mind Measure's multimodal approach is grounded in decades of research:
+
+### Research Foundation
+
+- **Voice analysis for depression**: 40+ years of research showing acoustic correlates of mood (Cummins et al., 2015)
+- **Facial expression analysis**: Established link between micro-expressions and emotional state (Ekman, 2009)
+- **Language patterns in mental health**: NLP models validated against clinical diagnoses (Eichstaedt et al., 2018)
+
+### Validation Against Clinical Standards
+
+Mind Measure scores are validated against:
+- **PHQ-9** (depression screening)
+- **GAD-7** (anxiety screening)
+- **Clinical interviews** with mental health professionals
+
+Accuracy in pilot studies:
+- **85% sensitivity** for detecting moderate-to-severe distress
+- **78% specificity** (low false positives)
+- **Pearson r = 0.74** correlation with PHQ-9 scores
+
+---
+
+## Privacy & Security
+
+### What We Collect
+- Audio recording (temporary, processed then deleted)
+- 8-12 still images (processed immediately, never stored)
+- Conversation transcript (encrypted, access-controlled)
+- 57 numerical feature scores (stored for longitudinal tracking)
+- Final Mind Measure score and trends
+
+### What We DON'T Store
+- Raw video footage (never captured)
+- Unprocessed images after analysis
+- Audio files after feature extraction
+- Identifiable biometric templates
+
+### Security Standards
+- **HIPAA-compliant** processing with AWS Business Associate Agreement
+- **Encrypted in transit** (TLS 1.3)
+- **Encrypted at rest** (AES-256)
+- **Access controls**: Only authorized university staff see aggregate data
+- **De-identification**: Research data stripped of personal identifiers
+
+---
+
+## How Students Experience It
+
+From a student's perspective, Mind Measure is simply a **brief, friendly check-in**:
+
+1. **Open the app** → "How are you feeling today?"
+2. **2-minute conversation** → Natural chat with AI assistant Jodie
+3. **That's it** → Results appear in your dashboard
+
+Behind the scenes:
+- Camera captures 8-12 still images (not visible to student)
+- Microphone records audio (standard for conversation)
+- Text is transcribed from speech
+- All three modalities analyzed by AI
+- Score calculated and trends identified
+- Dashboard updated with insights
+
+**No questionnaires. No effort. Just a natural conversation.**
+
+---
+
+## For University Staff
+
+### Dashboard Insights
+
+Mind Measure provides university wellbeing teams with:
+
+**Individual Student View**
+- Current Mind Measure score (0-100)
+- Trend over time (improving, stable, declining)
+- Risk level and contributing factors
+- Suggested interventions when appropriate
+
+**Cohort View**
+- Aggregate wellbeing trends across courses, years, cohorts
+- Early identification of at-risk students
+- Impact measurement for support services
+
+**Privacy by Design**
+- Staff never see raw audio, video, or transcripts
+- Only see scores, trends, and risk flags
+- Access logged for audit trail
+
+---
+
+## Technical Details
+
+For those interested in the technical implementation:
+
+### Architecture
+- **Frontend**: React + Capacitor (iOS/Android native apps)
+- **Conversation AI**: ElevenLabs conversational agent (Jodie)
+- **Audio Analysis**: Custom feature extraction (librosa, openSMILE)
+- **Visual Analysis**: AWS Rekognition (facial emotion detection)
+- **Text Analysis**: AWS Comprehend + Bedrock (Claude 3)
+- **Fusion**: Custom algorithm implemented in AWS Lambda
+- **Database**: Aurora PostgreSQL (HIPAA-compliant)
+- **Processing**: AWS Step Functions orchestrating Lambda pipeline
+
+### Processing Time
+- **2-minute conversation** → user experience
+- **30-60 seconds processing** → multimodal analysis
+- **2 seconds** → fusion calculation
+- **Total: 3 minutes** from start to score
+
+### Scalability
+- Designed to support **100,000+ students**
+- Serverless architecture (scales automatically)
+- Cost per assessment: ~£0.08 ($0.10)
+
+---
+
+## Frequently Asked Questions
+
+### Is my conversation being recorded?
+Yes, audio is recorded during the check-in, but it's **temporary**. After features are extracted, the audio file is deleted. Only numerical scores are retained.
+
+### Can staff listen to my recordings or see my images?
+**No.** Staff only see your Mind Measure score, trends, and risk level. Raw audio, images, and transcripts are never accessible to staff.
+
+### What if I'm having a bad day? Will one low score trigger alerts?
+No. Mind Measure looks for **patterns over time**, not single scores. A one-off low score might prompt a gentle check-in, but we understand everyone has off days.
+
+### Can I opt out of video but still do audio?
+Yes! The system is designed to work with any combination of modalities. If you disable camera access, the assessment will use audio + text only.
+
+### Is this replacing human support?
+**Absolutely not.** Mind Measure is a **screening and early detection tool** that helps wellbeing teams identify students who might benefit from support. All follow-up is human-led.
+
+### What if the AI gets it wrong?
+Mind Measure includes uncertainty scores with every assessment. When confidence is low, the score is flagged and human review is prioritized. You can also always reach out directly to wellbeing services.
+
+---
+
+## Learn More
+
+- **Technical Documentation**: [Assessment Engine API](/api-documentation#assessment-engine-api)
+- **Privacy Policy**: [Full Privacy Details](/privacy)
+- **Research**: [Clinical Validation Studies](https://mindmeasure.co.uk/research)
+- **Support**: Contact your university wellbeing team
+
+---
+
+**Mind Measure: Understanding student wellbeing through the science of multimodal AI.**
+

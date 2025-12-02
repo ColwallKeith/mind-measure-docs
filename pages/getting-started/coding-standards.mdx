@@ -1,0 +1,582 @@
+# Coding Standards
+
+## Overview
+
+Coding standards, contribution guidelines, and technical implementation details for Mind Measure developers.
+
+**Note**: For deployment procedures and architecture overview, see the [Development Guide](/development-guide).
+
+This page covers:
+- Contributing guidelines and code of conduct
+- Code quality standards (TypeScript, React, CSS)
+- Testing guidelines
+- Integration patterns
+- Security best practices
+
+## Contributing Guidelines
+
+### Code of Conduct
+
+We are committed to making participation in the Mind Measure project harassment-free for everyone. Expected behavior includes:
+
+- Use welcoming and inclusive language
+- Be respectful of differing viewpoints and experiences
+- Gracefully accept constructive criticism
+- Focus on what is best for the community
+- Show empathy towards other community members
+- Maintain confidentiality of user data and respect privacy
+
+### Getting Started
+
+#### Prerequisites
+- Node.js 18+ installed
+- Git configured with your name and email
+- Cursor IDE (recommended)
+- Basic understanding of React, TypeScript, and AWS services
+
+#### Repository Setup
+```bash
+# Clone the repository
+git clone https://github.com/ColwallKeith/mind-measure-core.git
+cd mind-measure-core
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env
+cp apps/admin/.env.example apps/admin/.env
+cp apps/mobile/.env.example apps/mobile/.env
+
+# Start local development
+npm run dev:admin  # or npm run dev:mobile
+```
+
+### Development Workflow
+
+#### Branching Strategy
+- **main**: Production-ready code
+- **develop**: Integration branch for features
+- **feature/**: Individual feature branches
+- **hotfix/**: Critical production fixes
+
+#### Feature Development Process
+```bash
+# Create feature branch
+git checkout develop
+git pull origin develop
+git checkout -b feature/your-feature-name
+
+# Make changes and commit
+git add .
+git commit -m "feat: add new feature description"
+
+# Push and create PR
+git push origin feature/your-feature-name
+```
+
+#### Commit Message Convention
+Follow conventional commits format:
+- `feat:` - New features
+- `fix:` - Bug fixes
+- `docs:` - Documentation changes
+- `style:` - Code style changes
+- `refactor:` - Code refactoring
+- `test:` - Test additions or changes
+- `chore:` - Maintenance tasks
+
+### Coding Standards
+
+#### TypeScript Guidelines
+```typescript
+// Use explicit types for function parameters and returns
+interface UserProfile {
+  id: string;
+  email: string;
+  institutionId?: string;
+}
+
+const updateProfile = async (
+  userId: string, 
+  updates: Partial<UserProfile>
+): Promise<UserProfile> => {
+  // Implementation
+};
+
+// Use strict null checks
+const userName = user?.profile?.name ?? 'Unknown User';
+```
+
+#### React Component Standards
+```typescript
+// Use function components with TypeScript
+interface ButtonProps {
+  variant: 'primary' | 'secondary';
+  children: React.ReactNode;
+  onClick: () => void;
+}
+
+export const Button: React.FC<ButtonProps> = ({ 
+  variant, 
+  children, 
+  onClick 
+}) => {
+  return (
+    <button 
+      className={`btn btn-${variant}`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+};
+```
+
+#### CSS and Styling Guidelines
+```css
+/* Use Mind Measure brand colors from design system */
+:root {
+  --color-primary: #2563eb;
+  --color-secondary: #7c3aed;
+  --color-accent: #f59e0b;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+}
+
+/* Follow BEM naming convention for custom classes */
+.dashboard-card {
+  /* Block */
+}
+
+.dashboard-card__header {
+  /* Element */
+}
+
+.dashboard-card--featured {
+  /* Modifier */
+}
+```
+
+#### AWS Lambda Functions
+
+Lambda functions are the core of our serverless backend processing.
+
+```typescript
+// Lambda function template
+import { APIGatewayProxyHandler } from 'aws-lambda';
+
+export const handler: APIGatewayProxyHandler = async (event) => {
+  try {
+    // Parse request body
+    const body = event.body ? JSON.parse(event.body) : {};
+    
+    // Get user from Cognito authorizer
+    const userId = event.requestContext.authorizer?.claims?.sub;
+    
+    if (!userId) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: 'Unauthorized' })
+      };
+    }
+    
+    // Process request
+    const result = await processRequest(body, userId);
+    
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify(result)
+    };
+  } catch (error) {
+    console.error('Lambda error:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ 
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      })
+    };
+  }
+};
+
+async function processRequest(data: any, userId: string) {
+  // Your business logic here
+  return { success: true, data };
+}
+```
+
+#### Vercel Serverless API Functions
+
+For the mobile app API endpoints served via Vercel:
+
+```typescript
+// pages/api/database/select.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  ssl: { rejectUnauthorized: false }
+});
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  
+  try {
+    const { table, limit = 10 } = req.body;
+    
+    const result = await pool.query(
+      `SELECT * FROM ${table} LIMIT $1`,
+      [limit]
+    );
+    
+    res.status(200).json({ data: result.rows });
+  } catch (error) {
+    console.error('API error:', error);
+    res.status(500).json({ error: 'Database query failed' });
+  }
+}
+```
+
+## Quality Assurance
+
+### Security Guards
+```bash
+# Check for hardcoded secrets
+npm run guard:secrets
+
+# Check for cross-package imports
+npm run guard:cross
+
+# Run all guards
+npm run guard:all
+```
+
+### Code Quality
+```bash
+# Linting
+npm run lint
+
+# Type checking
+npm run typecheck
+
+# Build verification
+npm run build
+```
+
+### Testing Guidelines
+```typescript
+// Unit test example
+import { render, screen } from '@testing-library/react';
+import { Button } from './Button';
+
+describe('Button Component', () => {
+  it('renders with correct text', () => {
+    render(<Button variant="primary" onClick={() => {}}>Click me</Button>);
+    expect(screen.getByText('Click me')).toBeInTheDocument();
+  });
+
+  it('calls onClick when clicked', () => {
+    const handleClick = jest.fn();
+    render(<Button variant="primary" onClick={handleClick}>Click me</Button>);
+    screen.getByText('Click me').click();
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+### Code Review Checklist
+- [ ] Code follows TypeScript and React best practices
+- [ ] All functions have appropriate type annotations
+- [ ] Components are properly tested
+- [ ] Security guards pass
+- [ ] Documentation is updated
+- [ ] Commit messages follow convention
+- [ ] No hardcoded secrets or sensitive data
+- [ ] Cross-import rules are followed
+
+## Integrations
+
+### ElevenLabs Voice Integration
+
+#### Setup and Configuration
+```typescript
+// ElevenLabs client configuration
+import { ElevenLabsApi } from 'elevenlabs';
+
+const elevenlabs = new ElevenLabsApi({
+  apiKey: process.env.ELEVENLABS_API_KEY,
+});
+
+// Voice synthesis
+const synthesizeVoice = async (text: string, voiceId: string) => {
+  const audio = await elevenlabs.generate({
+    voice: voiceId,
+    text: text,
+    model_id: "eleven_monolingual_v1"
+  });
+  
+  return audio;
+};
+```
+
+#### Voice Processing Pipeline
+1. **Text Input**: User provides text for synthesis
+2. **Voice Selection**: Choose appropriate voice model
+3. **Audio Generation**: ElevenLabs API processing
+4. **Audio Delivery**: Stream audio to client
+5. **Quality Control**: Monitor synthesis quality
+
+### Integration Strategy
+
+#### Third-Party Service Connections
+- **AWS Aurora**: Primary database (PostgreSQL)
+- **AWS Cognito**: Authentication and user management
+- **AWS S3**: File storage and media uploads
+- **AWS Lambda**: Serverless backend processing
+- **AWS Rekognition**: Visual analysis
+- **AWS Comprehend**: Text sentiment analysis
+- **ElevenLabs**: Voice synthesis and conversational AI
+- **Vercel**: Frontend hosting and serverless API
+
+#### API Integration Patterns
+```typescript
+// Standardized API client pattern
+class ApiClient {
+  private baseUrl: string;
+  private apiKey: string;
+
+  constructor(baseUrl: string, apiKey: string) {
+    this.baseUrl = baseUrl;
+    this.apiKey = apiKey;
+  }
+
+  async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+}
+```
+
+## Technical Implementation
+
+### Debug Implementation
+
+#### Development Debugging
+```typescript
+// Debug utilities
+const DEBUG = process.env.NODE_ENV === 'development';
+
+export const debugLog = (message: string, data?: any) => {
+  if (DEBUG) {
+    console.log(`[DEBUG] ${message}`, data);
+  }
+};
+
+// Error boundary for development
+export class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    if (DEBUG) {
+      console.error('Error Boundary caught an error:', error, errorInfo);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div>Something went wrong. Check console for details.</div>;
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+#### Production Monitoring
+```typescript
+// Error tracking and monitoring
+import * as Sentry from '@sentry/react';
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV,
+});
+
+// Performance monitoring
+export const trackPerformance = (name: string, fn: () => Promise<any>) => {
+  const transaction = Sentry.startTransaction({ name });
+  
+  return fn()
+    .finally(() => transaction.finish());
+};
+```
+
+### Migration Guide
+
+#### Database Migrations
+```sql
+-- Migration template
+-- Migration: YYYY-MM-DD-HHMMSS_migration_name.sql
+
+-- Add new column with default value
+ALTER TABLE profiles 
+ADD COLUMN new_field VARCHAR(255) DEFAULT 'default_value';
+
+-- Create index for performance
+CREATE INDEX idx_profiles_new_field ON profiles(new_field);
+
+-- Update existing data if needed
+UPDATE profiles 
+SET new_field = 'updated_value' 
+WHERE condition = true;
+```
+
+#### Application Migrations
+```typescript
+// Version migration helper
+interface MigrationScript {
+  version: string;
+  description: string;
+  up: () => Promise<void>;
+  down: () => Promise<void>;
+}
+
+const migrations: MigrationScript[] = [
+  {
+    version: '1.1.0',
+    description: 'Add user preferences table',
+    up: async () => {
+      // Forward migration
+    },
+    down: async () => {
+      // Rollback migration
+    }
+  }
+];
+
+export const runMigrations = async (targetVersion: string) => {
+  // Migration execution logic
+};
+```
+
+### Localization Standards
+
+#### British English Spelling
+- **Colour** not Color
+- **Centre** not Center  
+- **Realise** not Realize
+- **Organisation** not Organization
+- **Behaviour** not Behavior
+
+#### Text Guidelines
+```typescript
+// Localization helper
+const text = {
+  en_GB: {
+    'welcome.message': 'Welcome to Mind Measure',
+    'colour.primary': 'Primary Colour',
+    'organisation.settings': 'Organisation Settings',
+  }
+};
+
+export const t = (key: string, locale: string = 'en_GB') => {
+  return text[locale]?.[key] || key;
+};
+```
+
+## Pull Request Process
+
+### PR Requirements
+1. **Builds successfully** and passes all tests
+2. **Code review** by at least one team member
+3. **Documentation updates** for any new features
+4. **Security guards** pass all checks
+5. **No breaking changes** without major version bump
+
+### PR Template
+```markdown
+### Summary
+Brief description of what changed and why.
+
+### Checklist
+- [ ] Code builds and typechecks locally
+- [ ] If backend or schema changed, docs updated under /docs
+- [ ] If UX changed, screenshots added to PR
+- [ ] Security guards pass
+- [ ] Tests added/updated for new functionality
+
+### Testing
+How was this change tested?
+
+### Screenshots
+If UI changes, include before/after screenshots.
+```
+
+## Security Guidelines
+
+### Data Handling
+- **Never log sensitive data** in production
+- **Encrypt all data** in transit and at rest
+- **Use environment variables** for secrets
+- **Implement proper authentication** for all endpoints
+- **Follow principle of least privilege** for database access
+
+### Code Security
+```typescript
+// Input validation example
+import { z } from 'zod';
+
+const UserProfileSchema = z.object({
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  institutionId: z.string().uuid().optional(),
+});
+
+export const validateUserProfile = (data: unknown) => {
+  return UserProfileSchema.parse(data);
+};
+```
+
+### Security Checklist
+- [ ] No hardcoded secrets in code
+- [ ] Input validation on all user inputs
+- [ ] SQL injection prevention (use parameterized queries)
+- [ ] XSS prevention (proper escaping)
+- [ ] CSRF protection enabled
+- [ ] Authentication required for protected routes
+- [ ] Authorization checks in place
+- [ ] Rate limiting implemented
