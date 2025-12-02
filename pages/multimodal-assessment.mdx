@@ -2,7 +2,7 @@
 
 ## What is Multimodal Assessment?
 
-Mind Measure uses a **multimodal assessment** approach to understand student wellbeing. This means we analyse three different types of signals during a brief check-in conversation:
+Mind Measure uses a **multimodal assessment** approach to understand student wellbeing. This means we analyze three different types of signals during a brief check-in conversation:
 
 1. **Audio** - How you sound (voice patterns, speech rhythm, energy)
 2. **Visual** - How you look (facial expressions, engagement)
@@ -17,7 +17,7 @@ By combining these three signals, Mind Measure creates a more complete and accur
 Traditional mental health assessments rely solely on what you say (questionnaires, self-reports). While valuable, they miss important signals:
 
 - **Words can mask feelings**: You might say "I'm fine" while your voice tone, facial expression, or speech patterns suggest otherwise
-- **Self-awareness varies**: Students experiencing stress may not fully recognise the changes in their own behavior
+- **Self-awareness varies**: Students experiencing stress may not fully recognize the changes in their own behavior
 - **Context matters**: Combining multiple signals helps distinguish between temporary mood dips and concerning patterns
 
 Research shows that multimodal AI assessment can detect wellbeing changes **5-7 days earlier** than self-report alone.
@@ -28,7 +28,7 @@ Research shows that multimodal AI assessment can detect wellbeing changes **5-7 
 
 ### Audio Features (23 measurements)
 
-We analyse **how you sound**, not what you say. The audio analysis extracts 23 distinct features from your voice:
+We analyze **how you sound**, not what you say. The audio analysis extracts 23 distinct features from your voice:
 
 **Vocal Energy & Dynamics**
 - **Speech rate**: Are you speaking quickly (potentially anxious) or slowly (potentially low energy)?
@@ -49,7 +49,7 @@ We analyse **how you sound**, not what you say. The audio analysis extracts 23 d
 - A student experiencing depression might show: slower speech rate, lower pitch, reduced pitch variation, longer pauses
 - A student experiencing anxiety might show: faster speech rate, higher pitch, more jitter, shorter breath groups
 
-**Privacy Note:** We analyse acoustic patterns only. The actual words are processed separately for text analysis - we never link specific words to voice characteristics.
+**Privacy Note:** We analyze acoustic patterns only. The actual words are processed separately for text analysis - we never link specific words to voice characteristics.
 
 ---
 
@@ -79,7 +79,7 @@ We analyse **your facial expressions and engagement**, captured through 8-12 sti
 - Improving wellbeing: More genuine smiles, stable eye contact, animated expressions
 
 **Privacy & Ethics:**
-- Images are analysed immediately and **never stored permanently**
+- Images are analyzed immediately and **never stored permanently**
 - Only numerical scores (0-1) are retained, not the images themselves
 - Analysis is done on-device where possible, using AWS Rekognition when cloud processing is needed
 - All processing is HIPAA-compliant with Business Associate Agreement
@@ -182,7 +182,7 @@ This means Mind Measure becomes **more accurate over time** as it learns your pe
 
 ### 1. Early Detection
 
-By analysing multiple signals, Mind Measure can detect wellbeing changes **5-7 days earlier** than self-report questionnaires alone. This early warning allows:
+By analyzing multiple signals, Mind Measure can detect wellbeing changes **5-7 days earlier** than self-report questionnaires alone. This early warning allows:
 - Proactive support before crisis
 - Intervention when most effective
 - Better outcomes for students
@@ -190,7 +190,7 @@ By analysing multiple signals, Mind Measure can detect wellbeing changes **5-7 d
 ### 2. Objective Measurement
 
 Voice and facial patterns provide **objective data** that complements self-report. Students experiencing stress may:
-- Not recognise changes in themselves
+- Not recognize changes in themselves
 - Minimize their struggles
 - Feel pressure to appear "fine"
 
@@ -279,7 +279,7 @@ Behind the scenes:
 - Camera captures 8-12 still images (not visible to student)
 - Microphone records audio (standard for conversation)
 - Text is transcribed from speech
-- All three modalities analysed by AI
+- All three modalities analyzed by AI
 - Score calculated and trends identified
 - Dashboard updated with insights
 
@@ -289,25 +289,33 @@ Behind the scenes:
 
 ## For University Staff
 
-### Dashboard Insights
+### What Universities See
 
-Mind Measure provides university wellbeing teams with:
+Mind Measure is designed as a **student self-monitoring tool**, not an institutional surveillance system. University staff have access to:
 
-**Individual Student View**
-- Current Mind Measure score (0-100)
-- Trend over time (improving, stable, declining)
-- Risk level and contributing factors
-- Suggested interventions when appropriate
+**Aggregate Cohort Data Only**
+- Anonymous wellbeing trends across courses, years, programmes
+- Percentage of students checking in regularly
+- Overall cohort mood trends (no individual identification)
+- Impact measurement for support services effectiveness
 
-**Cohort View**
-- Aggregate wellbeing trends across courses, years, cohorts
-- Early identification of at-risk students
-- Impact measurement for support services
+**What Staff CANNOT See**
+- ❌ Individual student scores or data
+- ❌ Student names linked to wellbeing data
+- ❌ Raw audio, video, or transcripts
+- ❌ Personal check-in history or trends
 
-**Privacy by Design**
-- Staff never see raw audio, video, or transcripts
-- Only see scores, trends, and risk flags
-- Access logged for audit trail
+**Student Privacy is Paramount**
+- Students own their data - it's for their personal insight only
+- Universities only see anonymised, aggregated trends
+- Individual support is student-initiated, not institution-driven
+- No surveillance, no monitoring, no tracking of individuals
+
+**When Students Need Support**
+- Students can **choose** to share their dashboard with wellbeing services
+- This is always opt-in and student-controlled
+- Students can refer themselves if they want help
+- No automated alerts or institutional access to personal data
 
 ---
 
