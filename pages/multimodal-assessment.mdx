@@ -2,7 +2,7 @@
 
 ## What is Multimodal Assessment?
 
-Mind Measure uses a **multimodal assessment** approach to understand student wellbeing. This means we analyze three different types of signals during a brief check-in conversation:
+Mind Measure uses a **multimodal assessment** approach to understand student wellbeing. This means we analyse three different types of signals during a brief check-in conversation:
 
 1. **Audio** - How you sound (voice patterns, speech rhythm, energy)
 2. **Visual** - How you look (facial expressions, engagement)
@@ -17,7 +17,7 @@ By combining these three signals, Mind Measure creates a more complete and accur
 Traditional mental health assessments rely solely on what you say (questionnaires, self-reports). While valuable, they miss important signals:
 
 - **Words can mask feelings**: You might say "I'm fine" while your voice tone, facial expression, or speech patterns suggest otherwise
-- **Self-awareness varies**: Students experiencing stress may not fully recognize the changes in their own behavior
+- **Self-awareness varies**: Students experiencing stress may not fully recognise the changes in their own behavior
 - **Context matters**: Combining multiple signals helps distinguish between temporary mood dips and concerning patterns
 
 Research shows that multimodal AI assessment can detect wellbeing changes **5-7 days earlier** than self-report alone.
@@ -26,9 +26,9 @@ Research shows that multimodal AI assessment can detect wellbeing changes **5-7 
 
 ## The Three Modalities
 
-### 🎤 Audio Features (23 measurements)
+### Audio Features (23 measurements)
 
-We analyze **how you sound**, not what you say. The audio analysis extracts 23 distinct features from your voice:
+We analyse **how you sound**, not what you say. The audio analysis extracts 23 distinct features from your voice:
 
 **Vocal Energy & Dynamics**
 - **Speech rate**: Are you speaking quickly (potentially anxious) or slowly (potentially low energy)?
@@ -49,13 +49,13 @@ We analyze **how you sound**, not what you say. The audio analysis extracts 23 d
 - A student experiencing depression might show: slower speech rate, lower pitch, reduced pitch variation, longer pauses
 - A student experiencing anxiety might show: faster speech rate, higher pitch, more jitter, shorter breath groups
 
-**Privacy Note:** We analyze acoustic patterns only. The actual words are processed separately for text analysis - we never link specific words to voice characteristics.
+**Privacy Note:** We analyse acoustic patterns only. The actual words are processed separately for text analysis - we never link specific words to voice characteristics.
 
 ---
 
-### 📸 Visual Features (18 measurements)
+### Visual Features (18 measurements)
 
-We analyze **your facial expressions and engagement**, captured through 8-12 still images during the 2-minute check-in:
+We analyse **your facial expressions and engagement**, captured through 8-12 still images during the 2-minute check-in:
 
 **Emotional Expression**
 - **Happiness**: Genuine smiles (Duchenne vs. social smiles)
@@ -79,16 +79,16 @@ We analyze **your facial expressions and engagement**, captured through 8-12 sti
 - Improving wellbeing: More genuine smiles, stable eye contact, animated expressions
 
 **Privacy & Ethics:**
-- Images are analyzed immediately and **never stored permanently**
+- Images are analysed immediately and **never stored permanently**
 - Only numerical scores (0-1) are retained, not the images themselves
 - Analysis is done on-device where possible, using AWS Rekognition when cloud processing is needed
 - All processing is HIPAA-compliant with Business Associate Agreement
 
 ---
 
-### 📝 Text Features (16 measurements)
+### Text Features (16 measurements)
 
-We analyze **what you say and how you express yourself**, not just specific keywords:
+We analyse **what you say and how you express yourself**, not just specific keywords:
 
 **Sentiment & Emotion**
 - **Overall sentiment**: Positive, negative, neutral, mixed
@@ -182,7 +182,7 @@ This means Mind Measure becomes **more accurate over time** as it learns your pe
 
 ### 1. Early Detection
 
-By analyzing multiple signals, Mind Measure can detect wellbeing changes **5-7 days earlier** than self-report questionnaires alone. This early warning allows:
+By analysing multiple signals, Mind Measure can detect wellbeing changes **5-7 days earlier** than self-report questionnaires alone. This early warning allows:
 - Proactive support before crisis
 - Intervention when most effective
 - Better outcomes for students
@@ -190,7 +190,7 @@ By analyzing multiple signals, Mind Measure can detect wellbeing changes **5-7 d
 ### 2. Objective Measurement
 
 Voice and facial patterns provide **objective data** that complements self-report. Students experiencing stress may:
-- Not recognize changes in themselves
+- Not recognise changes in themselves
 - Minimize their struggles
 - Feel pressure to appear "fine"
 
@@ -279,7 +279,7 @@ Behind the scenes:
 - Camera captures 8-12 still images (not visible to student)
 - Microphone records audio (standard for conversation)
 - Text is transcribed from speech
-- All three modalities analyzed by AI
+- All three modalities analysed by AI
 - Score calculated and trends identified
 - Dashboard updated with insights
 
