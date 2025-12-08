@@ -1,16 +1,7 @@
 # ADR-002: Lambda Function Architecture for AI Analysis Pipeline
 
-> **Implementation Status**: ✅ COMPLETED - November 28, 2025
-> 
-> The Assessment Engine Lambda architecture is deployed and operational:
-> - 10 Lambda functions deployed via CDK
-> - Step Functions state machine orchestrating parallel analysis
-> - API Gateway serving Assessment Engine endpoints
-> - Processing 23 audio + 18 visual + 16 text features
-> - Output: Mind Measure Score (0-100) with uncertainty and risk levels
-
 ## Status
-**ACCEPTED** - Implemented October 2025, Assessment Engine Deployed November 28, 2025
+**ACCEPTED** - Implemented October 2025
 
 ## Context
 
@@ -28,7 +19,7 @@ The Mind Measure platform requires sophisticated AI analysis of multi-modal data
 ### Constraints
 
 1. **Processing Time**: Maximum 60 seconds per analysis function
-2. **Memory Limits**: Optimise for cost while maintaining performance
+2. **Memory Limits**: Optimize for cost while maintaining performance
 3. **Cold Start**: Minimize cold start impact on user experience
 4. **Security**: Secure handling of sensitive mental health data
 5. **Compliance**: HIPAA-compliant processing and logging
@@ -107,13 +98,13 @@ Assessment Session Creation
 
 ### 1. **Serverless Benefits**
 - **Auto-scaling**: Automatic scaling based on demand
-- **Cost Optimisation**: Pay only for actual execution time
+- **Cost Optimization**: Pay only for actual execution time
 - **No Infrastructure Management**: Focus on business logic
 - **High Availability**: Built-in redundancy and fault tolerance
 
 ### 2. **Function Separation**
 - **Parallel Processing**: Independent analysis functions run simultaneously
-- **Specialized Resources**: Each function optimised for its specific task
+- **Specialized Resources**: Each function optimized for its specific task
 - **Fault Isolation**: Failure in one analysis doesn't affect others
 - **Independent Scaling**: Each function scales based on its own demand
 
@@ -121,9 +112,9 @@ Assessment Session Creation
 - **Rekognition**: Native facial emotion analysis
 - **Comprehend**: Advanced NLP capabilities (future enhancement)
 - **CloudWatch**: Comprehensive monitoring and logging
-- **X-Ray**: Distributed tracing for performance optimisation
+- **X-Ray**: Distributed tracing for performance optimization
 
-### 4. **Performance Optimisation**
+### 4. **Performance Optimization**
 - **Memory Allocation**: Right-sized for each function's requirements
 - **Connection Pooling**: Reuse database connections across invocations
 - **Caching**: In-memory caching for frequently accessed data
@@ -139,7 +130,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
   const startTime = Date.now();
   
   try {
-    // 1. Authentication & Authorisation
+    // 1. Authentication & Authorization
     const user = await verifyJWTToken(event.headers.Authorization);
     
     // 2. Input Validation
@@ -214,7 +205,7 @@ class CircuitBreaker {
 ### Database Integration
 
 ```typescript
-// Optimised database connection
+// Optimized database connection
 class DatabaseConnection {
   private static pool: Pool;
 
@@ -277,7 +268,7 @@ Endpoints:
 
 ## Security Considerations
 
-### Authentication & Authorisation
+### Authentication & Authorization
 ```typescript
 // JWT token verification
 async function verifyJWTToken(authHeader: string): Promise<CognitoUser> {
@@ -373,7 +364,7 @@ export const handler = AWSXRay.captureAsyncFunc('analyze-audio', async (event) =
 });
 ```
 
-## Performance Optimisation
+## Performance Optimization
 
 ### Cold Start Mitigation
 ```typescript
@@ -403,7 +394,7 @@ ProvisionedConcurrency:
   analyze-audio: 3          # Keep 3 warm instances
 ```
 
-### Memory Optimisation
+### Memory Optimization
 ```typescript
 // Memory usage monitoring
 process.on('beforeExit', () => {
@@ -416,11 +407,11 @@ process.on('beforeExit', () => {
 });
 ```
 
-## Cost Optimisation
+## Cost Optimization
 
 ### Function Sizing
 ```yaml
-# Optimised memory allocation based on profiling
+# Optimized memory allocation based on profiling
 analyze-audio:
   Memory: 1024 MB  # Optimal for audio processing
   Cost: ~$0.0000166667 per 100ms
@@ -438,7 +429,7 @@ calculate-mind-measure:
   Cost: ~$0.0000166667 per 100ms
 ```
 
-### Execution Time Optimisation
+### Execution Time Optimization
 ```typescript
 // Parallel processing within functions
 async function processAnalysis(data: any) {
@@ -634,7 +625,7 @@ functions:
 1. **Custom Dashboards**: Real-time analysis pipeline monitoring
 2. **Alerting**: Proactive alerts for performance degradation
 3. **Cost Tracking**: Detailed cost analysis per university
-4. **Performance Optimisation**: Continuous optimisation based on metrics
+4. **Performance Optimization**: Continuous optimization based on metrics
 
 ## Related ADRs
 - [ADR-001: AWS Migration](#adr-001-aws-migration)

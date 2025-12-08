@@ -1,6 +1,8 @@
 {
   "001-aws-migration": "ADR-001: AWS Migration",
-  "002-lambda-architecture": "ADR-002: Lambda Architecture"
+  "002-lambda-architecture": "ADR-002: Lambda Architecture",
+  "003-elevenlabs-sdk-migration": "ADR-003: ElevenLabs SDK Migration",
+  "004-baseline-component-split": "ADR-004: Baseline Component Split"
 }
 
 

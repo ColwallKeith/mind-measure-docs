@@ -1,16 +1,7 @@
 # ADR-001: Migration from Supabase to AWS
 
-> **Migration Status**: ✅ COMPLETED - November 2025
-> 
-> This migration is complete. The platform now runs entirely on AWS infrastructure:
-> - Database: Aurora Serverless v2 (PostgreSQL)
-> - Authentication: AWS Cognito
-> - Storage: AWS S3
-> - Compute: AWS Lambda + Vercel serverless functions
-> - Assessment Engine: Deployed November 28, 2025
-
 ## Status
-**ACCEPTED** - Implemented October 2025, Completed November 2025
+**ACCEPTED** - Implemented October 2025
 
 ## Context
 
@@ -57,7 +48,7 @@ Mind Measure was initially built on Supabase for rapid prototyping and developme
 - Detailed audit logging with CloudTrail
 - Data residency control (EU-West-2 for GDPR compliance)
 
-### 2. **Scalability & Cost Optimisation**
+### 2. **Scalability & Cost Optimization**
 - Aurora Serverless v2: Pay-per-use scaling (0.5-16 ACUs)
 - Lambda functions: Pay-per-invocation with automatic scaling
 - S3: Cost-effective storage with lifecycle policies
@@ -106,7 +97,7 @@ Mind Measure was initially built on Supabase for rapid prototyping and developme
 
 ### Phase 4: Testing & Validation (Week 4)
 - [x] End-to-end testing of all user flows
-- [x] Performance testing and optimisation
+- [x] Performance testing and optimization
 - [x] Security testing and penetration testing
 - [x] Compliance validation and documentation
 - [x] Disaster recovery testing
@@ -185,7 +176,7 @@ calculate-mind-measure:
 ### Positive
 - **Enhanced Security**: HIPAA-compliant infrastructure with comprehensive audit logging
 - **Improved Scalability**: Auto-scaling database and serverless functions
-- **Cost Optimisation**: Pay-per-use model reduces costs during low usage periods
+- **Cost Optimization**: Pay-per-use model reduces costs during low usage periods
 - **Advanced Capabilities**: Native AI/ML integrations for enhanced analysis
 - **Better Compliance**: EU data residency and comprehensive compliance features
 - **Operational Excellence**: Enterprise-grade monitoring, backup, and disaster recovery
@@ -213,7 +204,7 @@ calculate-mind-measure:
 ### Cost Metrics
 - **Database Costs**: 30-50% reduction compared to fixed Supabase pricing
 - **Compute Costs**: Pay-per-use Lambda functions reduce idle costs
-- **Storage Costs**: S3 lifecycle policies optimise long-term storage costs
+- **Storage Costs**: S3 lifecycle policies optimize long-term storage costs
 
 ### Security Metrics
 - **Compliance**: 100% HIPAA compliance across all services
