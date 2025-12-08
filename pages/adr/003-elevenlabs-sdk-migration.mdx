@@ -29,10 +29,10 @@ The Mind Measure mobile application uses ElevenLabs' conversational AI for basel
 **We will migrate all ElevenLabs integrations to use `@elevenlabs/react` with the `useConversation` hook.**
 
 Key changes:
-1. Replace `@11labs/client` dependency with `@elevenlabs/react`
-2. Replace manual `Conversation.startSession()` with `useConversation` hook
-3. Use React hook patterns for event handling
-4. Leverage automatic cleanup and connection management
+- Replace `@11labs/client` dependency with `@elevenlabs/react`
+- Replace manual `Conversation.startSession()` with `useConversation` hook
+- Use React hook patterns for event handling
+- Leverage automatic cleanup and connection management
 
 **Code pattern:**
 
@@ -123,25 +123,25 @@ const sessionId = await conversation.startSession({
 
 **If this decision needs to be reverted:**
 
-1. **First**, check if `@11labs/client` is still installed:
+- **First**, check if `@11labs/client` is still installed:
    ```bash
    npm list @11labs/client
    ```
    
-2. **If not**, reinstall it:
+- **If not**, reinstall it:
    ```bash
    npm install @11labs/client
    npm uninstall @elevenlabs/react
    ```
 
-3. **For each file** using the new SDK:
+- **For each file** using the new SDK:
    - Find all `import { useConversation } from '@elevenlabs/react'`
    - Replace with `import { Conversation } from '@11labs/client'`
    - Replace hook usage with manual session management
    - Add refs to store conversation instance
    - Manually handle cleanup in useEffect
 
-4. **Verify the rollback**:
+- **Verify the rollback**:
    ```bash
    npm run build
    npm run check-layout  # Should fail - update this check!
@@ -164,7 +164,7 @@ const sessionId = await conversation.startSession({
 
 **Key patterns to follow:**
 
-1. **Always use the hook at component level:**
+- **Always use the hook at component level:**
    ```typescript
    function MyComponent() {
      const conversation = useConversation({ ... });
@@ -172,7 +172,7 @@ const sessionId = await conversation.startSession({
    }
    ```
 
-2. **Store session ID in state:**
+- **Store session ID in state:**
    ```typescript
    const [sessionId, setSessionId] = useState<string | null>(null);
    
@@ -182,14 +182,14 @@ const sessionId = await conversation.startSession({
    };
    ```
 
-3. **Always end session on cleanup:**
+- **Always end session on cleanup:**
    ```typescript
    const handleFinish = async () => {
      await conversation.endSession();
    };
    ```
 
-4. **Check conversation status:**
+- **Check conversation status:**
    ```typescript
    if (conversation.status === 'connected') {
      // Show active UI

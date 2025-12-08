@@ -9,22 +9,22 @@ Mind Measure was initially built on Supabase for rapid prototyping and developme
 
 ### Problems with Supabase Architecture
 
-1. **HIPAA Compliance Limitations**
+- **HIPAA Compliance Limitations**
    - Limited Business Associate Agreement (BAA) coverage
    - Insufficient audit logging capabilities
    - Limited control over data residency and encryption
 
-2. **Scalability Concerns**
+- **Scalability Concerns**
    - Fixed pricing model not suitable for variable university loads
    - Limited auto-scaling capabilities for compute resources
    - Connection pooling limitations for high-concurrency scenarios
 
-3. **Multi-tenancy Challenges**
+- **Multi-tenancy Challenges**
    - Difficult to implement university-specific data isolation
    - Limited customization for different compliance requirements
    - Complex backup and recovery for individual universities
 
-4. **Integration Limitations**
+- **Integration Limitations**
    - Limited AI/ML service integrations
    - Restricted serverless function capabilities
    - Limited real-time processing options
@@ -215,16 +215,16 @@ calculate-mind-measure:
 ## Rollback Plan
 
 ### Emergency Rollback (< 4 hours)
-1. **DNS Failover**: Point domains back to Supabase infrastructure
-2. **Database Sync**: Restore from last Supabase backup
-3. **Authentication**: Revert to Supabase Auth
-4. **File Storage**: Redirect to Supabase Storage
+- **DNS Failover**: Point domains back to Supabase infrastructure
+- **Database Sync**: Restore from last Supabase backup
+- **Authentication**: Revert to Supabase Auth
+- **File Storage**: Redirect to Supabase Storage
 
 ### Planned Rollback (< 24 hours)
-1. **Data Synchronization**: Full data sync from AWS to Supabase
-2. **Application Revert**: Deploy previous application version
-3. **DNS Update**: Update all DNS records
-4. **Verification**: Complete end-to-end testing
+- **Data Synchronization**: Full data sync from AWS to Supabase
+- **Application Revert**: Deploy previous application version
+- **DNS Update**: Update all DNS records
+- **Verification**: Complete end-to-end testing
 
 ## Risk Mitigation
 

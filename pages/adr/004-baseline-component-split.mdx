@@ -10,9 +10,9 @@
 
 The baseline assessment flow has two distinct screens:
 
-1. **Welcome Screen**: Introduces the user to baseline assessment, explains what it measures, shows benefits
-2. **"What to Expect" Screen**: Shows 5 specific bullet points about the assessment process, has the "Start" button
-3. **Conversation Screen**: The actual ElevenLabs conversation with Jodie
+- **Welcome Screen**: Introduces the user to baseline assessment, explains what it measures, shows benefits
+- **"What to Expect" Screen**: Shows 5 specific bullet points about the assessment process, has the "Start" button
+- **Conversation Screen**: The actual ElevenLabs conversation with Jodie
 
 Originally, all three screens were managed within a single `BaselineAssessmentSDK.tsx` component using internal state to toggle between them. This created a large component (~800 lines) with multiple responsibilities.
 
@@ -32,13 +32,13 @@ Originally, all three screens were managed within a single `BaselineAssessmentSD
 
 **We will split the baseline assessment into two separate components:**
 
-1. **`BaselineWelcome.tsx`**: 
+- **`BaselineWelcome.tsx`**: 
    - Exports `BaselineAssessmentScreen` component
    - Manages internal state for Welcome → "What to Expect" transition
    - No ElevenLabs SDK dependencies
    - Takes `onStartAssessment` callback prop
 
-2. **`BaselineAssessmentSDK.tsx`**:
+- **`BaselineAssessmentSDK.tsx`**:
    - Handles only the conversation screen
    - Uses ElevenLabs SDK
    - Manages conversation state and assessment data
@@ -148,26 +148,26 @@ case 'baseline_assessment':
 
 **If this decision needs to be reverted:**
 
-1. **Get the original combined component**:
+- **Get the original combined component**:
    ```bash
    git log --all --full-history -- "**/BaselineAssessmentSDK.tsx" | head -20
    # Find commit before the split
    git show <commit>:src/components/mobile/BaselineAssessmentSDK.tsx > BaselineAssessmentSDK.backup.tsx
    ```
 
-2. **Restore the monolithic component**:
+- **Restore the monolithic component**:
    - Copy welcome screen JSX from `BaselineWelcome.tsx` back into `BaselineAssessmentSDK.tsx`
    - Add back internal state for screen toggling
    - Remove `onStartAssessment` prop, use internal state instead
 
-3. **Update MobileAppStructure**:
+- **Update MobileAppStructure**:
    ```typescript
    case 'baseline_welcome':
      // Change to render BaselineAssessmentSDK directly
      return <BaselineAssessmentSDK onComplete={...} />;
    ```
 
-4. **Delete the separate file**:
+- **Delete the separate file**:
    ```bash
    git rm src/components/mobile/BaselineWelcome.tsx
    ```
@@ -188,7 +188,7 @@ case 'baseline_assessment':
 
 **Key patterns to follow:**
 
-1. **BaselineWelcome manages internal transitions:**
+- **BaselineWelcome manages internal transitions:**
    ```typescript
    const [showWelcome, setShowWelcome] = useState(true);
    
@@ -198,7 +198,7 @@ case 'baseline_assessment':
    return <WhatToExpectUI onStart={onStartAssessment} />;
    ```
 
-2. **MobileAppStructure handles cross-component navigation:**
+- **MobileAppStructure handles cross-component navigation:**
    ```typescript
    const [onboardingScreen, setOnboardingScreen] = useState('baseline_welcome');
    
@@ -206,7 +206,7 @@ case 'baseline_assessment':
    // baseline_assessment → null (dashboard)
    ```
 
-3. **Each component is self-contained:**
+- **Each component is self-contained:**
    - BaselineWelcome: Own logo, title, cards
    - BaselineAssessmentSDK: Own header, conversation UI
 

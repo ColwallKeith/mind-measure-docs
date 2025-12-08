@@ -6,25 +6,25 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 ### Onboard a University
 
-1. **Create Institution Record**
+- **Create Institution Record**
    ```sql
    INSERT INTO institutions (name, slug) 
    VALUES ('University Name', 'university-slug');
    ```
 
-2. **Configure Allowed Domains**
+- **Configure Allowed Domains**
    ```sql
    INSERT INTO allowed_domains (institution_id, domain) 
    VALUES (institution_id, 'university.edu');
    ```
 
-3. **Set Up Admin User**
+- **Set Up Admin User**
    ```sql
    INSERT INTO memberships (user_id, institution_id, role) 
    VALUES (admin_user_id, institution_id, 'admin');
    ```
 
-4. **Configure Institution Settings**
+- **Configure Institution Settings**
    - Upload institution branding
    - Set up mental health resources
    - Configure assessment parameters
@@ -32,7 +32,7 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 ### Promote a User to Admin
 
-1. **Verify User Identity**
+- **Verify User Identity**
    ```sql
    -- Query Cognito user via AWS CLI or application code
    -- Or check profiles table:
@@ -40,20 +40,20 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
    WHERE display_name LIKE '%user@university.edu%';
    ```
 
-2. **Update Membership Role**
+- **Update Membership Role**
    ```sql
    UPDATE memberships 
    SET role = 'admin' 
    WHERE user_id = user_id AND institution_id = institution_id;
    ```
 
-3. **Grant Additional Permissions**
+- **Grant Additional Permissions**
    - Access to user management
    - Resource management capabilities
    - Reporting and analytics access
    - System configuration rights
 
-4. **Notify User**
+- **Notify User**
    - Send email confirmation
    - Provide admin dashboard access
    - Share admin documentation
@@ -61,22 +61,22 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 ### Promote a User to Superadmin
 
-1. **Verify Superuser Authority**
+- **Verify Superuser Authority**
    - Confirm authorisation from system administrator
    - Document promotion reason
    - Update audit logs
 
-2. **Execute Promotion Function**
+- **Execute Promotion Function**
    ```sql
    SELECT make_superuser_by_email('admin@mindmeasure.co.uk');
    ```
 
-3. **Verify Permissions**
+- **Verify Permissions**
    ```sql
    SELECT * FROM memberships WHERE user_id = user_id AND role = 'superadmin';
    ```
 
-4. **Update Documentation**
+- **Update Documentation**
    - Record in admin user list
    - Update contact information
    - Notify other superadmins
@@ -85,7 +85,7 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 ### Rotate Keys
 
-1. **Generate New Keys**
+- **Generate New Keys**
    ```bash
    # Generate new JWT secret (if using custom JWT)
    openssl rand -base64 32
@@ -98,7 +98,7 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
      --region eu-west-2
    ```
 
-2. **Update Environment Variables**
+- **Update Environment Variables**
    ```bash
    # Update Aurora credentials in AWS Secrets Manager
    aws secretsmanager update-secret \
@@ -110,7 +110,7 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
    vercel env add DB_PASSWORD production
    ```
 
-3. **Restart Services**
+- **Restart Services**
    ```bash
    # Lambda functions auto-update on next invocation
    # Vercel functions restart automatically
@@ -123,7 +123,7 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
      --region eu-west-2
    ```
 
-4. **Verify Functionality**
+- **Verify Functionality**
    - Test authentication
    - Verify API access
    - Check admin dashboard
@@ -131,12 +131,12 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 ### Database Maintenance
 
-1. **Run Database Vacuum**
+- **Run Database Vacuum**
    ```sql
    VACUUM ANALYZE;
    ```
 
-2. **Check Index Usage**
+- **Check Index Usage**
    ```sql
    SELECT schemaname, tablename, attname, n_distinct, correlation
    FROM pg_stats
@@ -144,7 +144,7 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
    ORDER BY tablename, attname;
    ```
 
-3. **Monitor Query Performance**
+- **Monitor Query Performance**
    ```sql
    SELECT query, calls, total_time, mean_time
    FROM pg_stat_statements
@@ -152,26 +152,26 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
    LIMIT 10;
    ```
 
-4. **Update Statistics**
+- **Update Statistics**
    ```sql
    ANALYZE;
    ```
 
 ### Backup and Recovery
 
-1. **Create Manual Backup**
+- **Create Manual Backup**
    ```bash
    # Create database dump
    pg_dump -h db_host -U postgres -d mind_measure > backup_$(date +%Y%m%d).sql
    ```
 
-2. **Verify Backup Integrity**
+- **Verify Backup Integrity**
    ```bash
    # Test backup restoration
    psql -h test_host -U postgres -d test_db < backup_file.sql
    ```
 
-3. **Test Recovery Procedure**
+- **Test Recovery Procedure**
    - Simulate data loss scenario
    - Restore from backup
    - Verify data integrity
@@ -181,31 +181,31 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 ### Incident Response
 
-1. **Initial Assessment**
+- **Initial Assessment**
    - Identify security incident type
    - Assess potential impact
    - Document initial findings
    - Notify relevant stakeholders
 
-2. **Containment**
+- **Containment**
    - Isolate affected systems
    - Preserve evidence
    - Prevent further damage
    - Implement temporary fixes
 
-3. **Investigation**
+- **Investigation**
    - Analyze logs and data
    - Identify attack vectors
    - Determine scope of compromise
    - Document findings
 
-4. **Recovery**
+- **Recovery**
    - Restore systems from clean backups
    - Implement security patches
    - Update security configurations
    - Monitor for recurring issues
 
-5. **Post-Incident**
+- **Post-Incident**
    - Conduct lessons learned review
    - Update security procedures
    - Implement additional safeguards
@@ -213,7 +213,7 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 ### Access Review
 
-1. **User Access Audit**
+- **User Access Audit**
    ```sql
    -- Query profiles and memberships
    SELECT p.display_name, p.user_id, m.role, i.name as institution
@@ -228,13 +228,13 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
      --region eu-west-2
    ```
 
-2. **Permission Validation**
+- **Permission Validation**
    - Review user roles and permissions
    - Verify access appropriateness
    - Document access decisions
    - Update access controls
 
-3. **Clean Up**
+- **Clean Up**
    - Remove inactive users
    - Revoke unnecessary permissions
    - Update role assignments
@@ -244,7 +244,7 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 ### Health Checks
 
-1. **Database Health**
+- **Database Health**
    ```sql
    SELECT 
      pg_database_size('mind_measure') as db_size,
@@ -252,13 +252,13 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
      (SELECT count(*) FROM pg_stat_activity WHERE state = 'active') as active_queries;
    ```
 
-2. **Application Health**
+- **Application Health**
    - Check API response times
    - Monitor error rates
    - Verify authentication flows
    - Test critical user journeys
 
-3. **Infrastructure Health**
+- **Infrastructure Health**
    - Server resource utilization
    - Network connectivity
    - Storage capacity
@@ -266,19 +266,19 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 ### Alert Configuration
 
-1. **Critical Alerts**
+- **Critical Alerts**
    - Database connection failures
    - Authentication system down
    - High error rates
    - Security incidents
 
-2. **Warning Alerts**
+- **Warning Alerts**
    - High resource utilization
    - Slow query performance
    - Backup failures
    - Unusual access patterns
 
-3. **Info Alerts**
+- **Info Alerts**
    - Successful deployments
    - Scheduled maintenance
    - User activity summaries
@@ -288,19 +288,19 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 ### Production Deployment
 
-1. **Pre-Deployment**
+- **Pre-Deployment**
    - Run full test suite
    - Verify staging environment
    - Review change documentation
    - Notify stakeholders
 
-2. **Deployment**
+- **Deployment**
    - Deploy to production
    - Monitor deployment logs
    - Verify functionality
    - Check error rates
 
-3. **Post-Deployment**
+- **Post-Deployment**
    - Monitor system health
    - Verify user functionality
    - Check performance metrics
@@ -308,19 +308,19 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 ### Rollback Procedures
 
-1. **Identify Rollback Need**
+- **Identify Rollback Need**
    - Monitor error rates
    - Check user reports
    - Review system logs
    - Assess impact
 
-2. **Execute Rollback**
+- **Execute Rollback**
    - Revert to previous version
    - Restore database if needed
    - Verify system stability
    - Notify users if necessary
 
-3. **Post-Rollback**
+- **Post-Rollback**
    - Investigate root cause
    - Plan fix for next deployment
    - Update procedures
@@ -330,19 +330,19 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 ### Data Privacy Compliance
 
-1. **GDPR Compliance**
+- **GDPR Compliance**
    - Data subject access requests
    - Right to deletion
    - Data portability
    - Consent management
 
-2. **HIPAA Compliance**
+- **HIPAA Compliance**
    - Protected health information handling
    - Access controls
    - Audit trails
    - Breach notification
 
-3. **Institutional Privacy**
+- **Institutional Privacy**
    - Student data protection
    - FERPA compliance
    - Institutional policies
@@ -350,19 +350,19 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 ### Audit Procedures
 
-1. **Regular Audits**
+- **Regular Audits**
    - User access reviews
    - Data usage audits
    - Security configuration reviews
    - Compliance assessments
 
-2. **Audit Documentation**
+- **Audit Documentation**
    - Audit findings
    - Remediation plans
    - Compliance status
    - Improvement recommendations
 
-3. **Audit Follow-up**
+- **Audit Follow-up**
    - Implement recommendations
    - Monitor compliance
    - Update procedures

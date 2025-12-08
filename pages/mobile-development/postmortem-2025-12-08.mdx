@@ -8,18 +8,18 @@
 
 ### The Perfect Storm
 
-1. **Incompatible SDK Migration in Git History**
+- **Incompatible SDK Migration in Git History**
    - Commit on Nov 25th used `@11labs/client` (old SDK)
    - Commit on Dec 3rd migrated to `@elevenlabs/react` (new SDK)
    - These two SDKs have COMPLETELY different APIs
    - Rollback attempted to mix code from both eras
 
-2. **Component Architecture Changed**
+- **Component Architecture Changed**
    - Nov 25th: "What to expect" screen embedded in `BaselineAssessmentSDK.tsx`
    - Dec 3rd: Extracted to separate `BaselineWelcome.tsx` component
    - Rollback didn't account for this refactoring
 
-3. **No Automated Verification**
+- **No Automated Verification**
    - No tests checking critical UI text ("Five questions" vs "Six questions")
    - No checks preventing incompatible SDK imports
    - No visual regression testing
@@ -137,19 +137,19 @@ Added version comments to critical components:
 
 ## Key Lessons
 
-1. **Rollbacks are not simple "undo" operations**
+- **Rollbacks are not simple "undo" operations**
    - They can mix incompatible code from different architectural eras
    - Always test rollbacks in a branch first
 
-2. **Critical UI elements need automated verification**
+- **Critical UI elements need automated verification**
    - "Five questions" vs "Six questions" is easy to miss manually
    - SDK imports are invisible until build time
 
-3. **Git history needs context**
+- **Git history needs context**
    - Commits should document breaking changes
    - ADRs explain WHY architectural decisions were made
 
-4. **Manual testing is insufficient**
+- **Manual testing is insufficient**
    - Humans miss subtle layout shifts
    - Visual regression tests catch pixel-perfect differences
 

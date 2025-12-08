@@ -228,23 +228,23 @@ npm run test:e2e
 **Example**: Reverting from `@elevenlabs/react` back to `@11labs/client`
 
 **Special Steps:**
-1. Check ALL files that import ElevenLabs SDK:
+- Check ALL files that import ElevenLabs SDK:
    ```bash
    rg "elevenlabs" -t tsx -t ts
    ```
 
-2. Verify old SDK is in package.json:
+- Verify old SDK is in package.json:
    ```bash
    npm list @11labs/client
    ```
 
-3. If missing, reinstall:
+- If missing, reinstall:
    ```bash
    npm install @11labs/client@<version>
    npm uninstall @elevenlabs/react
    ```
 
-4. Update check-layout.js:
+- Update check-layout.js:
    - Remove checks for new SDK
    - Add checks for old SDK
 
@@ -258,21 +258,21 @@ npm run test:e2e
 **Example**: Reverting `BaselineWelcome.tsx` split back to monolithic `BaselineAssessmentSDK.tsx`
 
 **Special Steps:**
-1. Get the old combined component:
+- Get the old combined component:
    ```bash
    git show <pre-split-commit>:src/components/mobile/BaselineAssessmentSDK.tsx > temp-combined.tsx
    ```
 
-2. Compare what's different:
+- Compare what's different:
    ```bash
    diff temp-combined.tsx src/components/mobile/BaselineAssessmentSDK.tsx
    ```
 
-3. Merge the welcome screen logic back in
+- Merge the welcome screen logic back in
 
-4. Update imports in `MobileAppStructure.tsx`
+- Update imports in `MobileAppStructure.tsx`
 
-5. Delete the split file:
+- Delete the split file:
    ```bash
    git rm src/components/mobile/BaselineWelcome.tsx
    ```
@@ -280,15 +280,15 @@ npm run test:e2e
 ### Scenario C: Rolling Back Database Changes
 
 **Special Steps:**
-1. Run down migrations FIRST:
+- Run down migrations FIRST:
    ```bash
    # Before git reset!
    npm run migrate:down
    ```
 
-2. Then perform git rollback
+- Then perform git rollback
 
-3. Verify database schema matches code
+- Verify database schema matches code
 
 ---
 

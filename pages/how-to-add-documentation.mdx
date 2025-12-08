@@ -10,10 +10,10 @@ This guide explains how to safely add new documentation to the Mind Measure docu
 - **Domain**: `docs.mindmeasure.co.uk` points to the `docs` Vercel project
 
 ##  IMPORTANT: What NOT to Do
-1. **Never add emojis or icons** to documentation headers - keep it professional
-2. **Never create duplicate files** (e.g., `architecture 3.mdx`)
-3. **Never add authentication code** to the docs site
-4. **Never deploy to the wrong Vercel project** (`mind_measure_docs` has duplicates)
+- **Never add emojis or icons** to documentation headers - keep it professional
+- **Never create duplicate files** (e.g., `architecture 3.mdx`)
+- **Never add authentication code** to the docs site
+- **Never deploy to the wrong Vercel project** (`mind_measure_docs` has duplicates)
 
 ## Step-by-Step Process
 
@@ -137,9 +137,9 @@ git push
 
 ### Issue: Duplicate menu items
 **Solution**: 
-1. Check for duplicate files (e.g., `page.mdx` and `page 2.mdx`)
-2. Delete duplicates
-3. Clear Vercel cache: `rm -rf .vercel && vercel --prod`
+- Check for duplicate files (e.g., `page.mdx` and `page 2.mdx`)
+- Delete duplicates
+- Clear Vercel cache: `rm -rf .vercel && vercel --prod`
 
 ### Issue: Emojis appearing in navigation
 **Solution**: Remove all emojis from MDX headers:
@@ -150,9 +150,9 @@ git push
 
 ### Issue: Site broken after deployment
 **Solution**:
-1. Check Vercel deployment logs
-2. Revert to last working commit
-3. Redeploy: `vercel --prod`
+- Check Vercel deployment logs
+- Revert to last working commit
+- Redeploy: `vercel --prod`
 
 ### Issue: Wrong Vercel project
 **Solution**: Ensure `.vercel/project.json` contains:
@@ -179,8 +179,8 @@ Brief description of what this section covers.
 - Feature 2
 
 ## Getting Started
-1. Step 1
-2. Step 2
+- Step 1
+- Step 2
 
 ## Next Steps
 - [Sub-page 1](./sub-page-1)
@@ -238,14 +238,14 @@ Additional content...
 
 If something breaks:
 
-1. **Identify last working deployment** in Vercel dashboard
-2. **Revert to that deployment**:
+- **Identify last working deployment** in Vercel dashboard
+- **Revert to that deployment**:
    ```bash
    # Find the deployment ID from Vercel dashboard
    vercel rollback [deployment-url]
    ```
-3. **Fix issues locally** before redeploying
-4. **Test thoroughly** before pushing again
+- **Fix issues locally** before redeploying
+- **Test thoroughly** before pushing again
 
 ## Contact & Support
 

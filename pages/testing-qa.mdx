@@ -11,11 +11,11 @@ Mind Measure uses a comprehensive testing and quality assurance system to preven
 
 After a critical incident on December 8, 2025, we implemented a multi-layered prevention system that includes:
 
-1. **Automated Layout Verification** - Runs on every deployment
-2. **Visual Regression Testing** - Catches UI changes automatically
-3. **Pre-Commit Hooks** - Blocks problematic code before it's committed
-4. **Architecture Decision Records** - Documents major technical decisions
-5. **Safe Rollback Procedures** - Prevents dangerous rollbacks
+- **Automated Layout Verification** - Runs on every deployment
+- **Visual Regression Testing** - Catches UI changes automatically
+- **Pre-Commit Hooks** - Blocks problematic code before it's committed
+- **Architecture Decision Records** - Documents major technical decisions
+- **Safe Rollback Procedures** - Prevents dangerous rollbacks
 
 ## Quick Reference
 
@@ -42,11 +42,11 @@ npm run test:ui
 
 Before deploying to production:
 
-1. ✅ Run `npm run check-layout` - Verifies critical UI elements
-2. ✅ Run `npm run test:visual` - Checks for visual regressions
-3. ✅ Run `npm run test:e2e` - Validates critical flows
-4. ✅ Check for linter errors
-5. ✅ Review git diff for unintended changes
+- ✅ Run `npm run check-layout` - Verifies critical UI elements
+- ✅ Run `npm run test:visual` - Checks for visual regressions
+- ✅ Run `npm run test:e2e` - Validates critical flows
+- ✅ Check for linter errors
+- ✅ Review git diff for unintended changes
 
 ## Testing Infrastructure
 
@@ -281,19 +281,19 @@ npm run test:visual -- --update-snapshots
 
 ### Writing New Tests
 
-1. **Focus on critical user flows** - Don't test everything, test what matters
-2. **Use descriptive test names** - "shows exactly five questions" not "test1"
-3. **Allow for minor differences** - Use `maxDiffPixels` for visual tests
-4. **Test responsiveness** - Include mobile viewport tests
-5. **Document expected behavior** - Add comments explaining WHY
+- **Focus on critical user flows** - Don't test everything, test what matters
+- **Use descriptive test names** - "shows exactly five questions" not "test1"
+- **Allow for minor differences** - Use `maxDiffPixels` for visual tests
+- **Test responsiveness** - Include mobile viewport tests
+- **Document expected behavior** - Add comments explaining WHY
 
 ### Maintaining Tests
 
-1. **Update baselines after intentional changes** - Don't ignore failing tests
-2. **Review visual diffs carefully** - Ensure changes are intentional
-3. **Keep tests fast** - Mock external APIs, use small datasets
-4. **Run tests locally before pushing** - Don't rely only on CI
-5. **Fix flaky tests immediately** - Flaky tests erode confidence
+- **Update baselines after intentional changes** - Don't ignore failing tests
+- **Review visual diffs carefully** - Ensure changes are intentional
+- **Keep tests fast** - Mock external APIs, use small datasets
+- **Run tests locally before pushing** - Don't rely only on CI
+- **Fix flaky tests immediately** - Flaky tests erode confidence
 
 ### Test Coverage Goals
 

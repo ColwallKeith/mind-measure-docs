@@ -99,8 +99,8 @@ Use @elevenlabs/react with useConversation hook for all ElevenLabs integrations.
 
 ## Rollback Safety
 If reverting commits after this date, ensure:
-1. Only revert files that DON'T import @elevenlabs/react
-2. If you must revert a file with @elevenlabs/react, you MUST also revert all its dependencies
+- Only revert files that DON'T import @elevenlabs/react
+- If you must revert a file with @elevenlabs/react, you MUST also revert all its dependencies
 ```
 
 ### 4. Pre-Commit Layout Checks
@@ -320,25 +320,25 @@ test.describe('Baseline Assessment Flow', () => {
 
 ## Immediate Actions
 
-1. **Install Testing Tools** (30 mins):
+- **Install Testing Tools** (30 mins):
    ```bash
    npm install -D @playwright/test
    npx playwright install
    ```
 
-2. **Create First Visual Test** (1 hour):
+- **Create First Visual Test** (1 hour):
    - Baseline welcome screen
    - Baseline conversation UI
    - Dashboard with scores
 
-3. **Set Up Pre-Commit Hook** (30 mins):
+- **Set Up Pre-Commit Hook** (30 mins):
    ```bash
    npm install -D husky
    npx husky install
    npx husky add .husky/pre-commit "npm run check-critical-layout"
    ```
 
-4. **Document Current State** (30 mins):
+- **Document Current State** (30 mins):
    - Create ADR for @elevenlabs/react migration
    - Tag current commit as `stable-baseline-v2.0`
    - Take screenshots of all screens
