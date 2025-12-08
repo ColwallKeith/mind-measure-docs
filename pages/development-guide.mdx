@@ -35,13 +35,13 @@ Critical rules:
 
 Before ANY major work:
 
-1. Read `DEVELOPMENT_PROTOCOL_MASTER.md` first
-2. Read ALL relevant documentation
-3. Understand existing architecture - never assume
-4. Ask clarifying questions
-5. Get explicit approval for architectural changes
-6. Test frequently during development
-7. Deploy incrementally
+- Read `DEVELOPMENT_PROTOCOL_MASTER.md` first
+- Read ALL relevant documentation
+- Understand existing architecture - never assume
+- Ask clarifying questions
+- Get explicit approval for architectural changes
+- Test frequently during development
+- Deploy incrementally
 
 This protocol was created after 2 days of lost work due to architectural mistakes.
 
@@ -123,20 +123,20 @@ export VITE_DB_NAME=mindmeasure
 Wait for explicit user confirmation before proceeding.
 
 ```bash
-# 1. Set environment variables
-# 2. Build
+# Set environment variables first
+# Then build
 npm run build
 
-# 3. Deploy to Vercel
+# Deploy to Vercel
 npx vercel --prod
 
-# 4. Alias domain
+# Alias domain
 npx vercel alias mobile.mindmeasure.app
 
-# 5. Sync to iOS
+# Sync to iOS
 npx cap sync ios
 
-# 6. Test on device
+# Test on device
 npx cap run ios
 ```
 
@@ -223,12 +223,12 @@ Mobile App
 **Status**: Schema pending deployment (password issue)
 
 **Tables** (in `assessment_engine` schema):
-1. `check_ins` - Main check-in records
-2. `audio_analysis` - 23 audio features
-3. `visual_analysis` - 18 visual features
-4. `text_analysis` - 16 text features
-5. `fusion_results` - Final Mind Measure scores
-6. `user_baselines` - Personal baseline data
+- `check_ins` - Main check-in records
+- `audio_analysis` - 23 audio features
+- `visual_analysis` - 18 visual features
+- `text_analysis` - 16 text features
+- `fusion_results` - Final Mind Measure scores
+- `user_baselines` - Personal baseline data
 
 **Migration**: `assessment-engine/migrations/checkin-pipeline-v2.sql`
 
@@ -322,11 +322,11 @@ npx cdk destroy --force
 ### Mobile App Deployment
 
 **Pre-deployment:**
-1. Read development protocol
-2. Verify production status
-3. Set environment variables
-4. Ask: "Ready to deploy? This will take 5-6 minutes."
-5. Wait for confirmation
+- Read development protocol
+- Verify production status
+- Set environment variables
+- Ask: "Ready to deploy? This will take 5-6 minutes."
+- Wait for confirmation
 
 **Deployment:**
 ```bash
@@ -413,11 +413,11 @@ aws ce get-cost-and-usage \
 ### Mobile App Issues
 
 **Immediate actions:**
-1. STOP - Don't make more changes
-2. ROLLBACK - Redeploy last known good version
-3. CHECK LOGS - Vercel + CloudWatch
-4. VERIFY - Test with device
-5. DOCUMENT - What broke and why
+- STOP - Don't make more changes
+- ROLLBACK - Redeploy last known good version
+- CHECK LOGS - Vercel + CloudWatch
+- VERIFY - Test with device
+- DOCUMENT - What broke and why
 
 **Rollback:**
 ```bash
@@ -428,10 +428,10 @@ npx vercel rollback mobile.mindmeasure.app <deployment-url>
 ### Assessment Engine Issues
 
 **Immediate actions:**
-1. DISABLE feature flag in mobile app
-2. CHECK CloudWatch logs
-3. IDENTIFY failing Lambda
-4. FIX or destroy stack
+- DISABLE feature flag in mobile app
+- CHECK CloudWatch logs
+- IDENTIFY failing Lambda
+- FIX or destroy stack
 
 **Disable:**
 ```typescript
