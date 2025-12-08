@@ -1,0 +1,368 @@
+# AWS Environment Setup Guide
+
+## Environment Variables Configuration
+
+Create a `.env.local` file in your project root with the following AWS configuration:
+
+```bash
+# AWS Configuration
+# Copy these settings and fill in your AWS credentials
+
+# AWS General
+AWS_REGION=eu-west-2
+AWS_ACCESS_KEY_ID=your_access_key_here
+AWS_SECRET_ACCESS_KEY=your_secret_key_here
+
+# AWS RDS PostgreSQL
+AWS_RDS_HOST=your-rds-instance.region.rds.amazonaws.com
+AWS_RDS_PORT=5432
+AWS_RDS_DATABASE=mindmeasure
+AWS_RDS_USERNAME=mindmeasure_user
+AWS_RDS_PASSWORD=your_secure_password_here
+
+# AWS Cognito
+AWS_COGNITO_USER_POOL_ID=eu-west-2_xxxxxxxxx
+AWS_COGNITO_CLIENT_ID=your_cognito_client_id_here
+
+# AWS S3
+AWS_S3_BUCKET_NAME=mindmeasure-storage
+AWS_S3_REGION=eu-west-2
+
+# Backend Provider Selection
+BACKEND_PROVIDER=aws-rds
+
+# For development/testing, you can still use Supabase:
+# BACKEND_PROVIDER=supabase
+# VITE_SUPABASE_URL=your_supabase_url
+# VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+## AWS Infrastructure Setup
+
+### 1. Create AWS Account and Configure CLI
+
+```bash
+# Install AWS CLI
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+
+# Configure AWS CLI
+aws configure
+# Enter your Access Key ID, Secret Access Key, Region (eu-west-2), and output format (json)
+```
+
+### 2. Create RDS PostgreSQL Instance
+
+```bash
+# Create DB subnet group
+aws rds create-db-subnet-group \
+  --db-subnet-group-name mindmeasure-subnet-group \
+  --db-subnet-group-description "Mind Measure DB Subnet Group" \
+  --subnet-ids subnet-12345678 subnet-87654321 \
+  --region eu-west-2
+
+# Create RDS instance
+aws rds create-db-instance \
+  --db-instance-identifier mindmeasure-db \
+  --db-instance-class db.t3.medium \
+  --engine postgres \
+  --engine-version 15.4 \
+  --master-username mindmeasure_user \
+  --master-user-password YourSecurePassword123! \
+  --allocated-storage 100 \
+  --storage-type gp2 \
+  --storage-encrypted \
+  --vpc-security-group-ids sg-12345678 \
+  --db-subnet-group-name mindmeasure-subnet-group \
+  --backup-retention-period 7 \
+  --multi-az \
+  --region eu-west-2
+```
+
+### 3. Create Cognito User Pool
+
+```bash
+# Create user pool
+aws cognito-idp create-user-pool \
+  --pool-name MindMeasureUsers \
+  --policies '{
+    "PasswordPolicy": {
+      "MinimumLength": 8,
+      "RequireUppercase": true,
+      "RequireLowercase": true,
+      "RequireNumbers": true,
+      "RequireSymbols": false
+    }
+  }' \
+  --auto-verified-attributes email \
+  --username-attributes email \
+  --schema '[
+    {
+      "Name": "email",
+      "AttributeDataType": "String",
+      "Required": true,
+      "Mutable": true
+    },
+    {
+      "Name": "given_name",
+      "AttributeDataType": "String",
+      "Required": false,
+      "Mutable": true
+    },
+    {
+      "Name": "family_name",
+      "AttributeDataType": "String",
+      "Required": false,
+      "Mutable": true
+    },
+    {
+      "Name": "display_name",
+      "AttributeDataType": "String",
+      "Required": false,
+      "Mutable": true
+    }
+  ]' \
+  --region eu-west-2
+
+# Create user pool client
+aws cognito-idp create-user-pool-client \
+  --user-pool-id eu-west-2_xxxxxxxxx \
+  --client-name MindMeasureApp \
+  --explicit-auth-flows ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
+  --generate-secret false \
+  --region eu-west-2
+```
+
+### 4. Create S3 Buckets
+
+```bash
+# Create private bucket for user content
+aws s3 mb s3://mindmeasure-user-content --region eu-west-2
+
+# Create public bucket for assets
+aws s3 mb s3://mindmeasure-public-assets --region eu-west-2
+
+# Configure bucket policies
+aws s3api put-bucket-encryption \
+  --bucket mindmeasure-user-content \
+  --server-side-encryption-configuration '{
+    "Rules": [
+      {
+        "ApplyServerSideEncryptionByDefault": {
+          "SSEAlgorithm": "AES256"
+        }
+      }
+    ]
+  }'
+
+# Block public access for private bucket
+aws s3api put-public-access-block \
+  --bucket mindmeasure-user-content \
+  --public-access-block-configuration \
+    BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+```
+
+### 5. Create Lambda Functions
+
+```bash
+# Create execution role for Lambda
+aws iam create-role \
+  --role-name MindMeasureLambdaRole \
+  --assume-role-policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "lambda.amazonaws.com"
+        },
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  }'
+
+# Attach policies
+aws iam attach-role-policy \
+  --role-name MindMeasureLambdaRole \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+aws iam attach-role-policy \
+  --role-name MindMeasureLambdaRole \
+  --policy-arn arn:aws:iam::aws:policy/AmazonRDSDataFullAccess
+
+aws iam attach-role-policy \
+  --role-name MindMeasureLambdaRole \
+  --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
+```
+
+## Application Configuration
+
+### Update Backend Service Factory
+
+The application will automatically use AWS services when `BACKEND_PROVIDER=aws-rds` is set in your environment variables.
+
+### Environment-Specific Configuration
+
+```typescript
+// src/config/aws.ts
+export const awsConfig = {
+  region: process.env.AWS_REGION || 'eu-west-2',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
+  },
+  rds: {
+    host: process.env.AWS_RDS_HOST!,
+    port: parseInt(process.env.AWS_RDS_PORT || '5432'),
+    database: process.env.AWS_RDS_DATABASE!,
+    username: process.env.AWS_RDS_USERNAME!,
+    password: process.env.AWS_RDS_PASSWORD!
+  },
+  cognito: {
+    userPoolId: process.env.AWS_COGNITO_USER_POOL_ID!,
+    clientId: process.env.AWS_COGNITO_CLIENT_ID!
+  },
+  s3: {
+    bucketName: process.env.AWS_S3_BUCKET_NAME!,
+    region: process.env.AWS_S3_REGION || process.env.AWS_REGION || 'eu-west-2'
+  }
+};
+```
+
+## Security Considerations
+
+### 1. IAM Policies
+
+Create least-privilege IAM policies for your application:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "rds:DescribeDBInstances",
+        "rds:Connect"
+      ],
+      "Resource": "arn:aws:rds:eu-west-2:*:db:mindmeasure-db"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cognito-idp:AdminCreateUser",
+        "cognito-idp:AdminDeleteUser",
+        "cognito-idp:AdminGetUser",
+        "cognito-idp:AdminUpdateUserAttributes"
+      ],
+      "Resource": "arn:aws:cognito-idp:eu-west-2:*:userpool/eu-west-2_*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::mindmeasure-user-content/*",
+        "arn:aws:s3:::mindmeasure-public-assets/*"
+      ]
+    }
+  ]
+}
+```
+
+### 2. VPC Configuration
+
+For production, deploy RDS in private subnets:
+
+```bash
+# Create VPC
+aws ec2 create-vpc --cidr-block 10.0.0.0/16 --region eu-west-2
+
+# Create private subnets
+aws ec2 create-subnet --vpc-id vpc-12345678 --cidr-block 10.0.1.0/24 --availability-zone eu-west-2a
+aws ec2 create-subnet --vpc-id vpc-12345678 --cidr-block 10.0.2.0/24 --availability-zone eu-west-2b
+
+# Create security groups
+aws ec2 create-security-group \
+  --group-name mindmeasure-db-sg \
+  --description "Mind Measure Database Security Group" \
+  --vpc-id vpc-12345678
+
+# Allow PostgreSQL access from application
+aws ec2 authorize-security-group-ingress \
+  --group-id sg-12345678 \
+  --protocol tcp \
+  --port 5432 \
+  --source-group sg-87654321
+```
+
+## Testing the Setup
+
+### 1. Test Database Connection
+
+```bash
+# Test RDS connection
+psql -h your-rds-instance.region.rds.amazonaws.com -U mindmeasure_user -d mindmeasure
+```
+
+### 2. Test Cognito
+
+```bash
+# Test user creation
+aws cognito-idp admin-create-user \
+  --user-pool-id eu-west-2_xxxxxxxxx \
+  --username test@example.com \
+  --user-attributes Name=email,Value=test@example.com \
+  --temporary-password TempPass123! \
+  --message-action SUPPRESS
+```
+
+### 3. Test S3
+
+```bash
+# Test file upload
+echo "test content" > test.txt
+aws s3 cp test.txt s3://mindmeasure-user-content/test/test.txt
+aws s3 ls s3://mindmeasure-user-content/test/
+```
+
+## Monitoring and Logging
+
+### CloudWatch Setup
+
+```bash
+# Create log groups
+aws logs create-log-group --log-group-name /aws/rds/instance/mindmeasure-db/postgresql
+aws logs create-log-group --log-group-name /aws/lambda/mindmeasure-functions
+aws logs create-log-group --log-group-name /aws/cognito/mindmeasure-users
+```
+
+### Alerts
+
+```bash
+# Create CloudWatch alarms
+aws cloudwatch put-metric-alarm \
+  --alarm-name "MindMeasure-DB-CPU-High" \
+  --alarm-description "Database CPU utilization is too high" \
+  --metric-name CPUUtilization \
+  --namespace AWS/RDS \
+  --statistic Average \
+  --period 300 \
+  --threshold 80 \
+  --comparison-operator GreaterThanThreshold \
+  --dimensions Name=DBInstanceIdentifier,Value=mindmeasure-db \
+  --evaluation-periods 2
+```
+
+## Next Steps
+
+1. **Set up your AWS account** and configure the CLI
+2. **Create the infrastructure** using the commands above
+3. **Update your environment variables** with the created resource IDs
+4. **Test the connection** using the provided test commands
+5. **Deploy your application** with the new AWS backend
+

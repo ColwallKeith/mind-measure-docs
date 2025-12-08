@@ -385,9 +385,9 @@ curl https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/start \
 https://eu-west-2.console.aws.amazon.com/cloudwatch/home?region=eu-west-2
 
 **Key metrics:**
-- Check-in completion rate (target: greater than 95%)
-- Processing time (target: less than 120s P95)
-- Lambda error rate (target: less than 1%)
+- Check-in completion rate (target: >95%)
+- Processing time (target: <120s P95)
+- Lambda error rate (target: <1%)
 - API Gateway 5xx errors (target: near zero)
 
 ### Cost Monitoring
@@ -422,7 +422,7 @@ aws ce get-cost-and-usage \
 **Rollback:**
 ```bash
 npx vercel ls mobile.mindmeasure.app
-npx vercel rollback mobile.mindmeasure.app [deployment-url]
+npx vercel rollback mobile.mindmeasure.app <deployment-url>
 ```
 
 ### Assessment Engine Issues

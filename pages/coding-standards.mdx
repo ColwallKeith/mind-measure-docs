@@ -1,17 +1,8 @@
-# Coding Standards
+# Development
 
 ## Overview
 
-Coding standards, contribution guidelines, and technical implementation details for Mind Measure developers.
-
-**Note**: For deployment procedures and architecture overview, see the [Development Guide](/development-guide).
-
-This page covers:
-- Contributing guidelines and code of conduct
-- Code quality standards (TypeScript, React, CSS)
-- Testing guidelines
-- Integration patterns
-- Security best practices
+Development guidelines, integration specifications, and technical implementation details for the Mind Measure platform.
 
 ## Contributing Guidelines
 
@@ -32,7 +23,7 @@ We are committed to making participation in the Mind Measure project harassment-
 - Node.js 18+ installed
 - Git configured with your name and email
 - Cursor IDE (recommended)
-- Basic understanding of React, TypeScript, and AWS services
+- Basic understanding of React, TypeScript, and Supabase
 
 #### Repository Setup
 ```bash
@@ -158,98 +149,50 @@ export const Button: React.FC<ButtonProps> = ({
 }
 ```
 
-#### AWS Lambda Functions
-
-Lambda functions are the core of our serverless backend processing.
-
+#### Supabase Edge Functions
 ```typescript
-// Lambda function template
-import { APIGatewayProxyHandler } from 'aws-lambda';
+// Edge function template
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-export const handler: APIGatewayProxyHandler = async (event) => {
+interface RequestBody {
+  // Define request structure
+}
+
+serve(async (req) => {
   try {
-    // Parse request body
-    const body = event.body ? JSON.parse(event.body) : {};
-    
-    // Get user from Cognito authorizer
-    const userId = event.requestContext.authorizer?.claims?.sub;
-    
-    if (!userId) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: 'Unauthorized' })
-      };
+    // CORS headers
+    if (req.method === 'OPTIONS') {
+      return new Response('ok', { 
+        headers: { 
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        } 
+      });
     }
+
+    // Initialize Supabase client
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Validate request
+    const { data } = await req.json() as RequestBody;
     
     // Process request
-    const result = await processRequest(body, userId);
-    
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: JSON.stringify(result)
-    };
+    const result = await processRequest(data, supabase);
+
+    return new Response(JSON.stringify(result), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
-    console.error('Lambda error:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      })
-    };
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
-};
-
-async function processRequest(data: any, userId: string) {
-  // Your business logic here
-  return { success: true, data };
-}
-```
-
-#### Vercel Serverless API Functions
-
-For the mobile app API endpoints served via Vercel:
-
-```typescript
-// pages/api/database/select.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { Pool } from 'pg';
-
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  ssl: { rejectUnauthorized: false }
 });
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-  
-  try {
-    const { table, limit = 10 } = req.body;
-    
-    const result = await pool.query(
-      `SELECT * FROM ${table} LIMIT $1`,
-      [limit]
-    );
-    
-    res.status(200).json({ data: result.rows });
-  } catch (error) {
-    console.error('API error:', error);
-    res.status(500).json({ error: 'Database query failed' });
-  }
-}
 ```
 
 ## Quality Assurance
@@ -344,14 +287,11 @@ const synthesizeVoice = async (text: string, voiceId: string) => {
 ### Integration Strategy
 
 #### Third-Party Service Connections
-- **AWS Aurora**: Primary database (PostgreSQL)
-- **AWS Cognito**: Authentication and user management
-- **AWS S3**: File storage and media uploads
-- **AWS Lambda**: Serverless backend processing
-- **AWS Rekognition**: Visual analysis
-- **AWS Comprehend**: Text sentiment analysis
-- **ElevenLabs**: Voice synthesis and conversational AI
-- **Vercel**: Frontend hosting and serverless API
+- **Supabase**: Primary backend and database
+- **OpenAI**: Audio transcription via Whisper API
+- **AWS**: Temporary audio processing and analysis
+- **ElevenLabs**: Voice synthesis and generation
+- **Vercel**: Frontend hosting and deployment
 
 #### API Integration Patterns
 ```typescript
@@ -499,7 +439,7 @@ export const runMigrations = async (targetVersion: string) => {
 - **Colour** not Color
 - **Centre** not Center  
 - **Realise** not Realize
-- **Organisation** not Organisation
+- **Organisation** not Organization
 - **Behaviour** not Behavior
 
 #### Text Guidelines
@@ -578,5 +518,5 @@ export const validateUserProfile = (data: unknown) => {
 - [ ] XSS prevention (proper escaping)
 - [ ] CSRF protection enabled
 - [ ] Authentication required for protected routes
-- [ ] Authorisation checks in place
+- [ ] Authorization checks in place
 - [ ] Rate limiting implemented

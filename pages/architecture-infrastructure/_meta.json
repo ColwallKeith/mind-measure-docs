@@ -1,9 +1,0 @@
-{
-  "architecture": "System Overview",
-  "backend": "Backend Services",
-  "database": "Database (Aurora PostgreSQL)",
-  "authentication-aws": "Authentication (Cognito)",
-  "aurora-serverless-v2": "Aurora Serverless v2 Details"
-}
-
-

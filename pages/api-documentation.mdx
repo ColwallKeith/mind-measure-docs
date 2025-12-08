@@ -8,23 +8,16 @@ The Mind Measure API provides secure, scalable endpoints for mental health asses
 
 ## Base URLs
 
-### Assessment Engine API (Multimodal Assessment)
+### Lambda Functions (AI Analysis)
 ```
-Production: https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/
+Production: https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev
 Region: eu-west-2 (London)
-Deployed: November 28, 2025
 ```
 
-### Mobile App API (Vercel Serverless)
+### Database & Storage APIs (Vercel)
 ```
 Production: https://mobile.mindmeasure.app/api
-Endpoints: /api/database/*, /api/storage/*, /api/auth/*
-```
-
-### Admin Dashboard API (Vercel Serverless)
-```
-Production: https://admin.mindmeasure.co.uk/api
-Endpoints: Admin-specific endpoints
+Admin: https://admin.mindmeasure.co.uk/api
 ```
 
 ## Authentication
@@ -68,20 +61,19 @@ const response = await fetch('/api/endpoint', {
 
 ## Rate Limiting
 
-### Assessment Engine API
+### Lambda Functions
 ```yaml
-/checkins/start: 10 requests/minute per user
-/checkins/:id/complete: 10 requests/minute per user
-/checkins/:id: 60 requests/minute per user (polling)
+analyze-audio: 10 requests/minute per user
+analyze-visual: 5 requests/minute per user
+analyze-text: 20 requests/minute per user
+calculate-mind-measure: 10 requests/minute per user
 ```
 
-### Vercel Database APIs
+### Database APIs
 ```yaml
-/api/database/select: 100 requests/minute per user
-/api/database/insert: 50 requests/minute per user
-/api/database/update: 50 requests/minute per user
-/api/database/delete: 20 requests/minute per user
+General APIs: 100 requests/minute per user
 File Upload: 10 requests/minute per user
+Bulk Operations: 5 requests/minute per user
 ```
 
 ## Error Handling
@@ -109,243 +101,7 @@ interface ErrorResponse {
 
 ---
 
-## Assessment Engine API
-
-The Assessment Engine provides multimodal wellbeing assessment using 23 audio features, 18 visual features, and 16 text features. Deployed November 28, 2025.
-
-### POST /v1/checkins/start
-
-Creates a new check-in and generates presigned S3 upload URLs for media files.
-
-**Request**
-```typescript
-POST https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/start
-Headers: {
-  Authorization: Bearer <cognito_jwt_token>,
-  Content-Type: application/json
-}
-Body: {
-  type: "daily" | "baseline" | "adhoc"
-}
-```
-
-**Response**
-```typescript
-{
-  checkInId: string;  // UUID
-  type: "daily" | "baseline" | "adhoc";
-  uploadUrls: {
-    audio: {
-      url: string;      // Presigned S3 PUT URL
-      bucket: string;   // S3 bucket name
-      key: string;      // S3 object key
-    };
-    images: Array<{
-      url: string;
-      bucket: string;
-      key: string;
-    }>;  // 8-12 image URLs
-  };
-}
-```
-
-### POST /v1/checkins/:id/complete
-
-Marks media uploads complete and starts the processing pipeline.
-
-**Request**
-```typescript
-POST https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/:checkInId/complete
-Headers: {
-  Authorization: Bearer <cognito_jwt_token>,
-  Content-Type: application/json
-}
-Body: {
-  type?: "daily" | "baseline" | "adhoc"  // Optional, defaults to existing type
-}
-```
-
-**Response**
-```typescript
-{
-  checkInId: string;
-  status: "PROCESSING";
-}
-```
-
-### GET /v1/checkins/:id
-
-Retrieves check-in status and results (when complete).
-
-**Request**
-```typescript
-GET https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/:checkInId
-Headers: {
-  Authorization: Bearer <cognito_jwt_token>
-}
-```
-
-**Response** (Status: PROCESSING)
-```typescript
-{
-  checkInId: string;
-  status: "PROCESSING";
-}
-```
-
-**Response** (Status: COMPLETE)
-```typescript
-{
-  checkInId: string;
-  status: "COMPLETE";
-  score: {
-    mindMeasureScore: number;        // 0-100
-    uncertainty: number;             // 0-1
-    directionOfChange: "better" | "same" | "worse";
-    riskLevel: "none" | "mild" | "moderate" | "high";
-  };
-  modalities: {
-    audio?: {
-      score: number;      // -1 to 1
-      confidence: number; // 0-1
-    };
-    visual?: {
-      score: number;
-      confidence: number;
-    };
-    text?: {
-      score: number;
-      confidence: number;
-    };
-  };
-}
-```
-
-**Response** (Status: FAILED)
-```typescript
-{
-  checkInId: string;
-  status: "FAILED" | "QUALITY_FAILED";
-  error?: string;  // Human-readable error message
-}
-```
-
-### Example Usage
-
-```typescript
-// 1. Start check-in
-const startResponse = await fetch(
-  'https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/start',
-  {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${jwtToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ type: 'daily' })
-  }
-);
-const { checkInId, uploadUrls } = await startResponse.json();
-
-// 2. Upload media to S3
-await fetch(uploadUrls.audio.url, { method: 'PUT', body: audioBlob });
-await Promise.all(
-  uploadUrls.images.map(img => 
-    fetch(img.url, { method: 'PUT', body: imageBlob })
-  )
-);
-
-// 3. Complete check-in
-await fetch(
-  `https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/${checkInId}/complete`,
-  {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${jwtToken}` }
-  }
-);
-
-// 4. Poll for results
-const result = await pollForResult(checkInId, jwtToken);
-console.log('Mind Measure Score:', result.score.mindMeasureScore);
-```
-
----
-
-## Vercel API Endpoints
-
-### Database Operations
-
-#### POST /api/database/select
-
-Query data from the database.
-
-**Request**
-```typescript
-POST https://mobile.mindmeasure.app/api/database/select
-Headers: {
-  Content-Type: application/json
-}
-Body: {
-  table: string;
-  filters?: Record<string, any>;
-  limit?: number;
-  orderBy?: string;
-}
-```
-
-**Response**
-```typescript
-{
-  data: Array<Record<string, any>>;
-  count?: number;
-}
-```
-
-#### POST /api/database/insert
-
-Insert data into the database.
-
-**Request**
-```typescript
-POST https://mobile.mindmeasure.app/api/database/insert
-Body: {
-  table: string;
-  data: Record<string, any>;
-}
-```
-
-#### POST /api/database/update
-
-Update database records.
-
-**Request**
-```typescript
-POST https://mobile.mindmeasure.app/api/database/update
-Body: {
-  table: string;
-  filters: Record<string, any>;
-  updates: Record<string, any>;
-}
-```
-
-#### POST /api/database/delete
-
-Delete database records.
-
-**Request**
-```typescript
-POST https://mobile.mindmeasure.app/api/database/delete
-Body: {
-  table: string;
-  filters: Record<string, any>;
-}
-```
-
----
-
-## Legacy Lambda Function APIs
-
-> **Note**: These endpoints are from the legacy architecture. New assessments should use the Assessment Engine API above.
+## Lambda Function APIs
 
 ### Audio Analysis
 

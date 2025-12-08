@@ -34,10 +34,7 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 1. **Verify User Identity**
    ```sql
-   -- Query Cognito user via AWS CLI or application code
-   -- Or check profiles table:
-   SELECT id, user_id, display_name FROM profiles 
-   WHERE display_name LIKE '%user@university.edu%';
+   SELECT id, email FROM auth.users WHERE email = 'user@university.edu';
    ```
 
 2. **Update Membership Role**
@@ -62,7 +59,7 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 ### Promote a User to Superadmin
 
 1. **Verify Superuser Authority**
-   - Confirm authorisation from system administrator
+   - Confirm authorization from system administrator
    - Document promotion reason
    - Update audit logs
 
@@ -87,40 +84,27 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 1. **Generate New Keys**
    ```bash
-   # Generate new JWT secret (if using custom JWT)
+   # Generate new JWT secret
    openssl rand -base64 32
    
-   # Rotate Aurora database password
-   aws rds modify-db-cluster \
-     --db-cluster-identifier mindmeasure-aurora \
-     --master-user-password "new-secure-password" \
-     --apply-immediately \
-     --region eu-west-2
+   # Generate new service role key
+   supabase gen keys
    ```
 
 2. **Update Environment Variables**
    ```bash
-   # Update Aurora credentials in AWS Secrets Manager
-   aws secretsmanager update-secret \
-     --secret-id aurora-credentials \
-     --secret-string '{"username":"mindmeasure_admin","password":"new-password"}' \
-     --region eu-west-2
-   
-   # Update Vercel environment variables
-   vercel env add DB_PASSWORD production
+   # Update production environment
+   SUPABASE_JWT_SECRET=new_jwt_secret
+   SUPABASE_SERVICE_ROLE_KEY=new_service_key
    ```
 
 3. **Restart Services**
    ```bash
-   # Lambda functions auto-update on next invocation
-   # Vercel functions restart automatically
-   # Aurora connection pool refreshes automatically
+   # Restart Supabase services
+   supabase restart
    
-   # Force Lambda refresh (if needed)
-   aws lambda update-function-configuration \
-     --function-name CheckInStartLambda \
-     --environment Variables={DB_PASSWORD=new-password} \
-     --region eu-west-2
+   # Restart application servers
+   npm run restart:prod
    ```
 
 4. **Verify Functionality**
@@ -215,17 +199,11 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 
 1. **User Access Audit**
    ```sql
-   -- Query profiles and memberships
-   SELECT p.display_name, p.user_id, m.role, i.name as institution
-   FROM profiles p
-   JOIN memberships m ON p.user_id = m.user_id
+   SELECT u.email, m.role, i.name as institution
+   FROM auth.users u
+   JOIN memberships m ON u.id = m.user_id
    JOIN institutions i ON m.institution_id = i.id
    ORDER BY i.name, m.role;
-   
-   -- Or via AWS Cognito (using AWS CLI)
-   aws cognito-idp list-users \
-     --user-pool-id eu-west-2_ClAG4fQXR \
-     --region eu-west-2
    ```
 
 2. **Permission Validation**

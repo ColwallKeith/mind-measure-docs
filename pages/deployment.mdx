@@ -2,142 +2,21 @@
 
 Complete deployment instructions for the Mind Measure platform across different environments.
 
-## Overview
+## Production Deployment
 
-Mind Measure consists of three main deployment targets:
-1. **Mobile App** - Deployed to Vercel (mobile.mindmeasure.app)
-2. **Admin Dashboard** - Deployed to Vercel (admin.mindmeasure.co.uk)
-3. **Assessment Engine** - Deployed to AWS via CDK (API Gateway + Lambda)
+### Main Application
+- **URL**: [admin.mindmeasure.co.uk](https://admin.mindmeasure.co.uk)
+- **Platform**: Vercel
+- **Framework**: Vite (React/TypeScript)
+- **Build Command**: `npm run build`
+- **Output Directory**: `dist`
 
-## Mobile App Deployment
-
-### Prerequisites
-- Node.js 18+ installed
-- Vercel CLI installed (`npm i -g vercel`)
-- AWS credentials configured
-- Environment variables set
-
-### Deployment Steps
-
-**⚠️ CRITICAL**: Before deploying, ALWAYS ask: "Ready to deploy? This will take 5-6 minutes." Wait for explicit confirmation.
-
-```bash
-# 1. Set environment variables (see Environment Configuration section)
-export VITE_API_BASE_URL=https://mobile.mindmeasure.app/api
-export VITE_AWS_REGION=eu-west-2
-export VITE_AWS_COGNITO_USER_POOL_ID=eu-west-2_ClAG4fQXR
-export VITE_AWS_COGNITO_CLIENT_ID=7vu03ppv6alkpphs1ksopll8us
-export VITE_BACKEND_PROVIDER=aurora-serverless
-
-# 2. Build the application
-npm run build
-
-# 3. Deploy to Vercel production
-npx vercel --prod
-
-# 4. Ensure domain alias is correct
-npx vercel alias mobile.mindmeasure.app
-
-# 5. Sync to Capacitor for iOS testing
-npx cap sync ios
-
-# 6. Test on device
-npx cap run ios
-```
-
-### Verification
-- [ ] App loads on iOS device
-- [ ] Authentication works (sign in/sign up)
-- [ ] Database queries work
-- [ ] ElevenLabs conversation works
-- [ ] Dashboard displays data
-
-## Assessment Engine Deployment
-
-### Prerequisites
-- AWS CDK installed (`npm i -g aws-cdk`)
-- AWS credentials configured
-- CDK bootstrapped for account 459338929203
-
-### Deployment Steps
-
-```bash
-# 1. Navigate to Assessment Engine directory
-cd assessment-engine
-
-# 2. Install dependencies
-npm install
-
-# 3. Build Lambda functions
-npm run build
-
-# 4. Navigate to CDK directory
-cd infrastructure/cdk
-
-# 5. Deploy to staging
-npx cdk deploy --context env=staging
-
-# 6. Note the API Gateway URL from outputs
-# Example: https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/
-```
-
-### Database Migration
-
-After deploying infrastructure, run the database migration:
-
-```bash
-cd assessment-engine
-
-# Get Aurora password from AWS Secrets Manager or secure config
-export DB_PASSWORD="your-password"
-
-# Run migration
-PGPASSWORD="$DB_PASSWORD" psql \
-  -h mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com \
-  -U mindmeasure_admin \
-  -d mindmeasure \
-  -f migrations/checkin-pipeline-v2.sql
-```
-
-**Expected output**: 6 tables created in `assessment_engine` schema
-
-### Verification
-- [ ] API Gateway returns 200 OK (with valid JWT)
-- [ ] API Gateway returns 401 Unauthorized (without JWT)
-- [ ] `/checkins/start` endpoint returns presigned S3 URLs
-- [ ] Database tables exist
-- [ ] Step Functions state machine is active
-
-## Admin Dashboard Deployment
-
-```bash
-# Navigate to admin dashboard directory
-cd admin-dashboard
-
-# Build
-npm run build
-
-# Deploy to Vercel
-npx vercel --prod
-
-# Alias domain
-npx vercel alias admin.mindmeasure.co.uk
-```
-
-## Documentation Site Deployment
-
-```bash
-# Navigate to docs directory
-cd mind-measure-docs
-
-# Build
-npm run build
-
-# Deploy to Vercel
-npx vercel --prod
-
-# Site automatically available at docs.mindmeasure.co.uk
-```
+### Documentation Site
+- **URL**: [docs.mindmeasure.co.uk](https://docs.mindmeasure.co.uk)
+- **Platform**: Vercel
+- **Framework**: Next.js + Nextra
+- **Build Command**: `npm run build`
+- **Output Directory**: `out`
 
 ## Infrastructure
 
@@ -171,69 +50,20 @@ npx vercel --prod
 
 ## Environment Configuration
 
-### Mobile App Environment Variables (Vercel)
-
-**Required Variables:**
+### Production Environment Variables
 ```bash
-VITE_API_BASE_URL=https://mobile.mindmeasure.app/api
+# Backend Configuration
 VITE_BACKEND_PROVIDER=aurora-serverless
-VITE_AWS_REGION=eu-west-2
 VITE_DB_HOST=mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com
-VITE_DB_PORT=5432
-VITE_DB_NAME=mindmeasure
-VITE_DB_USERNAME=mindmeasure_admin
-VITE_DB_PASSWORD=[secure - from AWS Secrets Manager]
-VITE_AWS_COGNITO_USER_POOL_ID=eu-west-2_ClAG4fQXR
-VITE_AWS_COGNITO_CLIENT_ID=7vu03ppv6alkpphs1ksopll8us
-VITE_AWS_S3_BUCKET_NAME=mindmeasure-user-content-459338929203
-```
+VITE_AWS_REGION=eu-west-2
 
-**Assessment Engine Integration (Optional - Feature Flag)**
-```bash
-VITE_ASSESSMENT_ENGINE_API=https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1
-VITE_USE_ASSESSMENT_ENGINE=true  # Feature flag for gradual rollout
-```
+# Authentication
+VITE_AWS_COGNITO_USER_POOL_ID=your_user_pool_id
+VITE_AWS_COGNITO_CLIENT_ID=your_client_id
 
-### Assessment Engine Lambda Environment Variables
-
-**Common Variables (All Lambdas):**
-```bash
-ENV_NAME=staging
-DB_HOST=mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com
-DB_PORT=5432
-DB_NAME=mindmeasure
-DB_USER=mindmeasure_admin
-DB_PASSWORD=[secure]
-MEDIA_BUCKET=mindmeasure-checkin-media-staging
-```
-
-**Text Analysis Lambda Additional:**
-```bash
-BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0
-```
-
-**CheckInComplete Lambda Additional:**
-```bash
-STATE_MACHINE_ARN=arn:aws:states:eu-west-2:459338929203:stateMachine:CheckInStateMachine...
-```
-
-### Vercel API Functions Environment Variables
-
-**Database Connection:**
-```bash
-DB_HOST=mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com
-DB_PORT=5432
-DB_NAME=mindmeasure
-DB_USER=mindmeasure_admin
-DB_PASSWORD=[secure]
-```
-
-**AWS Services:**
-```bash
-AWS_REGION=eu-west-2
-AWS_COGNITO_USER_POOL_ID=eu-west-2_ClAG4fQXR
-AWS_COGNITO_CLIENT_ID=7vu03ppv6alkpphs1ksopll8us
-AWS_S3_BUCKET_NAME=mindmeasure-user-content-459338929203
+# Security
+VITE_ENCRYPTION_ENABLED=true
+VITE_AUDIT_LOGGING_ENABLED=true
 ```
 
 ## Monitoring & Alerts
@@ -250,60 +80,6 @@ AWS_S3_BUCKET_NAME=mindmeasure-user-content-459338929203
 - **Backup**: Backup success verification
 - **Security**: Access pattern monitoring
 
-## Rollback Procedures
-
-### Mobile App Rollback
-
-```bash
-# List recent deployments
-npx vercel ls mobile.mindmeasure.app
-
-# Rollback to specific deployment
-npx vercel rollback mobile.mindmeasure.app [deployment-url]
-
-# Or rollback to previous
-npx vercel rollback mobile.mindmeasure.app --prev
-```
-
-### Assessment Engine Rollback
-
-```bash
-# Disable feature flag immediately (in mobile app)
-export const USE_ASSESSMENT_ENGINE = false;
-
-# Destroy CDK stack (if needed)
-cd assessment-engine/infrastructure/cdk
-npx cdk destroy --force
-
-# Drop database schema (if needed)
-PGPASSWORD="password" psql -h ... -d mindmeasure \
-  -c "DROP SCHEMA assessment_engine CASCADE;"
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**Build Failures**
-- Check Node.js version (18+)
-- Verify all dependencies installed
-- Check environment variables are set
-
-**Deployment Failures**
-- Verify AWS credentials configured
-- Check Vercel project linked correctly
-- Review deployment logs in Vercel dashboard
-
-**Database Connection Issues**
-- Verify Aurora cluster is running
-- Check security groups allow connections
-- Verify credentials in Secrets Manager
-
-**Assessment Engine API Errors**
-- Check Lambda CloudWatch logs
-- Verify Step Functions state machine is active
-- Check IAM permissions for Lambdas
-
 ---
 
-For detailed development procedures, see the [Development Guide](/development-guide).
+For detailed deployment procedures, see the [Development Guide](/development).

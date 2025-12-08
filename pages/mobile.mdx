@@ -230,8 +230,6 @@ const handleConversationEnd = async () => {
 ```
 
 #### Check-In Assessment
-
-**Legacy Flow** (Baseline assessments)
 ```typescript
 // Regular check-in flow (more conversational)
 interface CheckInAssessmentFlow {
@@ -243,98 +241,6 @@ interface CheckInAssessmentFlow {
   6: 'Results Integration';      // Update dashboard with trends
 }
 ```
-
-**Assessment Engine Integration** (Deployed November 28, 2025)
-
-The Assessment Engine provides a sophisticated multimodal analysis pipeline for daily check-ins:
-
-```typescript
-// Assessment Engine check-in flow
-interface AssessmentEngineCheckInFlow {
-  1: 'Start Check-In';
-     // Call POST /v1/checkins/start
-     // Get presigned S3 URLs for audio + 8-12 images
-  
-  2: 'Record Conversation';
-     // Record audio during ElevenLabs conversation
-     // Capture 8-12 still images at intervals
-  
-  3: 'Upload Media';
-     // Upload audio file to S3
-     // Upload images to S3
-  
-  4: 'Complete Check-In';
-     // Call POST /v1/checkins/{id}/complete
-     // Starts Step Functions processing pipeline
-  
-  5: 'Poll for Results';
-     // Poll GET /v1/checkins/{id} every 3 seconds
-     // Wait for status === "COMPLETE"
-  
-  6: 'Display Results';
-     // Show Mind Measure Score (0-100)
-     // Display modality breakdowns
-     // Show uncertainty and risk level
-}
-```
-
-**Example Integration Code:**
-```typescript
-import { startCheckIn, completeCheckIn, getCheckInStatus } from '@/services/assessmentEngine';
-
-async function submitCheckIn(audioBlob: Blob, imageBlobs: Blob[]) {
-  // 1. Start check-in
-  const { checkInId, uploadUrls } = await startCheckIn('daily');
-  
-  // 2. Upload media
-  await fetch(uploadUrls.audio.url, { method: 'PUT', body: audioBlob });
-  await Promise.all(
-    uploadUrls.images.map((img, idx) => 
-      fetch(img.url, { method: 'PUT', body: imageBlobs[idx] })
-    )
-  );
-  
-  // 3. Complete check-in
-  await completeCheckIn(checkInId);
-  
-  // 4. Poll for results
-  const result = await pollForResult(checkInId);
-  
-  // 5. Display score
-  displayScore(result.score.mindMeasureScore, result.modalities);
-}
-
-async function pollForResult(checkInId: string): Promise<CheckInStatusResponse> {
-  const maxAttempts = 20;
-  const delayMs = 3000;
-  
-  for (let i = 0; i < maxAttempts; i++) {
-    const status = await getCheckInStatus(checkInId);
-    if (status.status === 'COMPLETE' || status.status === 'FAILED') {
-      return status;
-    }
-    await new Promise(resolve => setTimeout(resolve, delayMs));
-  }
-  
-  throw new Error('Timed out waiting for check-in result');
-}
-```
-
-**Feature Flag:**
-```typescript
-// Enable Assessment Engine gradually
-const USE_ASSESSMENT_ENGINE = process.env.VITE_USE_ASSESSMENT_ENGINE === 'true';
-
-if (USE_ASSESSMENT_ENGINE) {
-  // Use Assessment Engine API
-  await submitCheckIn(audioBlob, imageBlobs);
-} else {
-  // Use legacy flow
-  await legacyCheckInFlow();
-}
-```
-
-See [Assessment Engine documentation](/assessment-engine) and [API Documentation](/api-documentation) for complete details.
 
 ### Dashboard Experience
 
@@ -751,7 +657,7 @@ export const NotificationService = {
 };
 ```
 
-## Performance Optimisation
+## Performance Optimization
 
 ### Code Splitting
 ```typescript

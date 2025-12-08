@@ -1,16 +1,5 @@
 # AWS Migration & Compliance Guide
 
-> **Migration Status**: ✅ COMPLETED - November 2025
-> 
-> The migration from Supabase to AWS is complete. The platform now runs entirely on AWS infrastructure:
-> - Database: Aurora Serverless v2 (PostgreSQL) - mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com
-> - Authentication: AWS Cognito (eu-west-2_ClAG4fQXR)
-> - Storage: AWS S3
-> - Compute: AWS Lambda + Vercel serverless functions
-> - Assessment Engine: Deployed November 28, 2025
-> 
-> This document describes the migration process and compliance framework. All systems are now operational on AWS.
-
 # Mind Measure AWS Migration & Compliance Guide
 
 ## Executive Summary
@@ -88,7 +77,7 @@ AI/ML:
 - ✅ Auto-scaling database (0.5-16 ACUs)
 - ✅ Serverless functions with automatic scaling
 - ✅ Global content delivery with CloudFront
-- ✅ Cost optimisation with pay-per-use model
+- ✅ Cost optimization with pay-per-use model
 
 ---
 
@@ -545,7 +534,7 @@ class DataRetentionService {
 // Data export service
 class DataExportService {
   async exportUserData(userId: string, requesterId: string): Promise<UserDataExport> {
-    // Verify requester authorisation
+    // Verify requester authorization
     await this.verifyDataSubjectRequest(userId, requesterId);
     
     // Collect all user data
@@ -714,7 +703,7 @@ Student Data Access:
   
   University Staff:
     - Access: Students from same university only
-    - Scope: Aggregated data, anonymised individual data
+    - Scope: Aggregated data, anonymized individual data
     - Restrictions: No direct personal identifiers
     - Audit: All access logged
   
@@ -1620,11 +1609,11 @@ Technical Training:
     - Compliance monitoring
 ```
 
-### Performance Optimisation
+### Performance Optimization
 
 #### Continuous Improvement
 ```typescript
-// Performance optimisation service
+// Performance optimization service
 class PerformanceOptimizationService {
   async optimizeSystemPerformance(): Promise<OptimizationReport> {
     const metrics = await this.collectPerformanceMetrics();
@@ -1654,7 +1643,7 @@ class PerformanceOptimizationService {
         type: 'database',
         severity: 'high',
         description: 'Database response time exceeds threshold',
-        recommendations: ['Optimise queries', 'Add indexes', 'Scale up capacity']
+        recommendations: ['Optimize queries', 'Add indexes', 'Scale up capacity']
       });
     }
     
@@ -1666,7 +1655,7 @@ class PerformanceOptimizationService {
         type: 'lambda_cold_start',
         severity: 'medium',
         description: 'High cold start rate affecting performance',
-        recommendations: ['Increase provisioned concurrency', 'Optimise function size']
+        recommendations: ['Increase provisioned concurrency', 'Optimize function size']
       });
     }
     
@@ -1687,7 +1676,7 @@ The Mind Measure AWS migration and compliance implementation represents a compre
 ✅ **GDPR Compliance**: EU data residency and privacy controls  
 ✅ **SOC 2 Readiness**: Security and availability controls  
 ✅ **Scalable Architecture**: Auto-scaling serverless infrastructure  
-✅ **Cost Optimisation**: Pay-per-use model with 40% cost reduction  
+✅ **Cost Optimization**: Pay-per-use model with 40% cost reduction  
 ✅ **Enhanced Security**: Multi-layered security controls  
 ✅ **Operational Excellence**: Comprehensive monitoring and automation  
 
@@ -1697,7 +1686,7 @@ The Mind Measure AWS migration and compliance implementation represents a compre
 🔄 **Regular Audits**: Quarterly internal and annual external audits  
 🔄 **Staff Training**: Ongoing security and compliance training  
 🔄 **Policy Updates**: Regular policy reviews and updates  
-🔄 **Performance Optimisation**: Continuous system optimisation  
+🔄 **Performance Optimization**: Continuous system optimization  
 🔄 **Incident Preparedness**: Regular incident response testing  
 
 This comprehensive approach ensures Mind Measure maintains the highest standards of security, privacy, and compliance while delivering exceptional service to universities and students.
