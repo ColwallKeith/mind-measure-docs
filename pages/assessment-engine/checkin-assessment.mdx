@@ -1,0 +1,181 @@
+# Daily Check-in Assessment
+
+## Overview
+
+Daily check-ins are brief, conversational wellness assessments designed for regular monitoring. Unlike baseline assessments, check-ins do not include structured clinical questions. Instead, they rely on natural conversation analysis.
+
+## Conversation Flow
+
+A typical check-in conversation:
+
+1. **Greeting**: "Hi, it's good to catch up with you. How are you today?"
+2. **Follow-up**: AI asks about what's contributing to their current state
+3. **Exploration**: Brief discussion of activities, mood, challenges
+4. **Mood Rating**: "Where would you put your mood today on a scale of 1 to 10?"
+5. **Closing**: "Thanks for sharing how you're feeling today."
+
+**Duration**: Typically 1-2 minutes
+
+## V2 Scoring Algorithm (December 2024)
+
+### Weighting Strategy
+
+Check-ins use **text-heavy weighting** because the conversation content is the primary signal:
+
+| Scenario | Text | Audio | Visual |
+|----------|------|-------|--------|
+| All modalities available | 70% | 15% | 15% |
+| Audio only (no visual) | 80% | 20% | - |
+| Visual only (no audio) | 80% | - | 20% |
+| Text only | 100% | - | - |
+
+### Sanity Floor
+
+To prevent obviously positive check-ins from being dragged down by conservative audio/visual scores:
+
+```typescript
+const shouldApplyFloor = 
+  textScore >= 75 &&           // High text score
+  riskLevel === 'none' &&      // No risk detected
+  avgQuality >= 0.6;           // Good signal quality
+
+if (shouldApplyFloor && finalScore < 60) {
+  finalScore = 60;  // Apply floor
+}
+```
+
+**Rationale**: If someone says they're feeling great (text score 85), the fact that they weren't smiling at the camera shouldn't drop their score to 50.
+
+## Implementation
+
+### Component: CheckinAssessmentSDK.tsx
+
+```typescript
+import { useConversation } from '@elevenlabs/react';
+import { CheckinEnrichmentService } from '../services/multimodal/checkin/enrichmentService';
+
+const CheckinAssessmentSDK = ({ userId, onComplete }) => {
+  const conversation = useConversation({
+    onMessage: handleMessage,
+    onDisconnect: handleComplete
+  });
+  
+  const startCheckin = async () => {
+    // Start media capture
+    await mediaCapture.start({
+      captureAudio: true,
+      captureVideo: true,
+      videoFrameRate: 0.5  // 1 frame every 2 seconds
+    });
+    
+    // Start ElevenLabs conversation
+    await conversation.startSession({
+      agentId: 'agent_7501k3hpgd5gf8ssm3c3530jx8qx'
+    });
+  };
+  
+  const handleComplete = async () => {
+    // Stop media capture
+    const media = await mediaCapture.stop();
+    
+    // Run enrichment
+    const enrichment = new CheckinEnrichmentService();
+    const result = await enrichment.enrichCheckIn({
+      userId,
+      transcript: accumulatedTranscript,
+      audioBlob: media.audio,
+      videoFrames: media.frames,
+      duration: conversationDuration
+    });
+    
+    // Save to database
+    await saveToDatabase(result);
+    onComplete(result);
+  };
+};
+```
+
+### Enrichment Pipeline
+
+```
+Transcript → Bedrock Text Analysis → Text Score (0-100)
+                                           ↓
+Audio Blob → Audio Feature Extraction → Audio Score (0-100)
+                                           ↓
+Video Frames → Rekognition → Visual Features → Visual Score (0-100)
+                                           ↓
+                    ┌──────────────────────┴──────────────────────┐
+                    │              V2 Fusion Algorithm             │
+                    │                                              │
+                    │  if (hasAudio && hasVisual):                 │
+                    │    raw = text*0.70 + audio*0.15 + visual*0.15│
+                    │  else if (hasAudio):                         │
+                    │    raw = text*0.80 + audio*0.20              │
+                    │  else if (hasVisual):                        │
+                    │    raw = text*0.80 + visual*0.20             │
+                    │  else:                                       │
+                    │    raw = text                                │
+                    │                                              │
+                    │  Apply sanity floor if applicable            │
+                    └──────────────────────┬──────────────────────┘
+                                           ↓
+                                    Final Score (0-100)
+```
+
+## Data Stored
+
+Check-in results are stored with assessment_type 'checkin':
+
+```json
+{
+  "assessment_type": "checkin",
+  "mind_measure_score": 64,
+  "mood_score": 8,
+  "themes": ["mood", "productivity", "exercise", "routine"],
+  "keywords": ["productive", "coffee", "dog walk", "exercise"],
+  "driver_positive": ["productivity", "exercise", "coffee", "dog walk"],
+  "driver_negative": [],
+  "conversation_summary": "You talked about having a productive day, enjoying your morning coffee and dog walk.",
+  "modalities": {
+    "text": { "score": 85, "confidence": 0.8 },
+    "audio": { "score": 25, "confidence": 0.6 },
+    "visual": { "score": 41, "confidence": 0.94 }
+  },
+  "uncertainty": 0.2,
+  "risk_level": "none",
+  "direction_of_change": "better",
+  "session_id": "conv_xxxx",
+  "check_in_id": "uuid-xxxx",
+  "transcript_length": 1001,
+  "duration": 70.855,
+  "processing_time_ms": 11601
+}
+```
+
+## Dashboard Display
+
+After a check-in, the dashboard shows:
+
+- **Mind Measure Score**: The final fused score (0-100)
+- **Mood**: User's explicit 1-10 rating
+- **Summary**: AI-generated conversation summary
+- **Themes**: Detected topics (e.g., "work", "exercise", "sleep")
+- **Positive Drivers**: Factors contributing to wellbeing
+- **Negative Drivers**: Factors detracting from wellbeing
+
+## Calibration Notes
+
+The V2 scoring weights are initial calibration values. Future tuning may adjust:
+
+- Text/audio/visual weight ratios
+- Sanity floor threshold (currently 60)
+- Quality threshold for floor application (currently 0.6)
+- Individual feature scoring algorithms
+
+All changes should be documented and version-controlled.
+
+---
+
+*Last Updated: December 2024*  
+*Scoring Version: V2*
+

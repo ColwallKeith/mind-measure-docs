@@ -1,0 +1,242 @@
+# Audio Features
+
+## Overview
+
+Mind Measure extracts 10 audio features from conversation recordings to assess vocal patterns associated with emotional state. All audio feature extraction is performed **client-side** using the Web Audio API.
+
+## Feature List
+
+| ID | Feature | Range | Description |
+|----|---------|-------|-------------|
+| A1 | **meanPitch** | 50-400 Hz | Average fundamental frequency (F0) |
+| A2 | **pitchVariability** | 0-200 Hz | Standard deviation of pitch |
+| A3 | **speakingRate** | 50-250 wpm | Words per minute estimation |
+| A4 | **pauseFrequency** | 0-50 | Number of pauses per minute |
+| A5 | **pauseDuration** | 0-5 s | Average pause length |
+| A6 | **voiceEnergy** | 0-1 | RMS energy normalised |
+| A7 | **jitter** | 0-1 | Pitch period variability (voice stability) |
+| A8 | **shimmer** | 0-1 | Amplitude variability (voice quality) |
+| A9 | **harmonicRatio** | 0-1 | Harmonic-to-noise ratio |
+| A10 | **quality** | 0-1 | Overall signal quality metric |
+
+## Extraction Methods
+
+### A1: Mean Pitch (F0)
+
+Uses autocorrelation to detect the fundamental frequency:
+
+```typescript
+async extractMeanPitch(channelData: Float32Array, sampleRate: number): Promise<number> {
+  const frameSize = Math.floor(sampleRate * 0.03); // 30ms frames
+  const hopSize = Math.floor(frameSize / 2);
+  const pitchValues: number[] = [];
+  
+  for (let i = 0; i < channelData.length - frameSize; i += hopSize) {
+    const frame = channelData.slice(i, i + frameSize);
+    const pitch = this.autocorrelationPitch(frame, sampleRate);
+    if (pitch > 50 && pitch < 400) {
+      pitchValues.push(pitch);
+    }
+  }
+  
+  return pitchValues.length > 0 
+    ? pitchValues.reduce((a, b) => a + b) / pitchValues.length 
+    : 150; // Default fallback
+}
+```
+
+### A2: Pitch Variability
+
+Standard deviation of detected pitch values:
+
+```typescript
+extractPitchVariability(pitchValues: number[]): number {
+  const mean = pitchValues.reduce((a, b) => a + b) / pitchValues.length;
+  const variance = pitchValues.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) / pitchValues.length;
+  return Math.sqrt(variance);
+}
+```
+
+### A3: Speaking Rate
+
+Estimated from energy envelope transitions:
+
+```typescript
+estimateSpeakingRate(channelData: Float32Array, sampleRate: number, duration: number): number {
+  // Count syllable-like energy peaks
+  const syllables = this.countSyllables(channelData, sampleRate);
+  const minutes = duration / 60;
+  const wordsEstimate = syllables / 1.5; // Average syllables per word
+  return wordsEstimate / minutes;
+}
+```
+
+### A4-A5: Pause Analysis
+
+Pauses detected as energy drops below threshold:
+
+```typescript
+analyzePauses(channelData: Float32Array, sampleRate: number): { frequency: number; duration: number } {
+  const frameSize = Math.floor(sampleRate * 0.02); // 20ms frames
+  const energyThreshold = 0.01;
+  let pauses: number[] = [];
+  let currentPauseLength = 0;
+  
+  for (let i = 0; i < channelData.length; i += frameSize) {
+    const energy = this.calculateRMS(channelData.slice(i, i + frameSize));
+    if (energy < energyThreshold) {
+      currentPauseLength += frameSize / sampleRate;
+    } else if (currentPauseLength > 0.2) { // Minimum 200ms pause
+      pauses.push(currentPauseLength);
+      currentPauseLength = 0;
+    }
+  }
+  
+  return {
+    frequency: pauses.length / (channelData.length / sampleRate / 60),
+    duration: pauses.length > 0 ? pauses.reduce((a, b) => a + b) / pauses.length : 0
+  };
+}
+```
+
+### A6: Voice Energy
+
+Normalised RMS energy:
+
+```typescript
+extractVoiceEnergy(channelData: Float32Array): number {
+  const rms = Math.sqrt(
+    channelData.reduce((sum, sample) => sum + sample * sample, 0) / channelData.length
+  );
+  return Math.min(rms * 10, 1); // Normalise to 0-1
+}
+```
+
+### A7: Jitter
+
+Cycle-to-cycle pitch period variation (simplified):
+
+```typescript
+extractJitter(channelData: Float32Array, sampleRate: number): number {
+  // Simplified: use pitch variability as proxy
+  // True jitter requires cycle-by-cycle period analysis
+  const pitchVar = this.extractPitchVariability(channelData, sampleRate);
+  return Math.min(pitchVar / 100, 1);
+}
+```
+
+### A8: Shimmer
+
+Amplitude variation between consecutive cycles:
+
+```typescript
+extractShimmer(channelData: Float32Array): number {
+  const frameSize = 1024;
+  const amplitudes: number[] = [];
+  
+  for (let i = 0; i < channelData.length - frameSize; i += frameSize) {
+    const frame = channelData.slice(i, i + frameSize);
+    amplitudes.push(Math.max(...frame.map(Math.abs)));
+  }
+  
+  let shimmerSum = 0;
+  for (let i = 1; i < amplitudes.length; i++) {
+    shimmerSum += Math.abs(amplitudes[i] - amplitudes[i - 1]);
+  }
+  
+  const meanAmplitude = amplitudes.reduce((a, b) => a + b) / amplitudes.length;
+  return shimmerSum / (amplitudes.length - 1) / meanAmplitude;
+}
+```
+
+### A9: Harmonic Ratio
+
+Harmonic-to-noise ratio estimation:
+
+```typescript
+extractHarmonicRatio(channelData: Float32Array, sampleRate: number): number {
+  // FFT-based harmonic analysis
+  const fftSize = 2048;
+  const spectrum = this.computeFFT(channelData.slice(0, fftSize));
+  
+  // Find harmonic peaks
+  const harmonicEnergy = this.sumHarmonicPeaks(spectrum, sampleRate);
+  const totalEnergy = spectrum.reduce((a, b) => a + b * b, 0);
+  
+  return harmonicEnergy / totalEnergy;
+}
+```
+
+### A10: Quality
+
+Composite quality metric:
+
+```typescript
+calculateQuality(features: AudioFeatures): number {
+  let quality = 0.6; // Base quality
+  
+  // Penalise extreme values
+  if (features.meanPitch < 80 || features.meanPitch > 300) quality -= 0.2;
+  if (features.voiceEnergy < 0.001) quality -= 0.3;
+  if (features.shimmer > 0.5) quality -= 0.1;
+  
+  return Math.max(0, Math.min(1, quality));
+}
+```
+
+## Scoring
+
+Audio features are converted to a 0-100 score:
+
+```typescript
+calculateAudioScore(features: AudioFeatures): number {
+  const scores: number[] = [];
+  
+  // Pitch: optimal around 150-180 Hz
+  if (features.meanPitch != null) {
+    const pitchScore = 100 - Math.abs(features.meanPitch - 165) / 2;
+    scores.push(Math.max(0, Math.min(100, pitchScore)));
+  }
+  
+  // Speaking rate: optimal around 120-150 wpm
+  if (features.speakingRate != null) {
+    const rateScore = 100 - Math.abs(features.speakingRate - 135) / 1.5;
+    scores.push(Math.max(0, Math.min(100, rateScore)));
+  }
+  
+  // Jitter: lower is better (more stable voice)
+  if (features.jitter != null) {
+    scores.push((1 - features.jitter) * 100);
+  }
+  
+  // Shimmer: lower is better (more consistent amplitude)
+  if (features.shimmer != null) {
+    scores.push((1 - features.shimmer) * 100);
+  }
+  
+  // Average all available scores
+  return scores.length > 0 
+    ? scores.reduce((a, b) => a + b) / scores.length 
+    : 50;
+}
+```
+
+## Research Basis
+
+Audio features are based on research into vocal biomarkers of mental health:
+
+- **Pitch variability**: Reduced in depression (monotone speech)
+- **Speaking rate**: Slowed in depression, increased in anxiety
+- **Pause patterns**: Increased pauses associated with cognitive load
+- **Jitter/Shimmer**: Elevated in stress and anxiety
+- **Voice energy**: Reduced in depression
+
+**Limitations**: Current extraction is simplified. Production systems may benefit from:
+- Praat integration for clinical-grade prosodic analysis
+- Machine learning models trained on clinical populations
+- Longitudinal normalisation against individual baselines
+
+---
+
+*Last Updated: December 2024*
+

@@ -5,6 +5,7 @@
   "mobile-development": "Mobile Development",
   "backend": "Backend",
   "database": "Database & RLS",
+  "assessment-engine": "Assessment Engine",
   "methodology": "Assessment Methodology",
   "authentication-aws": "AWS Authentication Guide",
   "aws-migration-compliance": "AWS Migration & Compliance",
@@ -22,5 +23,5 @@
   "medical-grade-security": "Medical-Grade Security",
   "phase2-advanced-security": "Phase 2: Advanced Security",
   "phase3-final-security": "Phase 3: Final Security",
-  "documentation-workflow": "Documentation Workflow"
+  "contributing": "Contributing"
 }

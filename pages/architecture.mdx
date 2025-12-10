@@ -205,24 +205,34 @@ const response = await fetch('/api/storage/upload', {
 
 **AWS Rekognition**
 - **Purpose**: Facial emotion analysis
-- **Features**: Emotion detection, face analysis
-- **Integration**: Lambda function calls
+- **Features**: Emotion detection, face analysis, pose estimation
+- **Integration**: Vercel API route `/api/rekognition/batch-analyze`
+
+**AWS Bedrock (Claude 3 Haiku)**
+- **Purpose**: Text analysis and conversation understanding
+- **Model**: `anthropic.claude-3-haiku-20240307-v1:0`
+- **Features**: Sentiment analysis, theme extraction, risk detection
+- **Integration**: Vercel API route `/api/bedrock/analyze-text`
 
 **ElevenLabs Integration**
 - **Purpose**: Conversational AI for assessments
-- **Agent ID**: `agent_9301k22s8e94f7qs5e704ez02npe`
-- **Features**: Voice-to-text, conversation management
+- **SDK**: `@elevenlabs/react` (useConversation hook)
+- **Agent IDs**:
+  - **Baseline Assessment**: `agent_9301k22s8e94f7qs5e704ez02npe`
+  - **Daily Check-in**: `agent_7501k3hpgd5gf8ssm3c3530jx8qx`
+- **Features**: Real-time conversation, voice synthesis, transcript generation
 
-**Custom AI Pipeline**
+**Multimodal Analysis Pipeline**
 ```typescript
-// Multi-modal analysis flow
-const analysisResults = await Promise.allSettled([
-  analyzeAudio(sessionId, audioData),
-  analyzeVisual(sessionId, imageData),
-  analyzeText(sessionId, transcriptData)
+// Parallel feature extraction
+const [audioFeatures, visualFeatures, textAnalysis] = await Promise.all([
+  extractAudioFeatures(audioBlob),           // Client-side Web Audio API
+  analyzeVisualFeatures(videoFrames),        // AWS Rekognition
+  analyzeTextWithBedrock(transcript)         // AWS Bedrock (Claude)
 ]);
 
-const fusionScore = await calculateMindMeasure(sessionId);
+// V2 Fusion: 70% text + 15% audio + 15% visual
+const finalScore = fuseScores(textAnalysis, audioFeatures, visualFeatures);
 ```
 
 ## Data Flow Architecture
@@ -230,36 +240,38 @@ const fusionScore = await calculateMindMeasure(sessionId);
 ### Assessment Data Pipeline
 
 ```
-Student Assessment → ElevenLabs Widget → Conversation Data
-                                              ↓
-                                    Session Creation (Database)
-                                              ↓
-                              ┌─────────────────────────────────┐
-                              │     Parallel Analysis           │
-                              │                                 │
-                    ┌─────────▼─────────┐  ┌─────────▼─────────┐
-                    │  Audio Analysis   │  │  Visual Analysis  │
-                    │   (Lambda)        │  │   (Lambda +       │
-                    │                   │  │   Rekognition)    │
-                    └─────────┬─────────┘  └─────────┬─────────┘
-                              │                      │
-                              └──────────┬───────────┘
-                                         │
-                                ┌────────▼────────┐
-                                │  Text Analysis  │
-                                │    (Lambda)     │
-                                └────────┬────────┘
-                                         │
-                                ┌────────▼────────┐
-                                │ Fusion Algorithm│
-                                │    (Lambda)     │
-                                └────────┬────────┘
-                                         │
-                                ┌────────▼────────┐
-                                │ Score Storage   │
-                                │   (Database)    │
-                                └─────────────────┘
+Student Assessment → ElevenLabs SDK → Conversation + Transcript
+                           ↓
+                    MediaCapture (Audio + Video Frames)
+                           ↓
+                    Session Complete
+                           ↓
+          ┌────────────────┼────────────────┐
+          │                │                │
+┌─────────▼─────────┐ ┌────▼────────┐ ┌─────▼─────────┐
+│  Audio Analysis   │ │   Visual    │ │ Text Analysis │
+│  (Client-side     │ │   Analysis  │ │ (Bedrock/     │
+│   Web Audio API)  │ │ (Rekognition│ │  Claude)      │
+└─────────┬─────────┘ └──────┬──────┘ └───────┬───────┘
+          │                  │                │
+          └──────────────────┼────────────────┘
+                             │
+                    ┌────────▼────────┐
+                    │ V2 Fusion       │
+                    │ 70/15/15 weights│
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │ Aurora Database │
+                    │ (fusion_outputs)│
+                    └─────────────────┘
 ```
+
+**Key Changes from V1**:
+- ElevenLabs **SDK** (not widget) for conversations
+- Audio features extracted **client-side** (not Lambda)
+- Text analysis via **AWS Bedrock** (not GPT-4o-mini)
+- **V2 scoring**: 70% text, 15% audio, 15% visual
 
 ### University Data Flow
 
