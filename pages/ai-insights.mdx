@@ -1,0 +1,371 @@
+# AI-Powered Institutional Insights
+
+Comprehensive guide to the AI-powered insights feature that transforms student wellbeing data into actionable institutional intelligence.
+
+## Overview
+
+The AI Insights feature uses AWS Bedrock (Claude 3 Sonnet) to analyze aggregated student wellbeing data and generate comprehensive institutional reports. Instead of manually interpreting keywords and themes, university staff receive AI-generated analysis with specific patterns, affected cohorts, and actionable recommendations.
+
+**Deployment Date**: December 2025  
+**Status**: Production  
+**Location**: Admin Dashboard → Overview → Student Concerns & Positive Themes  
+**Cost**: Approximately £12/month per university (1 daily analysis)
+
+## Key Features
+
+### Intelligent Theme Analysis
+- Identifies patterns across multiple data points
+- Groups related concerns into coherent themes
+- Calculates severity levels based on student count and risk indicators
+- Tracks trends over time (increasing/stable/decreasing)
+
+### Cohort Identification
+- Determines which student groups are most affected
+- Examples: "First years", "International students", "STEM students"
+- Helps target interventions to specific populations
+
+### Actionable Recommendations
+- Provides 3-4 specific, evidence-based actions for staff
+- Tailored to the actual concerns identified
+- Practical and implementable at institutional level
+
+### Professional Reporting
+- Generates institutional-quality analysis
+- Exportable as text reports for meetings
+- UK English, professional tone
+- Privacy-first (no individual student identification)
+
+## How to Use
+
+### Access the Feature
+
+1. Navigate to [admin.mindmeasure.co.uk](https://admin.mindmeasure.co.uk)
+2. Select your university from the dashboard
+3. Go to the **Overview** tab
+4. Scroll to "Student Concerns" or "Positive Themes" cards
+
+### Generate AI Insights
+
+1. Click the purple **"AI Insights"** button on either card
+2. Wait 10-15 seconds for analysis to complete
+3. Review the comprehensive report in the modal
+4. Export as text report if needed for meetings
+
+### Understanding the Output
+
+Each AI-generated insight includes:
+
+#### Theme Name
+Professional identification of the concern or positive theme
+- Example: "Academic Pressure & Time Management"
+
+#### Summary
+2-3 sentence explanation of what students are experiencing
+- Written in clear, professional UK English
+- Contextualizes the raw data
+
+#### Key Patterns
+Specific patterns identified with percentages
+- Example: "67% mention multiple deadlines within same week"
+- Helps understand the nuances of the concern
+
+#### Severity Assessment
+Four-level rating system:
+- **Critical**: Immediate intervention required
+- **High**: Significant concern requiring prompt action
+- **Medium**: Notable issue to monitor and address
+- **Low**: Positive trend to maintain
+
+#### Trend Direction
+- **Increasing**: Growing concern (↑ with percentage)
+- **Stable**: Consistent with previous periods (→)
+- **Decreasing**: Improving situation (↓ with percentage)
+
+#### Affected Cohorts
+Student groups most impacted by this theme
+- Helps target support services effectively
+- Examples: "First years during exam periods", "International students"
+
+#### Recommended Actions
+3-4 specific steps university staff can take
+- Evidence-based and practical
+- Aligned with the identified patterns
+- Implementable at institutional level
+
+#### Related Resources
+Types of support services that would help
+- Guides resource allocation
+- Identifies gaps in current offerings
+
+### Exporting Reports
+
+1. Click **"Export Report"** button in the insights modal
+2. Saves as plain text file with timestamp
+3. Formatted for easy sharing in meetings
+4. Contains all insights with full detail
+
+## Technical Architecture
+
+### Backend API Endpoint
+
+**Location**: `/api/ai-insights/generate`  
+**Method**: POST  
+**Authentication**: Admin credentials via session
+
+Request format:
+```json
+{
+  "type": "concern" | "positive",
+  "data": [
+    {
+      "keyword": "overwhelmed",
+      "count": 187,
+      "severity": "high"
+    }
+  ],
+  "universityId": "worcester",
+  "timeRange": "30d"
+}
+```
+
+Response format:
+```json
+{
+  "insights": [
+    {
+      "themeName": "Academic Pressure & Time Management",
+      "summary": "Students are reporting...",
+      "studentCount": 287,
+      "severity": "high",
+      "keyPatterns": [
+        {
+          "pattern": "Multiple deadlines same week",
+          "percentage": 67
+        }
+      ],
+      "trendDirection": "increasing",
+      "trendPercentage": 23,
+      "affectedCohorts": ["First years", "STEM students"],
+      "recommendedActions": ["Review assessment scheduling..."],
+      "relatedResources": ["Academic Skills Workshops"]
+    }
+  ],
+  "generatedAt": "2025-12-15T10:30:00Z",
+  "analysisScope": {
+    "studentCount": 287,
+    "timeFrame": "30d"
+  }
+}
+```
+
+### AWS Bedrock Integration
+
+**Model**: Claude 3 Sonnet (anthropic.claude-3-sonnet-20240229-v1:0)  
+**Region**: eu-west-2  
+**Authentication**: Server-side credentials (stored in Vercel environment variables)
+
+Key configuration:
+- **Max tokens**: 4000
+- **Temperature**: 0.7 (balanced creativity and consistency)
+- **System prompt**: Specialized for institutional wellbeing analysis
+
+### Data Flow
+
+1. **Frontend** → User clicks "AI Insights" button
+2. **Service Layer** → `AIInsightsService.ts` prepares request
+3. **API Endpoint** → `/api/ai-insights/generate` receives request
+4. **Prompt Construction** → Builds specialized prompt with context
+5. **Bedrock Call** → Invokes Claude 3 Sonnet via AWS SDK
+6. **Response Parsing** → Validates and structures JSON response
+7. **Frontend Display** → `AIInsightsModal.tsx` renders results
+
+### Security & Privacy
+
+#### Data Protection
+- Aggregated data only (no individual transcripts sent to AI)
+- Keywords and counts, not personally identifiable information
+- Server-side processing (credentials never exposed to browser)
+- HTTPS encryption for all API calls
+
+#### AWS Credentials
+- Stored as encrypted Vercel environment variables
+- Shared with mobile app's Bedrock integration
+- Scoped to `bedrock:InvokeModel` permission only
+- Automatically trimmed to prevent formatting errors
+
+#### Compliance
+- GDPR compliant (no personal data processing)
+- HIPAA aligned (aggregated insights only)
+- Privacy-first design
+- No student identification in outputs
+
+## Cost Management
+
+### Pricing Structure
+
+**Claude 3 Sonnet Pricing**:
+- Input: $3.00 per million tokens
+- Output: $15.00 per million tokens
+
+**Typical Analysis**:
+- Input tokens: ~800 (keywords, context, system prompt)
+- Output tokens: ~1200 (insights JSON)
+- Cost per analysis: ~$0.02
+
+**Monthly Estimates**:
+- Daily analysis: ~£12/month per university
+- On-demand only: ~£0.60/month (1-2 analyses per week)
+
+### Cost Optimization Options
+
+#### Option 1: Claude 3 Haiku (60x cheaper)
+- Model: `anthropic.claude-3-haiku-20240307-v1:0`
+- Cost: ~$0.0003 per analysis
+- Monthly: ~£0.20 per university
+- Trade-off: Slightly less sophisticated analysis
+
+#### Option 2: Scheduled Analysis
+- Generate insights once daily at 2am
+- Store in database for instant access
+- No waiting time for users
+- Predictable monthly costs
+
+#### Option 3: Caching
+- Cache insights for 24 hours
+- Multiple users see same analysis
+- Reduced API calls
+- Cost savings for high-traffic dashboards
+
+## Troubleshooting
+
+### "The security token included in the request is invalid"
+
+**Cause**: AWS credentials expired or incorrectly formatted  
+**Solution**:
+1. Verify credentials in Vercel environment variables
+2. Check for extra spaces or newlines
+3. Ensure credentials match mobile app's working credentials
+4. Redeploy after updating
+
+### "r.insights.map is not a function"
+
+**Cause**: API response structure mismatch  
+**Solution**:
+1. Check API returns `{ insights: [...] }` not `{ insights: { insights: [...] } }`
+2. Verify parseClaudeResponse returns correct structure
+3. Check browser console for actual response structure
+
+### Modal shows "No significant insights generated"
+
+**Cause**: Claude returned empty or malformed JSON  
+**Solution**:
+1. Check Vercel function logs for Claude's raw response
+2. Verify prompt is constructed correctly
+3. Ensure sufficient data provided (at least 3-5 keywords)
+4. Check Claude didn't hit token limit
+
+### Analysis takes longer than 15 seconds
+
+**Cause**: Bedrock throttling or network latency  
+**Solution**:
+1. Check AWS Bedrock quotas for eu-west-2
+2. Request quota increase if hitting limits
+3. Consider implementing timeout handling
+4. Add retry logic for transient failures
+
+### S3 uploads fail alongside AI Insights
+
+**Cause**: Shared AWS credentials expired  
+**Solution**:
+1. Update AWS credentials in Vercel (both projects share same credentials)
+2. Test S3 uploads after fixing AI Insights
+3. Both features use same IAM user
+
+## Best Practices
+
+### When to Generate Insights
+
+**Recommended**:
+- Weekly review of student concerns
+- Monthly trend analysis
+- Before staff wellbeing meetings
+- When preparing institutional reports
+- After significant changes in patterns
+
+**Avoid**:
+- Multiple times per day (data doesn't change that fast)
+- Without reviewing raw data first
+- As only source of information (complement with direct student feedback)
+
+### Interpreting Results
+
+**Do**:
+- Cross-reference with raw keyword data
+- Consider institutional context
+- Share with relevant staff teams
+- Track recommendations implemented
+- Monitor impact of interventions
+
+**Don't**:
+- Take recommendations as absolute directives
+- Ignore institutional constraints
+- Share publicly without review
+- Use for individual student identification
+- Rely solely on AI without professional judgment
+
+### Combining with Other Data
+
+AI Insights work best when combined with:
+- Direct student feedback surveys
+- Staff observations and reports
+- Academic performance data
+- Support service utilization metrics
+- Engagement and attendance data
+
+## Future Enhancements
+
+### Planned Features
+
+#### Phase B: Scheduled Analysis
+- Automatic daily generation at 2am
+- Store insights in database
+- Historical trend tracking
+- Email summaries to staff
+
+#### Representative Quotes
+- Extract actual student quotes from transcripts
+- Add context to keyword patterns
+- Maintain privacy (anonymized)
+
+#### Longitudinal Analysis
+- Compare insights across terms
+- Identify seasonal patterns
+- Track intervention effectiveness
+- Year-over-year comparisons
+
+#### Custom Prompts
+- Institution-specific analysis focus
+- Configurable severity thresholds
+- Custom cohort definitions
+- Tailored recommendation types
+
+## Related Documentation
+
+- [Admin UI Guide](/core-platform/admin-ui) - Complete admin dashboard guide
+- [Architecture](/architecture-infrastructure/architecture) - System architecture overview
+- [Text Analysis](/assessment-engine/text-analysis) - How mobile app uses Bedrock
+- [Database Schema](/architecture-infrastructure/database) - Data structure documentation
+- [AWS Authentication](/architecture-infrastructure/authentication-aws) - AWS setup guide
+
+## API Reference
+
+For detailed API specifications and code examples, see:
+- [Backend API Documentation](/api-reference/api-documentation)
+- Source code: `mind-measure-core/api/ai-insights/generate.ts`
+- Frontend service: `mind-measure-core/src/services/AIInsightsService.ts`
+- Modal component: `mind-measure-core/src/components/AIInsightsModal.tsx`
+
+---
+
+**Questions or issues?** Contact the development team or check the [GitHub repository](https://github.com/ColwallKeith/mind-measure-core) for the latest updates.
+
