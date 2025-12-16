@@ -1,0 +1,93 @@
+# Quick Start Guide
+
+Welcome to Mind Measure! This guide will help you get started quickly, whether you're a developer, designer, or content editor.
+
+## Choose Your Path
+
+### 👨‍💻 For Developers
+
+**Get up and running in minutes:**
+
+1. **[Development Guide](/quick-start/development-guide)** - Complete setup and workflow
+2. **[First Deployment](/quick-start/deployment)** - Deploy your first changes
+3. **[Testing](/quick-start/testing)** - Test your code
+
+### 🎨 For Designers
+
+**Start designing:**
+
+1. **[Figma Workflow](/marketing-sites/figma-workflow)** - Design to code process
+2. **[Design System](/marketing-sites#design-system)** - Colors, typography, components
+
+### ✏️ For Content Editors
+
+**Manage content:**
+
+1. **[CMS User Guide](/admin/cms-user-guide)** - Using Sanity CMS
+2. **[Marketing Sites](/marketing-sites)** - Marketing content management
+
+## What You'll Need
+
+### For Development
+
+- Node.js 20+
+- Git
+- Vercel CLI
+- Your preferred code editor (Cursor recommended)
+
+### Key Resources
+
+- **Documentation**: https://docs.mindmeasure.co.uk
+- **Admin Dashboard**: https://admin.mindmeasure.co.uk
+- **Mobile App**: https://mobile.mindmeasure.app
+- **Marketing Sites**: https://mindmeasure.co.uk / mindmeasure.app
+
+## Common Tasks
+
+### Deploy Changes
+
+```bash
+# For admin dashboard (mind-measure-core)
+cd mind-measure-core
+npx vercel --prod
+
+# For mobile app (mind-measure-mobile-final)
+cd mind-measure-mobile-final
+npx vercel --prod
+
+# For marketing sites
+cd mindmeasure-marketing/sites/university
+npx vercel --prod
+```
+
+### Run Locally
+
+```bash
+# Admin dashboard
+npm run dev          # http://localhost:5173
+
+# Mobile app
+npm run dev          # http://localhost:5173
+
+# Marketing sites
+npm run dev:university    # http://localhost:4321
+npm run dev:student       # http://localhost:4321
+```
+
+## Next Steps
+
+1. Read the **[Development Guide](/quick-start/development-guide)** for detailed setup
+2. Review **[Platform Architecture](/architecture)** to understand the system
+3. Check **[Security & Privacy](/security)** for compliance requirements
+4. Join the team communication channels
+
+## Need Help?
+
+- **Documentation**: Browse the sidebar for detailed guides
+- **Troubleshooting**: Check [Operations](/operations) for common issues
+- **Contributing**: See [Contributing](/contributing) to add documentation
+
+---
+
+**Ready to dive deeper?** Choose a topic from the sidebar or start with the [Development Guide](/quick-start/development-guide).
+
