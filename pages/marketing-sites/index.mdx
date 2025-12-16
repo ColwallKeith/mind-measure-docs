@@ -1,0 +1,217 @@
+# Marketing Sites Overview
+
+## Purpose
+
+Unified monorepo for all Mind Measure marketing websites, enabling:
+- Shared component library
+- Consistent blog and whitepaper system
+- Streamlined Figma → Code workflow
+- Independent deployment per audience
+- Easy addition of new sites (Mind Measure Pro in 2026)
+
+## Repository Structure
+
+```
+mindmeasure-marketing/
+│
+├── sites/                          # Individual marketing sites
+│   ├── university/                 # mindmeasure.co.uk
+│   │   ├── src/
+│   │   │   ├── pages/             # Astro pages
+│   │   │   ├── components/        # University-specific components
+│   │   │   ├── layouts/
+│   │   │   └── styles/
+│   │   ├── sanity/                # University Sanity schemas
+│   │   ├── public/                # Static assets
+│   │   ├── astro.config.mjs
+│   │   └── package.json
+│   │
+│   ├── student/                   # mindmeasure.app
+│   │   └── [same structure as university]
+│   │
+│   └── workplace/                 # [2026] Mind Measure Pro
+│       └── package.json (placeholder)
+│
+├── packages/
+│   └── shared/                    # Shared across all sites
+│       ├── components/            # Reusable Astro components
+│       ├── layouts/               # Common layouts
+│       ├── styles/                # Shared CSS
+│       ├── utils/                 # Helper functions
+│       ├── types/                 # TypeScript types
+│       └── package.json
+│
+├── sanity/                        # Organized Sanity schemas
+│   ├── university/                # University-specific schemas
+│   ├── student/                   # Student-specific schemas
+│   ├── workplace/                 # Workplace-specific schemas
+│   └── shared/                    # Shared schemas (blogs, whitepapers)
+│
+└── package.json                   # Workspace root
+```
+
+## Sites & Domains
+
+| Site | Domain | Audience | Status | Vercel Project |
+|------|--------|----------|--------|----------------|
+| **University** | mindmeasure.co.uk | Educational Institutions | ✅ Live | mindmeasure-uni |
+| **Student** | mindmeasure.app | Students | ✅ Live | mindmeasure-student |
+| **Workplace** | TBD | B2B/Enterprise | 🚧 2026 | TBD |
+
+## Tech Stack
+
+### Core Technologies
+- **Astro 5.7+** - Static site generation with island architecture
+- **TypeScript** - Type safety throughout
+- **Tailwind CSS 4** - Utility-first styling
+- **Sanity.io** - Headless CMS for content management
+
+### Component Libraries
+- **React 19** - For interactive components
+- **Vue 3** - For specific UI components
+- **Astro Components** - Primary component system
+
+### Fonts
+- **Chillax** - Display/Heading font
+- **Geist** - Body/Sans-serif font
+- **PP Mori** - Monospace font
+
+### Deployment
+- **Vercel** - Hosting and edge functions
+- **GitHub** - Version control
+- **Sanity Studio** - Content editing interface
+
+## Key Features
+
+### Current Features
+- ✅ Static site generation with Astro
+- ✅ Sanity CMS integration
+- ✅ Blog functionality
+- ✅ Responsive design
+- ✅ Component-based architecture
+- ✅ Independent deployments
+
+### Planned Enhancements
+- 🚧 Unified contact form system
+- 🚧 Enhanced blog engine (SEO, scheduling, rich media)
+- 🚧 Whitepaper management system
+- 🚧 Figma → Code workflow
+- 🚧 Shared component library
+- 🚧 Newsletter integration
+- 🚧 Analytics tracking
+
+## Quick Start
+
+### Development
+
+```bash
+# Navigate to project
+cd mindmeasure-marketing
+
+# Run a specific site
+npm run dev:university      # localhost:4321
+npm run dev:student         # localhost:4321
+
+# Build sites
+npm run build:university
+npm run build:student
+npm run build:all          # Build all sites
+
+# Generate Sanity types
+npm run generate:types
+```
+
+### Deployment
+
+Each site deploys independently to Vercel:
+
+```bash
+# Deploy university site
+cd sites/university
+npx vercel --prod
+
+# Deploy student site
+cd sites/student
+npx vercel --prod
+```
+
+## Design System
+
+### Color Palette
+```
+University Theme: Blue (#0066CC)
+Student Theme: Purple (#8B5CF6)
+Workplace Theme: Green (#059669) - Coming 2026
+```
+
+### Typography Scale
+- Display 1: 4rem / 64px
+- Display 2: 3rem / 48px
+- Heading 1: 2.5rem / 40px
+- Body: 1rem / 16px
+
+### Spacing
+- Base grid: 8px
+- Container max-width: 1280px
+
+## Environment Variables
+
+Each site needs:
+
+```env
+# Sanity
+PUBLIC_SANITY_PROJECT_ID=xxx
+PUBLIC_SANITY_DATASET=production
+SANITY_API_TOKEN=xxx
+
+# Contact Forms (when implemented)
+RESEND_API_KEY=xxx
+CONTACT_EMAIL=hello@mindmeasure.co.uk
+
+# Analytics (optional)
+GOOGLE_ANALYTICS_ID=xxx
+```
+
+## Team Workflow
+
+### Content Editors
+1. Access Sanity Studio
+2. Create/edit blog posts, whitepapers
+3. Preview changes
+4. Publish when ready
+
+### Designers
+1. Design in Figma using design system
+2. Export assets (images, icons)
+3. Share Dev Mode link
+4. Review implementation
+
+### Developers
+1. Pull latest code
+2. Create components from Figma
+3. Test locally
+4. Deploy to Vercel
+5. Sync with team
+
+## Success Metrics
+
+### Performance
+- Lighthouse Score: 90+ (all categories)
+- First Contentful Paint: less than 1.5s
+- Time to Interactive: less than 3s
+
+### SEO
+- Core Web Vitals: Pass
+- Mobile-friendly: Yes
+- Structured data: Implemented
+
+### Content
+- Blog posts: Regular publishing schedule
+- Whitepapers: Quarterly releases
+- Fresh content: Weekly updates
+
+---
+
+**Last Updated**: December 16, 2024  
+**Repository**: github.com/ColwallKeith/mindmeasure-marketing
+

@@ -1,0 +1,318 @@
+# Deployment Guide
+
+## Overview
+
+Each marketing site deploys independently to Vercel with its own domain, environment variables, and build configuration.
+
+## Deployment Architecture
+
+### Vercel Projects
+
+| Site | Vercel Project | Domain | Branch |
+|------|---------------|--------|--------|
+| University | `mindmeasure-uni` | mindmeasure.co.uk | main |
+| Student | `mindmeasure-student` | mindmeasure.app | main |
+| Workplace | TBD | TBD | main |
+
+### Why Separate Projects?
+
+- **Independent Deployments**: Deploy one site without affecting others
+- **Site-Specific Configuration**: Different environment variables and settings
+- **Isolated Analytics**: Separate performance monitoring
+- **Team Permissions**: Different access levels per site
+
+## Deployment Process
+
+### University Site
+
+```bash
+# Navigate to university site
+cd mindmeasure-marketing/sites/university
+
+# Build locally (optional test)
+npm run build
+
+# Deploy to production
+npx vercel --prod
+
+# Assign domain alias
+npx vercel alias [deployment-url] mindmeasure.co.uk
+```
+
+### Student Site
+
+```bash
+# Navigate to student site
+cd mindmeasure-marketing/sites/student
+
+# Build locally (optional test)
+npm run build
+
+# Deploy to production
+npx vercel --prod
+
+# Assign domain alias
+npx vercel alias [deployment-url] mindmeasure.app
+```
+
+## Automatic Deployments
+
+### GitHub Integration
+
+Both sites use automatic deployments via GitHub:
+
+1. **Push to `main`** triggers production deployment
+2. **Push to any branch** creates preview deployment
+3. **Pull Request** creates preview deployment with comment
+
+### Configuration
+
+Each site has `.vercel/project.json`:
+
+```json
+{
+  "projectId": "prj_xxx",
+  "orgId": "team_xxx",
+  "projectName": "mindmeasure-uni"
+}
+```
+
+## Environment Variables
+
+### Required for All Sites
+
+Set in Vercel dashboard under Settings → Environment Variables:
+
+```env
+# Sanity CMS
+PUBLIC_SANITY_PROJECT_ID=your_project_id
+PUBLIC_SANITY_DATASET=production
+SANITY_API_TOKEN=your_token
+
+# Contact Forms (when implemented)
+RESEND_API_KEY=re_xxx
+CONTACT_EMAIL=hello@mindmeasure.co.uk
+
+# Analytics
+GOOGLE_ANALYTICS_ID=G-xxx
+```
+
+### Environment-Specific
+
+- **Production**: `mindmeasure.co.uk` and `mindmeasure.app`
+- **Preview**: Automatically generated URLs
+- **Development**: `localhost:4321`
+
+## Build Configuration
+
+### Astro Build Settings
+
+Each site uses these Vercel settings:
+
+```
+Framework Preset: Astro
+Build Command: npm run build
+Output Directory: dist
+Install Command: npm install
+Node Version: 20.x
+```
+
+### Build Performance
+
+- **Build Time**: ~2-4 minutes
+- **Output Size**: ~500KB - 2MB (depends on images)
+- **Cache**: Vercel caches dependencies
+
+## Domain Configuration
+
+### DNS Records (Cloudflare)
+
+```dns
+# University Site (mindmeasure.co.uk)
+Type: A
+Name: @
+Value: 76.76.21.21
+Proxy: DNS only (grey cloud)
+
+Type: CNAME
+Name: www
+Value: cname.vercel-dns.com
+Proxy: DNS only (grey cloud)
+
+# Student Site (mindmeasure.app)
+Type: CNAME
+Name: @
+Value: cname.vercel-dns.com
+Proxy: DNS only (grey cloud)
+
+Type: CNAME
+Name: www
+Value: cname.vercel-dns.com
+Proxy: DNS only (grey cloud)
+```
+
+### Vercel Domain Setup
+
+1. Go to Vercel project → Settings → Domains
+2. Click "Add Domain"
+3. Enter domain (e.g., `mindmeasure.co.uk`)
+4. Follow DNS instructions
+5. Wait for verification (usually instant)
+6. Set as Production domain
+
+## Rollback Procedure
+
+### If Deployment Breaks
+
+1. **Check Vercel Dashboard** for deployment logs
+2. **Identify the Issue** in build logs or runtime logs
+3. **Rollback to Previous Deployment**:
+   ```bash
+   # List recent deployments
+   npx vercel ls --prod
+   
+   # Promote a previous deployment
+   npx vercel promote [previous-deployment-url]
+   ```
+
+### Quick Rollback via Dashboard
+
+1. Go to Vercel project → Deployments
+2. Find last working deployment
+3. Click three dots → "Promote to Production"
+4. Confirm
+
+## Deployment Checklist
+
+### Before Deploying
+
+- [ ] Test build locally (`npm run build`)
+- [ ] Check for TypeScript errors
+- [ ] Verify environment variables set in Vercel
+- [ ] Review changed files (`git status`)
+- [ ] Commit changes (`git add . && git commit`)
+- [ ] Push to feature branch first (creates preview)
+
+### During Deployment
+
+- [ ] Monitor Vercel dashboard for build progress
+- [ ] Check build logs for errors
+- [ ] Wait for deployment to complete (~3-5 min)
+
+### After Deployment
+
+- [ ] Visit production URL
+- [ ] Test critical pages (homepage, blog, contact)
+- [ ] Check browser console for errors
+- [ ] Verify images load correctly
+- [ ] Test forms (if applicable)
+- [ ] Check mobile responsiveness
+- [ ] Run Lighthouse audit
+
+## Troubleshooting
+
+### Build Fails
+
+**Check Build Logs:**
+1. Go to Vercel → Deployments → Click failed deployment
+2. Review "Building" section for errors
+3. Common issues:
+   - Missing environment variables
+   - TypeScript errors
+   - Import errors
+   - Sanity query errors
+
+**Fix:**
+```bash
+# Reproduce locally
+npm run build
+
+# Fix errors
+# Commit and push
+```
+
+### Site Shows 404
+
+**Check Domain Configuration:**
+1. Vercel → Settings → Domains
+2. Ensure domain is assigned
+3. Check DNS records in Cloudflare
+4. Verify DNS propagation
+
+**Fix:**
+```bash
+# Re-assign domain alias
+npx vercel alias [deployment-url] mindmeasure.co.uk
+```
+
+### Images Not Loading
+
+**Check:**
+- Image paths are correct
+- Images exist in `public/` or `src/assets/`
+- Sanity images have correct URLs
+- Image optimization settings
+
+### Slow Build Times
+
+**Optimize:**
+- Enable Vercel build cache
+- Use `astro:assets` for image optimization
+- Reduce number of pages built
+- Optimize Sanity queries
+
+## Monitoring
+
+### Vercel Analytics
+
+Built-in analytics track:
+- Page views
+- Visitor count
+- Top pages
+- Performance metrics
+- Geographic distribution
+
+### Performance Monitoring
+
+Monitor these metrics:
+- **First Contentful Paint**: Target < 1.5s
+- **Largest Contentful Paint**: Target < 2.5s
+- **Time to Interactive**: Target < 3.5s
+- **Cumulative Layout Shift**: Target < 0.1
+
+### Error Tracking
+
+Vercel logs show:
+- Build errors
+- Runtime errors
+- 404 errors
+- API errors
+
+## Best Practices
+
+### Deployment Timing
+
+- **Avoid peak hours** for major deployments
+- **Test in preview** before promoting to production
+- **Deploy incrementally** rather than big bang releases
+- **Have rollback plan** ready
+
+### Version Control
+
+- **Tag releases**: `git tag v1.2.3`
+- **Meaningful commits**: Clear commit messages
+- **Feature branches**: Develop in branches, merge to main
+- **Protected main**: Require PR reviews
+
+### Communication
+
+- **Announce deployments** to team
+- **Document changes** in commit messages
+- **Alert stakeholders** of major updates
+- **Monitor post-deployment** for issues
+
+---
+
+**Last Updated**: December 16, 2024  
+**Vercel Status**: https://www.vercel-status.com
+

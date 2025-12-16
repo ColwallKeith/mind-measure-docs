@@ -1,0 +1,277 @@
+# CMS & Content Management
+
+## Overview
+
+Enhanced Sanity CMS configuration for professional blog and whitepaper management across all marketing sites.
+
+## Goals
+
+1. **Unified Blog System** - Shared blog engine across all sites
+2. **Whitepaper Management** - Upload, manage, and track downloads
+3. **Advanced SEO** - Meta tags, Open Graph, structured data
+4. **Content Scheduling** - Publish and unpublish dates
+5. **Rich Media** - Image galleries, videos, embeds
+6. **Author Management** - Multiple authors with profiles
+7. **Related Content** - Automatic recommendations
+
+## Content Architecture
+
+### Sanity Projects
+
+Each site maintains its own Sanity project:
+- **University Site**: Separate project for institution content
+- **Student Site**: Separate project for student content
+- **Shared Schemas**: Common content types used across sites
+
+### Why Separate Projects?
+
+- Different content strategies per audience
+- Independent content teams
+- Flexible permissions
+- Separate billing
+
+## Enhanced Blog Schema
+
+### Core Fields
+
+```typescript
+{
+  name: 'blogPost',
+  type: 'document',
+  fields: [
+    // Content
+    { name: 'title', type: 'string', required: true },
+    { name: 'slug', type: 'slug', required: true },
+    { name: 'excerpt', type: 'text', maxLength: 200 },
+    { name: 'coverImage', type: 'image' },
+    { name: 'content', type: 'array' }, // Portable Text
+    
+    // Author & Taxonomy
+    { name: 'author', type: 'reference', to: [{ type: 'author' }] },
+    { name: 'categories', type: 'array' },
+    { name: 'tags', type: 'array' },
+    
+    // SEO
+    { name: 'seoTitle', type: 'string', maxLength: 60 },
+    { name: 'seoDescription', type: 'text', maxLength: 160 },
+    { name: 'ogImage', type: 'image' },
+    
+    // Publishing
+    { name: 'publishedAt', type: 'datetime', required: true },
+    { name: 'unpublishAt', type: 'datetime' },
+    { name: 'featured', type: 'boolean' },
+    
+    // Multi-site
+    { name: 'sites', type: 'array' }, // ['university', 'student']
+    
+    // Related Content
+    { name: 'relatedPosts', type: 'array' }
+  ]
+}
+```
+
+### Rich Content Types
+
+Portable Text supports:
+- **Text Blocks**: Headings, paragraphs, lists
+- **Images**: With captions and alt text
+- **Code Blocks**: Syntax-highlighted code
+- **Callouts**: Info, warning, success, tip boxes
+- **Embeds**: YouTube, Twitter, etc.
+- **Internal Links**: Link to other blog posts
+
+## Whitepaper Schema
+
+### Core Fields
+
+```typescript
+{
+  name: 'whitepaper',
+  type: 'document',
+  fields: [
+    // Content
+    { name: 'title', type: 'string', required: true },
+    { name: 'slug', type: 'slug', required: true },
+    { name: 'description', type: 'text', maxLength: 300 },
+    { name: 'coverImage', type: 'image', required: true },
+    { name: 'keyTakeaways', type: 'array' }, // Bullet points
+    
+    // File
+    { name: 'file', type: 'file', accept: 'application/pdf' },
+    { name: 'fileSize', type: 'string' }, // "2.5 MB"
+    { name: 'pages', type: 'number' },
+    
+    // Form Requirements
+    { name: 'requiresForm', type: 'boolean', default: true },
+    { name: 'formFields', type: 'array' }, // name, email, organization, etc.
+    
+    // Categories & Publishing
+    { name: 'categories', type: 'array' },
+    { name: 'publishedAt', type: 'datetime', required: true },
+    { name: 'sites', type: 'array' }
+  ]
+}
+```
+
+### Download Flow
+
+1. User clicks "Download" on whitepaper
+2. Modal appears with contact form (if required)
+3. User fills form and submits
+4. Email sent to sales team
+5. PDF download starts automatically
+6. Download tracked in analytics
+
+## Author Schema
+
+```typescript
+{
+  name: 'author',
+  type: 'document',
+  fields: [
+    { name: 'name', type: 'string', required: true },
+    { name: 'slug', type: 'slug', required: true },
+    { name: 'image', type: 'image' },
+    { name: 'bio', type: 'text', rows: 4 },
+    { name: 'role', type: 'string' }, // e.g., "Clinical Psychologist"
+    { name: 'social', type: 'object', fields: [
+      { name: 'twitter', type: 'url' },
+      { name: 'linkedin', type: 'url' },
+      { name: 'website', type: 'url' }
+    ]}
+  ]
+}
+```
+
+## Sanity Studio Configuration
+
+### Unified Studio
+
+Create a shared Sanity Studio that manages content for all projects:
+
+```typescript
+// sanity.config.ts
+export default defineConfig([
+  {
+    name: 'university',
+    title: 'Mind Measure University',
+    projectId: 'xxx',
+    dataset: 'production',
+    schema: { types: [blogPost, whitepaper, author, category] }
+  },
+  {
+    name: 'student',
+    title: 'Mind Measure Student',
+    projectId: 'yyy',
+    dataset: 'production',
+    schema: { types: [blogPost, whitepaper, author, category] }
+  }
+])
+```
+
+### Studio Features
+
+- **Multi-project Switching**: Toggle between university and student content
+- **Live Preview**: See changes before publishing
+- **Desk Structure**: Custom organization of content types
+- **Roles & Permissions**: Control who can edit what
+
+## Content Workflow
+
+### Creating a Blog Post
+
+1. **Draft**: Content editor creates post in Sanity Studio
+2. **Preview**: Review with live preview
+3. **Schedule**: Set publish date/time
+4. **Publish**: Post goes live automatically at scheduled time
+5. **Update**: Edit anytime, changes deploy on next build
+
+### Managing Whitepapers
+
+1. **Upload PDF**: Add whitepaper file to Sanity
+2. **Add Metadata**: Title, description, key takeaways
+3. **Configure Form**: Choose required form fields
+4. **Publish**: Make available on site
+5. **Track**: Monitor downloads and form submissions
+
+## SEO Features
+
+### Per-Post Optimization
+
+- Custom SEO title and description
+- Open Graph image for social sharing
+- Structured data (Article schema)
+- Canonical URLs
+- XML sitemap generation
+
+### Content Guidelines
+
+- **Title**: 50-60 characters
+- **Meta Description**: 150-160 characters
+- **Image Alt Text**: Descriptive, keyword-rich
+- **Headings**: Proper H1-H6 hierarchy
+- **Internal Linking**: Link to related content
+
+## Analytics Integration
+
+### Tracked Events
+
+- Page views per post
+- Time on page
+- Scroll depth
+- Social shares
+- Whitepaper downloads
+- Form submissions
+
+### Popular Content
+
+Sanity dashboard shows:
+- Most viewed blog posts
+- Most downloaded whitepapers
+- Trending topics
+- Author performance
+
+## Implementation Checklist
+
+### Phase 1: Blog Enhancement
+- [ ] Create enhanced blog post schema
+- [ ] Create author schema
+- [ ] Update category schema
+- [ ] Generate TypeScript types
+- [ ] Test in Sanity Studio
+
+### Phase 2: Whitepaper System
+- [ ] Create whitepaper schema
+- [ ] Set up file upload
+- [ ] Configure form requirements
+- [ ] Generate TypeScript types
+- [ ] Test in Sanity Studio
+
+### Phase 3: Frontend Components
+- [ ] Build BlogList component
+- [ ] Build BlogPost layout
+- [ ] Build WhitepaperCard component
+- [ ] Build WhitepaperDownload component
+- [ ] Add to shared package
+
+### Phase 4: Deployment
+- [ ] Connect to Sanity projects
+- [ ] Test queries
+- [ ] Deploy to Vercel
+- [ ] Test live functionality
+
+## Future Enhancements
+
+- Newsletter integration (ConvertKit, Mailchimp)
+- Comment system (Disqus, Commento)
+- Reading progress indicator
+- Bookmark/save functionality
+- PDF generation for blog posts
+- RSS feed generation
+- Multi-language support
+
+---
+
+**Status**: Planned  
+**Implementation Date**: Q1 2025
+
