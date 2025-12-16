@@ -31,6 +31,7 @@ export default {
     )
   },
   sidebar: {
+    defaultMenuCollapseLevel: 1,
     titleComponent({ title, type }: { title: string; type: string }) {
       if (type === 'separator') {
         return <span className="cursor-default">{title}</span>

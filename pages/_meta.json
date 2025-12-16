@@ -1,15 +1,15 @@
 {
-  "index": "🏠 Overview",
-  "quick-start": "🚀 Quick Start",
-  "architecture": "🏗️ Platform Architecture",
-  "mobile": "📱 Mobile Application",
-  "admin": "💻 Admin Dashboard",
-  "marketing-sites": "🎨 Marketing Sites",
-  "assessment": "🧠 Assessment System",
-  "security": "🔐 Security & Privacy",
-  "api-reference": "📡 API Reference",
-  "operations": "🔧 Operations",
-  "adr": "📋 Architecture Decisions",
-  "historical": "📚 Historical Records",
-  "contributing": "🤝 Contributing"
+  "index": "Overview",
+  "quick-start": "Quick Start",
+  "architecture": "Architecture",
+  "mobile": "Mobile",
+  "admin": "Admin",
+  "marketing-sites": "Marketing Sites",
+  "assessment": "Assessment",
+  "security": "Security",
+  "api-reference": "API",
+  "operations": "Operations",
+  "adr": "Architecture Decisions",
+  "historical": "Historical",
+  "contributing": "Contributing"
 }
