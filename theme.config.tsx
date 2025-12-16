@@ -20,6 +20,17 @@ export default {
       <meta property="og:title" content="Mind Measure Documentation" />
       <meta property="og:description" content="Complete documentation for the Mind Measure platform" />
       <link rel="icon" href="/favicon.ico" />
+      <style>{`
+        /* Hide all folder icons */
+        .nextra-sidebar-container nav svg {
+          display: none !important;
+        }
+        /* Remove extra spacing left by hidden icons */
+        .nextra-sidebar-container nav a,
+        .nextra-sidebar-container nav button {
+          padding-left: 0 !important;
+        }
+      `}</style>
     </>
   ),
   banner: {
