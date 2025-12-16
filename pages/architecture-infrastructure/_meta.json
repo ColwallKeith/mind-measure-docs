@@ -1,0 +1,8 @@
+{
+  "architecture": "System Architecture",
+  "aurora-serverless-v2": "Aurora Serverless v2",
+  "authentication-aws": "AWS Authentication",
+  "backend": "Backend Services",
+  "database": "Database & RLS"
+}
+
