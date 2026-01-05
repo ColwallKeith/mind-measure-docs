@@ -1,0 +1,292 @@
+# Dashboard Improvements
+
+Recent enhancements to the mobile app dashboard provide students with richer insights into their wellbeing trends over time.
+
+## Overview
+
+The dashboard now features swipeable score cards showing current scores, 7-day trends, and 30-day trends, inspired by Apple Health's visualization approach.
+
+## Key Features
+
+### Swipeable Score Cards
+
+**Current Score Card**
+- Displays latest Mind Measure score
+- Color-coded by wellbeing band (Green/Blue/Yellow/Red)
+- Shows mood score and check-in date
+- Baseline score displayed for comparison
+
+**7-Day View Card**
+- Bar chart showing scores for last 7 days
+- Baseline reference line
+- Dynamic day labels (relative to current day)
+- Check-in counter showing participation
+- Encouragement message if few check-ins
+- Bars grow from baseline to show improvement/decline
+
+**30-Day View Card**
+- Bar chart showing scores for last 30 days
+- Average score display
+- Check-in counter for the month
+- Day numbers (1-31) based on actual dates
+- Minimum 5 check-ins required for meaningful average
+
+### Visualization Design
+
+**Apple Health Inspiration**
+- Prominent, solid bars
+- Clear baseline reference
+- Bars grow from bottom upwards
+- Strong contrast with white bars on colored backgrounds
+- Minimal, focused data display
+
+**Color-Coded Backgrounds**
+- Green (80-100): Excellent wellbeing
+- Blue (60-79): Good wellbeing
+- Amber (40-59): Moderate concerns
+- Red (0-39): Concerning patterns
+
+## User Interface Components
+
+### SwipeableScoreCard Component
+
+Main container handling swipe gestures and card transitions.
+
+```typescript
+interface SwipeableScoreCardProps {
+  latestScore: number | null;
+  latestSession: SessionData | null;
+  baselineScore: number | null;
+  trendData: {
+    last7CheckIns: Array<{score: number, date: string}>;
+    last30Days: Array<{score: number, date: string}>;
+  };
+  userCreatedAt: string;
+}
+```
+
+**Features:**
+- Framer Motion animations
+- Touch-friendly swipe gestures
+- Pagination dots for navigation
+- Conditional view display based on account age
+
+### CurrentScoreCard Component
+
+Displays the user's most recent wellbeing score.
+
+**Key Elements:**
+- Large score display (0-100)
+- Status badge (Excellent/Good/Moderate/Concerning)
+- Mood score indicator
+- Last check-in date
+- Baseline comparison indicator
+
+### SevenDayViewCard Component
+
+Shows bar chart for the last 7 days of check-ins.
+
+**Key Elements:**
+- "SEVEN DAY VIEW" title
+- Average score display top-left
+- Check-in counter
+- Baseline score label with horizontal line
+- 7 vertical bars (one per day)
+- Dynamic day labels (S M T W T F S)
+- Y-axis: 0, 50, 100
+- Encouragement message for low participation
+
+**Data Handling:**
+- Only actual check-in scores shown
+- Days without check-ins show minimal 2px bar
+- Bar heights relative to score (0-100 scale)
+- Baseline line spans full width
+
+### ThirtyDayViewCard Component
+
+Shows bar chart for the last 30 days of check-ins.
+
+**Key Elements:**
+- "THIRTY DAY VIEW" title
+- Average score display
+- Check-in counter
+- Baseline score label with horizontal line
+- 30 vertical bars (one per day)
+- Day numbers (1-31) based on dates
+- Y-axis: 0, 50, 100
+
+**Minimum Check-in Logic:**
+- If < 5 check-ins in 30 days: Show average with message
+- Message: "you have only checked in X times in the last 30 days, try checking in more often to measure and monitor your mood."
+
+## Technical Implementation
+
+### Data Preparation
+
+**7-Day Data:**
+```typescript
+const prepare7DayData = (sessions: SessionData[], baselineScore: number) => {
+  const last7Days = getLast7Days();
+  return last7Days.map(date => {
+    const session = sessions.find(s => 
+      isSameDay(new Date(s.created_at), date)
+    );
+    return {
+      date,
+      score: session?.final_score || null,
+      hasCheckIn: !!session
+    };
+  });
+};
+```
+
+**30-Day Data:**
+```typescript
+const prepare30DayData = (sessions: SessionData[], baselineScore: number) => {
+  const last30Days = getLast30Days();
+  return last30Days.map(date => {
+    const session = sessions.find(s => 
+      isSameDay(new Date(s.created_at), date)
+    );
+    return {
+      date,
+      score: session?.final_score || null,
+      hasCheckIn: !!session
+    };
+  });
+};
+```
+
+### Dynamic Day Labels
+
+Day labels adjust based on the current day of the week:
+```typescript
+const getDayLabels = () => {
+  const today = new Date();
+  const dayIndex = today.getDay(); // 0 = Sunday, 6 = Saturday
+  const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  
+  // Rotate array so today is last
+  return [
+    ...days.slice(dayIndex + 1),
+    ...days.slice(0, dayIndex + 1)
+  ];
+};
+```
+
+### Color-Coded Backgrounds
+
+Backgrounds change based on score ranges:
+```typescript
+const getBackgroundGradient = (score: number) => {
+  if (score >= 80) return 'linear-gradient(135deg, #10B981, #059669)'; // Green
+  if (score >= 60) return 'linear-gradient(135deg, #3B82F6, #2563EB)'; // Blue
+  if (score >= 40) return 'linear-gradient(135deg, #F59E0B, #D97706)'; // Amber
+  return 'linear-gradient(135deg, #EF4444, #DC2626)'; // Red
+};
+```
+
+## Data Flow
+
+### Dashboard Data Hook
+
+```typescript
+// useDashboardData.ts
+const fetchDashboardData = async () => {
+  // Fetch user profile with baseline
+  const profile = await fetchProfile(userId);
+  
+  // Fetch all assessment sessions
+  const sessions = await fetchSessions(userId);
+  
+  // Calculate trend data
+  const trendData = calculateTrendData(sessions);
+  
+  return {
+    profile: {
+      ...profile,
+      baselineScore: profile.baseline_score,
+      createdAt: profile.created_at
+    },
+    latestScore: sessions[0]?.final_score || null,
+    latestSession: sessions[0] || null,
+    trendData
+  };
+};
+```
+
+### Conditional View Display
+
+Views only shown when account age permits:
+```typescript
+const canShow7DayView = () => {
+  const accountAge = Date.now() - new Date(userCreatedAt).getTime();
+  return accountAge >= 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+};
+
+const canShow30DayView = () => {
+  const accountAge = Date.now() - new Date(userCreatedAt).getTime();
+  return accountAge >= 30 * 24 * 60 * 60 * 1000; // 30 days in ms
+};
+```
+
+## User Experience
+
+### Swipe Gestures
+- Swipe left/right to navigate between cards
+- Smooth Framer Motion transitions
+- Pagination dots indicate current position
+- Dots are clickable for direct navigation
+
+### Visual Feedback
+- Active dot highlighted in purple
+- Inactive dots in white/transparent
+- Smooth animations between views
+- Loading states during data fetch
+
+### Encouragement Messages
+
+**7-Day View:**
+- If < 3 check-ins: "you have checked in X times in the last seven days, try checking in more regularly for better monitoring"
+
+**30-Day View:**
+- If < 5 check-ins: "you have only checked in X times in the last 30 days, try checking in more often to measure and monitor your mood."
+
+## Design Decisions
+
+### Why Apple Health Style?
+- Familiar pattern for users
+- Clear visual communication
+- Minimal, focused design
+- Proven effective for health data
+
+### Why Baseline Reference?
+- Shows progress over time
+- Contextualizes daily variations
+- Highlights improvements or concerns
+- Personalizes the experience
+
+### Why Dynamic Day Labels?
+- Always shows "today" as the last day
+- More intuitive than fixed calendar
+- Easier to understand recent patterns
+- Matches user's mental model
+
+### Why Minimum Check-in Thresholds?
+- Ensures data quality
+- Prevents misleading averages
+- Encourages regular participation
+- Provides actionable feedback
+
+## Related Documentation
+
+- [Mobile App Overview](/mobile/overview)
+- [Assessment Methodology](/assessment/methodology)
+- [Scoring Algorithm](/assessment/scoring-algorithm)
+
+---
+
+**Status:** Complete and deployed  
+**Last Updated:** January 5, 2026  
+**Components:** SwipeableScoreCard, CurrentScoreCard, SevenDayViewCard, ThirtyDayViewCard
+
