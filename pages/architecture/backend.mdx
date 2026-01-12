@@ -237,8 +237,6 @@ const analysisResults = await Promise.allSettled([
 ### API Gateway Configuration
 
 #### Endpoint Structure
-
-**Legacy Lambda Functions** (Deprecated - Use Assessment Engine)
 ```yaml
 Base URL: https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev
 
@@ -247,49 +245,22 @@ Endpoints:
     Description: Process audio analysis
     Authentication: Required (JWT)
     Rate Limit: 10 requests/minute
-    Status: Legacy - Use Assessment Engine
     
   POST /analyze-visual:
     Description: Process visual analysis
     Authentication: Required (JWT)
     Rate Limit: 5 requests/minute
-    Status: Legacy - Use Assessment Engine
     
   POST /analyze-text:
     Description: Process text analysis
     Authentication: Required (JWT)
     Rate Limit: 20 requests/minute
-    Status: Legacy - Use Assessment Engine
     
   POST /calculate-mind-measure:
     Description: Calculate fusion score
     Authentication: Required (JWT)
     Rate Limit: 10 requests/minute
-    Status: Legacy - Use Assessment Engine
 ```
-
-**Assessment Engine API** (Deployed November 28, 2025)
-```yaml
-Base URL: https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/
-
-Endpoints:
-  POST /checkins/start:
-    Description: Create check-in and get S3 upload URLs
-    Authentication: Required (Cognito JWT)
-    Rate Limit: 10 requests/minute
-    
-  POST /checkins/{id}/complete:
-    Description: Start processing pipeline
-    Authentication: Required (Cognito JWT)
-    Rate Limit: 10 requests/minute
-    
-  GET /checkins/{id}:
-    Description: Get check-in status and results
-    Authentication: Required (Cognito JWT)
-    Rate Limit: 60 requests/minute
-```
-
-See [API Documentation](/api-documentation) for complete Assessment Engine API reference.
 
 #### CORS Configuration
 ```json
@@ -687,7 +658,7 @@ export const handler = async (event: any) => {
 };
 ```
 
-### Performance Optimisation
+### Performance Optimization
 
 #### Connection Pooling
 ```typescript
@@ -925,29 +896,6 @@ describe('Assessment Pipeline Integration', () => {
 
 This backend architecture provides a robust, scalable, and maintainable foundation for the Mind Measure platform, leveraging AWS serverless technologies for optimal performance and cost-effectiveness.
 
-**Last Updated**: November 28, 2025  
-**Version**: 2.1 (Assessment Engine Added)  
-**Next Review**: December 28, 2025
-
----
-
-## Assessment Engine
-
-The Assessment Engine is a new multimodal assessment pipeline deployed November 28, 2025. It provides:
-
-- **23 audio features** - Prosody, speech dynamics, vocal biomarkers
-- **18 visual features** - Facial expressions, gaze, microexpressions (from still images)
-- **16 text features** - Sentiment, cognitive load, rumination markers
-- **Multimodal fusion** - Quality-weighted fusion algorithm producing Mind Measure Score (0-100)
-- **Baseline calibration** - Personal baseline tracking for each user
-
-**Architecture:**
-- 10 Lambda functions orchestrated by Step Functions
-- API Gateway REST API with Cognito authentication
-- Aurora PostgreSQL (`assessment_engine` schema)
-- S3 for media storage
-
-**Documentation:**
-- See [Assessment Engine documentation](/assessment-engine) for complete details
-- See [API Documentation](/api-documentation) for endpoint reference
-- See [Deployment Guide](/deployment) for deployment procedures
+**Last Updated**: October 28, 2025  
+**Version**: 2.0 (AWS Migration)  
+**Next Review**: November 28, 2025

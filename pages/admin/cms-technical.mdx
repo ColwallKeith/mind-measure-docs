@@ -1,90 +1,65 @@
-# CMS Technical Documentation
+# Mind Measure CMS - Technical Documentation
 
-## Overview
+## � Architecture Overview
 
-The Mind Measure CMS (Content Management System) is a comprehensive university administration platform built with React, TypeScript, and AWS serverless infrastructure. It enables university administrators to manage institutional data, emergency resources, content, and student wellbeing configurations.
-
-**Deployment**: Vercel  
-**URL**: `https://admin.mindmeasure.co.uk/university/{slug}/cms`  
-**Authentication**: AWS Cognito  
-**Database**: Aurora Serverless v2 (PostgreSQL)  
-**Storage**: AWS S3
-
----
-
-## Architecture
+The Mind Measure CMS is built as a React-based single-page application with a Supabase backend, designed for scalability and maintainability.
 
 ### Technology Stack
 
 **Frontend:**
-- React 18 with TypeScript
-- Vite 6.x for build tooling
-- Tailwind CSS for styling
-- shadcn/ui component library
-- Lucide React for icons
-- React Router for routing
+- **React 18** with TypeScript
+- **Vite** for build tooling and development
+- **Tailwind CSS** for styling
+- **React Router** for client-side routing
+- **Lucide React** for icons
 
 **Backend:**
-- Aurora Serverless v2 (PostgreSQL 15.4)
-- AWS Cognito for authentication
-- AWS S3 for file storage
-- Vercel Serverless Functions for API proxy
+- **Supabase** (PostgreSQL database)
+- **Row Level Security (RLS)** for data access control
+- **Supabase Storage** for file uploads
+- **Real-time subscriptions** for live updates
 
-**Data Access:**
-- `BackendServiceFactory` - Unified data access layer
-- Direct PostgreSQL connections from Vercel API functions
-- Application-level access control via Cognito JWT validation
+**Authentication:**
+- **Custom authentication system** using Supabase Auth
+- **University-scoped access control**
+- **Email domain validation**
 
----
-
-## Project Structure
+## � Project Structure
 
 ```
 src/
-├── components/
-│   ├── institutional/
-│   │   ├── UniversityCMS.tsx              # Main CMS interface
-│   │   ├── UniversityScopedCMS.tsx        # University-scoped view
-│   │   ├── UniversityDashboard.tsx        # Dashboard analytics
-│   │   └── cms/
-│   │       ├── UniversityOnboarding.tsx   # 7-step onboarding
-│   │       ├── EmergencyResourcesManager.tsx
-│   │       ├── ContentManager.tsx
-│   │       ├── UniversityDataManager.tsx
-│   │       └── data.ts                    # Data access functions
-│   └── ui/                                 # shadcn/ui components
-├── features/
-│   └── cms/
-│       └── data.ts                         # CMS data layer
-├── services/
-│   ├── database/
-│   │   ├── BackendServiceFactory.ts       # Service factory
-│   │   └── AWSService.ts                  # AWS implementation
-│   └── auth-aws.ts                        # Cognito auth service
-├── api/                                    # Vercel API functions
-│   ├── auth/
-│   │   └── signin.ts                      # Cognito sign-in proxy
-│   └── database/
-│       ├── select.ts                      # Database query proxy
-│       ├── insert.ts
-│       ├── update.ts
-│       └── delete.ts
-└── Router.tsx                              # Application routing
+ components/
+�    institutional/
+�   �    UniversityScopedCMS.tsx          # Main CMS interface
+�   �    cms/
+�   �        UniversityOnboarding.tsx     # 7-step system
+�   �        DemographicsManager.tsx      # Demographics with toggle
+�   �        AcademicStructureManager.tsx # Faculties/schools
+�   �        EmergencyServicesManager.tsx # Emergency resources
+�   �        WellbeingContentLibrary.tsx  # Content management
+�   �        ReportsAnalyticsConfig.tsx   # Reports system
+�   �        AuthorizedUsersManager.tsx   # User management
+�   �        ContentManager.tsx           # Article management
+�   �        EmergencyResourcesManager.tsx # Emergency contacts
+�    ui/                                  # Reusable UI components
+�    UniversitySpecificLogin.tsx          # Authentication
+ contexts/
+�    AdminAuthContext.tsx                 # Authentication context
+ services/
+�    adminAuth.ts                         # Authentication service
+ features/
+�    cms/
+�        data.ts                          # Data access layer
+ Router.tsx                               # Application routing
 ```
 
----
-
-## Database Schema
-
-The CMS uses Aurora Serverless v2 PostgreSQL with the following core tables:
+## � Database Schema
 
 ### Core Tables
 
 #### `universities`
-Primary table storing all university information.
-
 ```sql
-CREATE TABLE public.universities (
+CREATE TABLE universities (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   short_name TEXT NOT NULL,
@@ -112,15 +87,11 @@ CREATE TABLE public.universities (
   logo_dark TEXT,
   campus_image TEXT,
   
-  -- Status
-  status TEXT DEFAULT 'planning',
-  current_uptake_rate NUMERIC DEFAULT 0,
-  
-  -- Authentication (managed via Cognito)
+  -- Authentication
   authorized_domains TEXT[] DEFAULT '{}',
   authorized_emails TEXT[] DEFAULT '{}',
   
-  -- Emergency Resources (JSONB)
+  -- Emergency Resources
   emergency_contacts JSONB DEFAULT '[]',
   mental_health_services JSONB DEFAULT '[]',
   local_resources JSONB DEFAULT '[]',
@@ -132,33 +103,33 @@ CREATE TABLE public.universities (
 );
 ```
 
-#### `institutions`
-Extended institutional management features.
-
+#### `university_authorized_users`
 ```sql
-CREATE TABLE public.institutions (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  slug TEXT UNIQUE NOT NULL,
-  domain TEXT,
-  
-  -- CMS Configuration
-  local_help_resources JSONB DEFAULT '[]',
-  branding JSONB DEFAULT '{}',
-  settings JSONB DEFAULT '{}',
-  
+CREATE TABLE university_authorized_users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  university_id TEXT REFERENCES universities(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  first_name TEXT,
+  last_name TEXT,
+  role TEXT DEFAULT 'admin',
+  department TEXT,
+  phone TEXT,
+  status TEXT DEFAULT 'active',
+  last_login TIMESTAMP WITH TIME ZONE,
+  login_count INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  
+  UNIQUE(university_id, email)
 );
 ```
 
 #### Content Management Tables
-
 ```sql
 -- Content Categories
 CREATE TABLE content_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  university_id TEXT REFERENCES universities(id),
+  university_id TEXT REFERENCES universities(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   slug TEXT NOT NULL,
   description TEXT,
@@ -169,8 +140,8 @@ CREATE TABLE content_categories (
 -- Content Articles
 CREATE TABLE content_articles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  university_id TEXT REFERENCES universities(id),
-  category_id UUID REFERENCES content_categories(id),
+  university_id TEXT REFERENCES universities(id) ON DELETE CASCADE,
+  category_id UUID REFERENCES content_categories(id) ON DELETE SET NULL,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   excerpt TEXT,
@@ -184,7 +155,7 @@ CREATE TABLE content_articles (
 -- Content Tags
 CREATE TABLE content_tags (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  university_id TEXT REFERENCES universities(id),
+  university_id TEXT REFERENCES universities(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   slug TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -192,7 +163,7 @@ CREATE TABLE content_tags (
   UNIQUE(university_id, slug)
 );
 
--- Article-Tag Association
+-- Article Tags (Many-to-Many)
 CREATE TABLE article_tags (
   article_id UUID REFERENCES content_articles(id) ON DELETE CASCADE,
   tag_id UUID REFERENCES content_tags(id) ON DELETE CASCADE,
@@ -200,364 +171,466 @@ CREATE TABLE article_tags (
 );
 ```
 
----
+#### Extended Schema Tables
+```sql
+-- Academic Structure
+CREATE TABLE faculties (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  university_id TEXT REFERENCES universities(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  head_of_faculty_name TEXT,
+  head_of_faculty_email TEXT,
+  student_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-## Authentication & Authorisation
+CREATE TABLE schools (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  university_id TEXT REFERENCES universities(id) ON DELETE CASCADE,
+  faculty_id UUID REFERENCES faculties(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  head_of_school_name TEXT,
+  head_of_school_email TEXT,
+  student_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-### AWS Cognito Integration
+CREATE TABLE departments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  university_id TEXT REFERENCES universities(id) ON DELETE CASCADE,
+  school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  head_of_department_name TEXT,
+  head_of_department_email TEXT,
+  student_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-**User Pool**: `eu-west-2_ClAG4fQXR`  
-**Client ID**: `7vu03ppv6alkpphs1ksopll8us`  
-**Region**: `eu-west-2` (London)
+-- Accommodation
+CREATE TABLE halls_of_residence (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  university_id TEXT REFERENCES universities(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  capacity INTEGER,
+  current_occupancy INTEGER DEFAULT 0,
+  contact_name TEXT,
+  contact_email TEXT,
+  contact_phone TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-#### Authentication Flow
+-- Wellbeing Content
+CREATE TABLE wellbeing_tips (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  university_id TEXT REFERENCES universities(id) ON DELETE CASCADE,
+  category_id UUID REFERENCES wellbeing_categories(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  priority TEXT DEFAULT 'medium',
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-```typescript
-// Vercel API proxy to Cognito (api/auth/signin.ts)
-import {
-  CognitoIdentityProviderClient,
-  InitiateAuthCommand
-} from '@aws-sdk/client-cognito-identity-provider';
+CREATE TABLE wellbeing_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  university_id TEXT REFERENCES universities(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  color TEXT DEFAULT '#3b82f6',
+  delivery_frequency TEXT DEFAULT 'weekly',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-const client = new CognitoIdentityProviderClient({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-  }
-});
+-- Reports & Analytics
+CREATE TABLE report_configurations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  university_id TEXT REFERENCES universities(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  type TEXT DEFAULT 'summary',
+  frequency TEXT DEFAULT 'weekly',
+  recipients TEXT[] DEFAULT '{}',
+  selected_fields TEXT[] DEFAULT '{}',
+  export_format TEXT DEFAULT 'pdf',
+  is_active BOOLEAN DEFAULT true,
+  last_generated TIMESTAMP WITH TIME ZONE,
+  next_scheduled TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { email, password } = req.body;
+-- System Settings
+CREATE TABLE settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  university_id TEXT REFERENCES universities(id) ON DELETE CASCADE,
+  key TEXT NOT NULL,
+  value JSONB,
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   
-  const command = new InitiateAuthCommand({
-    ClientId: process.env.AWS_COGNITO_CLIENT_ID,
-    AuthFlow: 'USER_PASSWORD_AUTH',
-    AuthParameters: {
-      USERNAME: email,
-      PASSWORD: password
-    }
-  });
-  
-  const result = await client.send(command);
-  return res.json({ session: result.AuthenticationResult });
-}
+  UNIQUE(university_id, key)
+);
 ```
 
-#### Client-Side Auth Service
+##  Row Level Security (RLS)
 
-```typescript
-// src/services/auth-aws.ts
-class AWSAuthService {
-  async signIn(email: string, password: string) {
-    // Call Vercel API proxy
-    const authResult = await this.databaseService.auth.signIn({
-      email,
-      password
-    });
-    
-    // Load profile from Aurora
-    const { data: profiles } = await this.databaseService.select('profiles', {
-      filters: { user_id: authResult.user.id },
-      columns: '*'
-    });
-    
-    return { user: authResult.user, profile: profiles[0] };
-  }
-}
-```
+### University Data Access
+```sql
+-- Universities: Public read, authenticated write
+CREATE POLICY "allow_public_select_universities" ON universities
+  FOR SELECT USING (true);
 
-### Access Control
+CREATE POLICY "allow_authenticated_insert_universities" ON universities
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
-**Application-Level Security:**
-- All CMS access requires valid Cognito JWT token
-- University-scoped data filtering via application logic
-- No database-level RLS (Row Level Security)
-- Authorisation checks in Vercel API functions
-
-**University Access Rules:**
-- Mind Measure staff (`@mindmeasure.co.uk`) → access all universities
-- University administrators → access own university only
-- Email domain validation against `authorized_domains`
-- Email whitelist via `authorized_emails`
-
----
-
-## Data Access Layer
-
-### BackendServiceFactory
-
-Unified data access abstraction supporting multiple backends.
-
-```typescript
-// src/services/database/BackendServiceFactory.ts
-export class BackendServiceFactory {
-  static createService(config: BackendConfig): DatabaseService {
-    if (config.provider === 'aurora-serverless') {
-      return new AWSService(config);
-    }
-    throw new Error(`Unsupported provider: ${config.provider}`);
-  }
-  
-  static getEnvironmentConfig(): BackendConfig {
-    return {
-      provider: import.meta.env.VITE_BACKEND_PROVIDER || 'aurora-serverless',
-      dbHost: import.meta.env.VITE_DB_HOST,
-      dbPort: parseInt(import.meta.env.VITE_DB_PORT || '5432'),
-      dbName: import.meta.env.VITE_DB_NAME,
-      dbUser: import.meta.env.VITE_DB_USERNAME,
-      dbPassword: import.meta.env.VITE_DB_PASSWORD,
-      region: import.meta.env.VITE_AWS_REGION || 'eu-west-2'
-    };
-  }
-}
-```
-
-### Database Operations
-
-```typescript
-// Features/CMS data access
-import { BackendServiceFactory } from '@/services/database/BackendServiceFactory';
-
-export async function getUniversityBySlug(slug: string): Promise<University | null> {
-  const backendService = BackendServiceFactory.createService(
-    BackendServiceFactory.getEnvironmentConfig()
+CREATE POLICY "allow_university_update" ON universities
+  FOR UPDATE USING (
+    auth.email() LIKE '%@mindmeasure.co.uk' OR
+    auth.email() = ANY(authorized_emails) OR
+    SPLIT_PART(auth.email(), '@', 2) = ANY(authorized_domains)
   );
+```
+
+### Content Access Control
+```sql
+-- Content Articles: University-scoped access
+CREATE POLICY "university_content_access" ON content_articles
+  FOR ALL USING (
+    auth.email() LIKE '%@mindmeasure.co.uk' OR
+    EXISTS (
+      SELECT 1 FROM universities u 
+      WHERE u.id = content_articles.university_id 
+      AND (
+        auth.email() = ANY(u.authorized_emails) OR
+        SPLIT_PART(auth.email(), '@', 2) = ANY(u.authorized_domains)
+      )
+    )
+  );
+```
+
+### Helper Functions
+```sql
+-- Check if user is authorized for university
+CREATE OR REPLACE FUNCTION is_user_authorized(university_id TEXT, user_email TEXT)
+RETURNS BOOLEAN AS $$
+BEGIN
+  -- MM staff have access to all universities
+  IF user_email LIKE '%@mindmeasure.co.uk' THEN
+    RETURN TRUE;
+  END IF;
   
-  const { data, error } = await backendService.select('universities', {
-    filters: { slug },
-    columns: '*'
-  });
-  
-  if (error) throw error;
-  return data?.[0] || null;
+  -- Check if user is in authorized emails or domain
+  RETURN EXISTS (
+    SELECT 1 FROM universities u 
+    WHERE u.id = university_id 
+    AND (
+      user_email = ANY(u.authorized_emails) OR
+      SPLIT_PART(user_email, '@', 2) = ANY(u.authorized_domains)
+    )
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Update user login tracking
+CREATE OR REPLACE FUNCTION update_user_last_login(university_id TEXT, user_email TEXT)
+RETURNS VOID AS $$
+BEGIN
+  INSERT INTO university_authorized_users (university_id, email, last_login, login_count)
+  VALUES (university_id, user_email, NOW(), 1)
+  ON CONFLICT (university_id, email) 
+  DO UPDATE SET 
+    last_login = NOW(),
+    login_count = university_authorized_users.login_count + 1;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+##  Component Architecture
+
+### Main CMS Interface (`UniversityScopedCMS.tsx`)
+
+```typescript
+interface UniversityScopedCMSProps {
+  universitySlug: string;
 }
 
-export async function updateUniversity(id: string, updates: Partial<University>) {
-  const backendService = BackendServiceFactory.createService(
-    BackendServiceFactory.getEnvironmentConfig()
-  );
+type CMSSection = 'dashboard' | 'profile' | 'emergency' | 'content' | 'users';
+
+export function UniversityScopedCMS({ universitySlug }: UniversityScopedCMSProps) {
+  const [activeSection, setActiveSection] = useState('dashboard');
+  const [university, setUniversity] = useState(null);
+  const [loading, setLoading] = useState(true);
   
-  const { error } = await backendService.update('universities', {
-    filters: { id },
-    updates
-  });
-  
-  if (error) throw error;
+  // Component renders different sections based on activeSection
+  // Uses Tabs component for navigation
+  // Implements university-scoped data loading
 }
 ```
 
-### Vercel API Proxy Pattern
-
-Database operations from the browser go through Vercel serverless functions:
+### 7-Step Onboarding System (`UniversityOnboarding.tsx`)
 
 ```typescript
-// api/database/select.ts
-import { Pool } from 'pg';
-
-const pool = new Pool({
-  host: process.env.VITE_DB_HOST,
-  port: parseInt(process.env.VITE_DB_PORT),
-  database: process.env.VITE_DB_NAME,
-  user: process.env.VITE_DB_USERNAME,
-  password: process.env.VITE_DB_PASSWORD,
-  ssl: { rejectUnauthorized: false }
-});
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { table, filters, columns } = req.body;
-  
-  // Build and execute query
-  const result = await pool.query(
-    `SELECT ${columns} FROM ${table} WHERE ...`,
-    [filterValues]
-  );
-  
-  return res.json({ data: result.rows });
+interface UniversityOnboardingProps {
+  onBack: () => void;
+  universityId?: string | null;
+  onSave?: () => void;
 }
-```
 
----
-
-## Component Architecture
-
-### Main CMS Interface
-
-```typescript
-// src/components/institutional/UniversityCMS.tsx
-type CMSSection = 'dashboard' | 'onboarding' | 'emergency' | 'content' | 'data' | 'settings';
-
-export function UniversityCMS({ institutionId }: UniversityCMSProps) {
-  const [activeSection, setActiveSection] = useState<CMSSection>('dashboard');
-  const [universities, setUniversities] = useState<University[]>([]);
-  
-  const loadData = async () => {
-    const backendService = BackendServiceFactory.createService(
-      BackendServiceFactory.getEnvironmentConfig()
-    );
-    
-    const { data } = await backendService.select('universities', {
-      filters: {},
-      columns: '*'
-    });
-    
-    setUniversities(data || []);
-  };
-  
-  return (
-    <Tabs value={activeSection} onValueChange={setActiveSection}>
-      <TabsList>
-        <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-        <TabsTrigger value="onboarding">Profile</TabsTrigger>
-        <TabsTrigger value="emergency">Emergency</TabsTrigger>
-        <TabsTrigger value="content">Content</TabsTrigger>
-        <TabsTrigger value="data">Data</TabsTrigger>
-      </TabsList>
-      
-      <TabsContent value="dashboard">
-        {/* Statistics and overview */}
-      </TabsContent>
-      
-      <TabsContent value="onboarding">
-        <UniversityOnboarding 
-          universityId={selectedUniversityId}
-          onSave={loadData}
-        />
-      </TabsContent>
-      
-      {/* Other sections */}
-    </Tabs>
-  );
-}
-```
-
-### 7-Step Onboarding System
-
-```typescript
-// src/components/institutional/cms/UniversityOnboarding.tsx
-const STEPS = [
-  { number: 1, title: 'Basic Information', description: 'University details and contact' },
-  { number: 2, title: 'Demographics', description: 'Student population data' },
-  { number: 3, title: 'Academic Structure', description: 'Faculties, schools, departments' },
-  { number: 4, title: 'Accommodation', description: 'Halls of residence' },
-  { number: 5, title: 'Branding', description: 'Colors, logos, images' },
-  { number: 6, title: 'Resources', description: 'Support services and contacts' },
-  { number: 7, title: 'Review', description: 'Confirm and save' }
-];
-
-export function UniversityOnboarding({ universityId, onSave }: Props) {
+export function UniversityOnboarding({ onBack, universityId, onSave }: UniversityOnboardingProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<UniversityFormData>({
-    name: '',
-    short_name: '',
-    contact_email: '',
-    // ... all fields with defaults
+    // All university fields with defaults
   });
   
-  const handleSave = async () => {
-    if (universityId) {
-      await updateUniversity(universityId, formData);
-    } else {
-      await createUniversity(formData);
-    }
-    onSave?.();
-  };
+  const totalSteps = 7;
   
-  return (
-    <div>
-      {/* Step indicator */}
-      <div className="flex justify-between mb-8">
-        {STEPS.map(step => (
-          <StepIndicator 
-            key={step.number}
-            step={step}
-            current={currentStep}
-            completed={currentStep > step.number}
-          />
-        ))}
-      </div>
-      
-      {/* Step content */}
-      {currentStep === 1 && <BasicInformationForm data={formData} onChange={setFormData} />}
-      {currentStep === 2 && <DemographicsForm data={formData} onChange={setFormData} />}
-      {/* ... other steps */}
-      
-      {/* Navigation */}
-      <div className="flex justify-between">
-        <Button onClick={() => setCurrentStep(prev => prev - 1)}>Previous</Button>
-        {currentStep < 7 ? (
-          <Button onClick={() => setCurrentStep(prev => prev + 1)}>Next</Button>
-        ) : (
-          <Button onClick={handleSave}>Save University</Button>
-        )}
-      </div>
-    </div>
-  );
+  // Renders different components based on currentStep
+  // Handles form data persistence
+  // Provides navigation between steps
 }
 ```
 
----
+### Numbers/Percentages Toggle System
 
-## Deployment
+```typescript
+interface ToggleableData {
+  showAsPercentages: boolean;
+  total: number;
+  values: Record<string, number>;
+}
+
+const DemographicsManager: React.FC = () => {
+  const [showAsPercentages, setShowAsPercentages] = useState(false);
+  
+  const calculatePercentages = (values: Record<string, number>, total: number) => {
+    return Object.entries(values).reduce((acc, [key, value]) => {
+      acc[key] = total > 0 ? Math.round((value / total) * 100) : 0;
+      return acc;
+    }, {} as Record<string, number>);
+  };
+  
+  // Toggle between numbers and percentages view
+  // Automatic validation and calculation
+  // Visual indicators for data consistency
+};
+```
+
+##  Data Access Layer (`features/cms/data.ts`)
+
+### University Operations
+```typescript
+export interface University {
+  id: string;
+  name: string;
+  short_name: string;
+  slug: string;
+  // ... all other fields
+}
+
+export async function getUniversityBySlug(slug: string): Promise<University | null> {
+  const { data, error } = await supabase
+    .from('universities')
+    .select('*')
+    .eq('slug', slug)
+    .single();
+    
+  if (error) throw error;
+  return data;
+}
+
+export async function updateUniversity(id: string, updates: Partial<University>): Promise<void> {
+  const { error } = await supabase
+    .from('universities')
+    .update(updates)
+    .eq('id', id);
+    
+  if (error) throw error;
+}
+```
+
+### Content Management
+```typescript
+export interface ContentArticle {
+  id: string;
+  university_id: string;
+  category_id?: string;
+  title: string;
+  content: string;
+  status: 'draft' | 'review' | 'published' | 'archived';
+  // ... other fields
+}
+
+export async function getContentArticles(universityId: string): Promise<ContentArticle[]> {
+  const { data, error } = await supabase
+    .from('content_articles')
+    .select(`
+      *,
+      category:content_categories(name, color),
+      tags:article_tags(tag:content_tags(name))
+    `)
+    .eq('university_id', universityId)
+    .order('created_at', { ascending: false });
+    
+  if (error) throw error;
+  return data || [];
+}
+```
+
+### User Management
+```typescript
+export interface AuthorizedUser {
+  id: string;
+  university_id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  role: string;
+  status: 'active' | 'inactive' | 'pending';
+  // ... other fields
+}
+
+export async function isUserAuthorized(universityId: string, email: string): Promise<boolean> {
+  const { data } = await supabase.rpc('is_user_authorized', {
+    university_id: universityId,
+    user_email: email
+  });
+  
+  return data || false;
+}
+```
+
+##  Styling System
+
+### Tailwind Configuration
+```javascript
+// tailwind.config.ts
+module.exports = {
+  content: ['./src/**/*.{js,ts,jsx,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        'mm-green': '#0BA66D',
+        'mm-blue': '#3b82f6',
+        // Mind Measure brand colors
+      }
+    }
+  }
+}
+```
+
+### Component Styling Patterns
+```typescript
+// Consistent card styling
+const cardClasses = "bg-white border border-slate-200 rounded-lg shadow-sm";
+
+// Status-based styling
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'active': return 'bg-green-100 text-green-800';
+    case 'draft': return 'bg-yellow-100 text-yellow-800';
+    case 'published': return 'bg-blue-100 text-blue-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
+
+// Responsive grid patterns
+const gridClasses = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4";
+```
+
+##  State Management
+
+### Authentication Context
+```typescript
+interface AdminAuthContextType {
+  user: User | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  isAuthenticated: boolean;
+}
+
+export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Handles authentication state
+  // Provides auth methods to components
+  // Manages session persistence
+};
+```
+
+### Form State Management
+```typescript
+// University onboarding form state
+const [formData, setFormData] = useState<UniversityFormData>({
+  // Default values for all fields
+  name: '',
+  total_students: 0,
+  // ... etc
+});
+
+// Partial updates
+const updateFormData = (updates: Partial<UniversityFormData>) => {
+  setFormData(prev => ({ ...prev, ...updates }));
+};
+
+// Validation state
+const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+```
+
+##  Deployment
 
 ### Environment Variables
-
-**Production** (`admin.mindmeasure.co.uk`)
 ```env
-# Backend Provider
-VITE_BACKEND_PROVIDER=aurora-serverless
+# Production
+VITE_SUPABASE_URL=https://ewrrictbejcmdkgpvkio.supabase.co
+VITE_SUPABASE_ANON_KEY=your_production_anon_key
+VITE_APP_URL=https://admin.mindmeasure.co.uk
 
-# Aurora Database
-VITE_DB_HOST=mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com
-VITE_DB_PORT=5432
-VITE_DB_NAME=mindmeasure
-VITE_DB_USERNAME=mindmeasure_admin
-VITE_DB_PASSWORD=[secure]
-
-# AWS Cognito
-VITE_AWS_COGNITO_USER_POOL_ID=eu-west-2_ClAG4fQXR
-VITE_AWS_COGNITO_CLIENT_ID=7vu03ppv6alkpphs1ksopll8us
-VITE_AWS_REGION=eu-west-2
-
-# AWS S3 (for file uploads)
-VITE_AWS_S3_BUCKET_NAME=mindmeasure-user-content-459338929203
+# Development
+VITE_SUPABASE_URL=https://ewrrictbejcmdkgpvkio.supabase.co
+VITE_SUPABASE_ANON_KEY=your_development_anon_key
+VITE_APP_URL=http://localhost:3000
 ```
 
-**Vercel API Functions** (serverless)
-```env
-# Same as above, plus:
-AWS_ACCESS_KEY_ID=[secure]
-AWS_SECRET_ACCESS_KEY=[secure]
+### Build Configuration
+```javascript
+// vite.config.ts
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          supabase: ['@supabase/supabase-js']
+        }
+      }
+    }
+  }
+});
 ```
 
-### Build & Deploy
-
-```bash
-# Local development
-npm run dev
-
-# Build for production
-npm run build
-
-# Deploy to Vercel
-npx vercel --prod
-```
-
-### Vercel Configuration
-
+### Vercel Deployment
 ```json
+// vercel.json
 {
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; connect-src 'self' https://*.mindmeasure.co.uk https://*.amazonaws.com;"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://api.mindmeasure.co.uk https://*.mindmeasure.co.uk;"
         }
       ]
     }
@@ -565,91 +638,94 @@ npx vercel --prod
 }
 ```
 
----
+##  Testing
 
-## Development Workflow
+### Component Testing
+```typescript
+// Example test for DemographicsManager
+import { render, screen, fireEvent } from '@testing-library/react';
+import { DemographicsManager } from './DemographicsManager';
 
-### Local Development
-
-```bash
-# 1. Clone repository
-git clone https://github.com/mindmeasure/mind-measure-core.git
-cd mind-measure-core
-
-# 2. Install dependencies
-npm install
-
-# 3. Set up environment variables
-cp .env.example .env
-# Edit .env with your Aurora and Cognito credentials
-
-# 4. Start development server
-npm run dev
-
-# 5. Access CMS
-# Navigate to http://localhost:5173/university/{slug}/cms
+describe('DemographicsManager', () => {
+  it('toggles between numbers and percentages', () => {
+    render(<DemographicsManager formData={mockData} setFormData={mockSetFormData} />);
+    
+    const toggleButton = screen.getByRole('button', { name: /calculator/i });
+    fireEvent.click(toggleButton);
+    
+    expect(screen.getByText(/show percentages/i)).toBeInTheDocument();
+  });
+});
 ```
 
-### Database Migrations
+### Database Testing
+```sql
+-- Test data setup
+INSERT INTO universities (id, name, short_name, slug, contact_email, website)
+VALUES ('test-uni', 'Test University', 'TestU', 'test', 'admin@test.edu', 'https://test.edu');
 
-```bash
-# Connect to Aurora
-psql -h mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com \
-     -U mindmeasure_admin \
-     -d mindmeasure
+-- Test RLS policies
+SET ROLE authenticated;
+SET request.jwt.claims TO '{"email": "admin@test.edu"}';
 
-# Run migration
-\i migrations/add_cms_feature.sql
+SELECT * FROM universities WHERE id = 'test-uni';
+-- Should return the test university
 ```
 
-### Testing
+##  Performance Considerations
 
-```bash
-# Run unit tests
-npm test
+### Code Splitting
+```typescript
+// Lazy load CMS components
+const UniversityOnboarding = lazy(() => import('./cms/UniversityOnboarding'));
+const EmergencyResourcesManager = lazy(() => import('./cms/EmergencyResourcesManager'));
 
-# Run type checking
-npm run type-check
-
-# Run linter
-npm run lint
+// Wrap in Suspense
+<Suspense fallback={<LoadingSpinner />}>
+  <UniversityOnboarding />
+</Suspense>
 ```
 
----
+### Data Optimization
+```typescript
+// Selective field loading
+const { data } = await supabase
+  .from('universities')
+  .select('id, name, short_name, slug') // Only needed fields
+  .eq('slug', slug)
+  .single();
 
-## Monitoring & Debugging
-
-### Vercel Logs
-
-```bash
-# View deployment logs
-npx vercel logs admin.mindmeasure.co.uk
-
-# View function logs
-npx vercel logs admin.mindmeasure.co.uk --since=1h
+// Pagination for large datasets
+const { data } = await supabase
+  .from('content_articles')
+  .select('*')
+  .range(start, end)
+  .order('created_at', { ascending: false });
 ```
 
-### Database Monitoring
+### Caching Strategy
+```typescript
+// React Query for data caching
+import { useQuery } from '@tanstack/react-query';
 
-Access Aurora metrics via AWS Console:
-- Query performance
-- Connection count
-- CPU/memory usage
-- Storage metrics
+const useUniversity = (slug: string) => {
+  return useQuery({
+    queryKey: ['university', slug],
+    queryFn: () => getUniversityBySlug(slug),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+```
+
+##  Monitoring & Debugging
 
 ### Error Handling
-
 ```typescript
 // Global error boundary
 class CMSErrorBoundary extends React.Component {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('CMS Error:', error, errorInfo);
-    
-    // Log to monitoring service
-    fetch('/api/log-error', {
-      method: 'POST',
-      body: JSON.stringify({ error: error.message, stack: errorInfo })
-    });
+    // Send to monitoring service
   }
   
   render() {
@@ -661,18 +737,80 @@ class CMSErrorBoundary extends React.Component {
 }
 ```
 
+### Logging
+```typescript
+// Structured logging
+const logger = {
+  info: (message: string, data?: any) => {
+    console.log(`[CMS] ${message}`, data);
+  },
+  error: (message: string, error?: Error) => {
+    console.error(`[CMS ERROR] ${message}`, error);
+  }
+};
+
+// Usage
+logger.info('University loaded', { universityId, slug });
+logger.error('Failed to save university', error);
+```
+
+##  Development Workflow
+
+### Local Development
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Run tests
+npm test
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+### Database Migrations
+```bash
+# Create new migration
+supabase migration new add_new_feature
+
+# Apply migrations
+supabase db push
+
+# Reset database (development only)
+supabase db reset
+```
+
+### Code Quality
+```bash
+# Linting
+npm run lint
+
+# Type checking
+npm run type-check
+
+# Format code
+npm run format
+```
+
 ---
 
-## Additional Resources
+##  Additional Resources
 
-- [Architecture Documentation](/architecture)
-- [Database Documentation](/database)
-- [API Documentation](/api-documentation)
-- [Deployment Guide](/deployment)
-- [CMS User Guide](/cms-user-guide)
+- **Supabase Documentation:** https://supabase.com/docs
+- **React Documentation:** https://react.dev
+- **Tailwind CSS:** https://tailwindcss.com/docs
+- **TypeScript Handbook:** https://www.typescriptlang.org/docs
 
 ---
 
-**Last Updated**: November 28, 2025  
-**Version**: 3.0 (AWS Native)  
-**Previous Version**: See `cms-technical-legacy-supabase.mdx` for historical Supabase implementation
+*This technical documentation provides comprehensive coverage of the Mind Measure CMS architecture, implementation details, and development practices. For user-facing documentation, refer to the CMS User Guide.*
+
+
+
+

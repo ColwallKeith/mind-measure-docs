@@ -1,0 +1,256 @@
+# Scoring Algorithm
+
+## Overview
+
+The Mind Measure scoring algorithm fuses multimodal inputs (text, audio, visual) into a single wellness score (0-100). This document describes the **V2 scoring algorithm** implemented in December 2025.
+
+## Score Range
+
+| Score | Interpretation |
+|-------|----------------|
+| 80-100 | Excellent wellbeing |
+| 60-79 | Good wellbeing |
+| 40-59 | Moderate wellbeing |
+| 20-39 | Low wellbeing |
+| 0-19 | Very low wellbeing (clinical attention recommended) |
+
+## V2 Scoring Weights
+
+### Daily Check-ins
+
+Check-ins use **text-heavy weighting** because natural conversation is the primary signal:
+
+```typescript
+// All modalities available
+finalScore = (textScore * 0.70) + (audioScore * 0.15) + (visualScore * 0.15);
+
+// Audio only (visual failed)
+finalScore = (textScore * 0.80) + (audioScore * 0.20);
+
+// Visual only (audio failed)
+finalScore = (textScore * 0.80) + (visualScore * 0.20);
+
+// Text only (both failed)
+finalScore = textScore;
+```
+
+### Baseline Assessments
+
+Baselines use **clinical-heavy weighting** because structured questions provide validated data:
+
+```typescript
+// All modalities available
+finalScore = (clinicalScore * 0.70) + (audioScore * 0.15) + (visualScore * 0.15);
+
+// Visual failed
+finalScore = (clinicalScore * 0.85) + (audioScore * 0.15);
+
+// Both failed
+finalScore = clinicalScore;
+```
+
+## Sanity Floor
+
+To prevent obviously positive check-ins from being dragged down by conservative audio/visual scores:
+
+```typescript
+const avgQuality = (audioConfidence + visualConfidence) / 2;
+
+const shouldApplyFloor = 
+  textScore >= 75 &&           // High text score
+  riskLevel === 'none' &&      // No risk detected
+  avgQuality >= 0.6;           // Reasonable signal quality
+
+if (shouldApplyFloor && finalScore < 60) {
+  finalScore = 60;  // Apply floor
+  warnings.push('Sanity floor applied');
+}
+```
+
+**Rationale**: If someone verbally expresses feeling great (text score 85) but wasn't smiling at the camera, the final score shouldn't drop below 60.
+
+## Example Calculations
+
+### Example 1: Positive Check-in
+
+**Input**:
+- Text score: 85 (Bedrock detected positive language)
+- Audio score: 25 (Voice features scored conservatively)
+- Visual score: 41 (Limited smiling detected)
+- Risk level: none
+- Quality: 0.77
+
+**Calculation**:
+```
+rawScore = (85 × 0.70) + (25 × 0.15) + (41 × 0.15)
+         = 59.5 + 3.75 + 6.15
+         = 69.4
+
+Sanity floor check: text=85 >= 75 ✓, risk=none ✓, quality=0.77 >= 0.6 ✓
+Floor applies but rawScore (69) > 60, so no adjustment needed.
+
+Final Score: 69
+```
+
+### Example 2: Sanity Floor Applied
+
+**Input**:
+- Text score: 80
+- Audio score: 15
+- Visual score: 20
+- Risk level: none
+- Quality: 0.65
+
+**Calculation**:
+```
+rawScore = (80 × 0.70) + (15 × 0.15) + (20 × 0.15)
+         = 56 + 2.25 + 3
+         = 61.25 → 61
+
+Sanity floor check: text=80 >= 75 ✓, risk=none ✓, quality=0.65 >= 0.6 ✓
+rawScore (61) > 60, so no floor adjustment.
+
+Final Score: 61
+```
+
+### Example 3: No Visual Data
+
+**Input**:
+- Text score: 70
+- Audio score: 30
+- Visual: not available
+
+**Calculation**:
+```
+rawScore = (70 × 0.80) + (30 × 0.20)
+         = 56 + 6
+         = 62
+
+Final Score: 62
+```
+
+## Individual Modality Scoring
+
+### Text Score (Bedrock)
+
+Claude 3 Haiku produces a 0-100 score based on:
+- Sentiment analysis
+- Linguistic patterns
+- Wellness indicators
+- Risk markers
+
+See [Text Analysis](./text-analysis) for details.
+
+### Audio Score
+
+Computed from 10 audio features:
+
+```typescript
+function calculateAudioScore(features: AudioFeatures): number {
+  const scores: number[] = [];
+  
+  // Pitch: optimal around 150-180 Hz
+  const pitchScore = 100 - Math.abs(features.meanPitch - 165) / 2;
+  scores.push(clamp(pitchScore, 0, 100));
+  
+  // Speaking rate: optimal around 120-150 wpm
+  const rateScore = 100 - Math.abs(features.speakingRate - 135) / 1.5;
+  scores.push(clamp(rateScore, 0, 100));
+  
+  // Jitter: lower is better
+  scores.push((1 - features.jitter) * 100);
+  
+  // Shimmer: lower is better
+  scores.push((1 - features.shimmer) * 100);
+  
+  return average(scores);
+}
+```
+
+See [Audio Features](./audio-features) for details.
+
+### Visual Score
+
+Computed from 10 visual features:
+
+```typescript
+function calculateVisualScore(features: VisualFeatures): number {
+  const scores: number[] = [];
+  
+  // Smile frequency
+  scores.push(features.smileFrequency * 100);
+  
+  // Eye contact
+  scores.push(features.eyeContact * 100);
+  
+  // Blink rate: optimal around 15-20 bpm
+  const blinkScore = 100 - Math.abs(features.blinkRate - 17) * 3;
+  scores.push(clamp(blinkScore, 0, 100));
+  
+  // Affect: -1 to +1 mapped to 0-100
+  scores.push((features.affect + 1) * 50);
+  
+  // Tension: lower is better
+  scores.push((1 - features.facialTension) * 100);
+  
+  return average(scores);
+}
+```
+
+See [Visual Features](./visual-features) for details.
+
+## Confidence and Uncertainty
+
+### Modality Confidence
+
+Each modality reports a confidence value (0-1):
+
+| Modality | Confidence Source |
+|----------|-------------------|
+| Text | `1 - uncertainty` from Bedrock |
+| Audio | Quality metric from feature extraction |
+| Visual | Face presence quality from Rekognition |
+
+### Overall Uncertainty
+
+The final uncertainty is the text analysis uncertainty (most reliable indicator):
+
+```typescript
+result.uncertainty = textResult.uncertainty;
+```
+
+Low uncertainty (< 0.3) indicates high confidence in the score.
+
+## Calibration Notes
+
+The V2 weights are initial values that may be tuned based on:
+
+1. **User feedback** - Does the score feel accurate?
+2. **Longitudinal data** - Do scores correlate with self-reported outcomes?
+3. **Clinical validation** - Correlation with PHQ-9, GAD-7, etc.
+
+### Tunable Parameters
+
+| Parameter | Current Value | Range | Purpose |
+|-----------|---------------|-------|---------|
+| Text weight (all) | 0.70 | 0.5-0.9 | Text influence when all modalities present |
+| Audio weight | 0.15 | 0.05-0.25 | Audio influence |
+| Visual weight | 0.15 | 0.05-0.25 | Visual influence |
+| Sanity floor threshold | 60 | 50-70 | Minimum score for positive check-ins |
+| Quality threshold | 0.6 | 0.5-0.8 | Minimum quality for floor to apply |
+| Text score threshold | 75 | 70-85 | Minimum text score for floor to apply |
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| V1 | Nov 2025 | Initial: 60/20/20 weighting |
+| V2 | Dec 2024 | Text-heavy: 70/15/15 + sanity floor |
+
+---
+
+*Last Updated: December 2025*  
+*Scoring Version: V2*
+
+
+

@@ -1,0 +1,268 @@
+# Text Analysis (Bedrock)
+
+## Overview
+
+Mind Measure uses **AWS Bedrock** with **Claude 3 Haiku** for conversational text analysis. The text analysis pipeline extracts semantic meaning, emotional indicators, and wellness-related themes from conversation transcripts.
+
+## Integration Architecture
+
+```
+Conversation Transcript
+        ↓
+    Vercel API Route
+    /api/bedrock/analyze-text
+        ↓
+    AWS Bedrock Client
+    (Claude 3 Haiku)
+        ↓
+    Structured JSON Response
+        ↓
+    Validation & Sanitisation
+        ↓
+    TextAnalysisResult
+```
+
+## API Endpoint
+
+**Endpoint**: `POST /api/bedrock/analyze-text`
+
+**Request**:
+```json
+{
+  "transcript": "Full conversation transcript...",
+  "context": {
+    "checkinId": "uuid",
+    "studentFirstName": "Keith",
+    "previousTextThemes": ["work", "sleep"],
+    "previousMindMeasureScore": 65,
+    "previousDirectionOfChange": "same"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "text_score": 85,
+  "mood_score": 8,
+  "uncertainty": 0.2,
+  "themes": ["mood", "productivity", "exercise", "routine"],
+  "keywords": ["productive", "coffee", "dog walk", "exercise"],
+  "risk_level": "none",
+  "direction_of_change": "better",
+  "conversation_summary": "You talked about having a productive day...",
+  "drivers_positive": ["productivity", "exercise", "coffee"],
+  "drivers_negative": []
+}
+```
+
+## Claude Prompt
+
+The system prompt instructs Claude to analyse the conversation:
+
+```typescript
+const SYSTEM_PROMPT = `You are a wellbeing conversation analyser. 
+Analyse the conversation and return ONLY valid JSON matching this schema:
+
+{
+  "text_score": number,        // 0-100 wellness indicator
+  "mood_score": number,        // 1-10 if explicitly stated
+  "uncertainty": number,       // 0-1 confidence (0=certain, 1=uncertain)
+  "themes": string[],          // Main topics discussed
+  "keywords": string[],        // Key terms mentioned
+  "risk_level": string,        // "none" | "mild" | "moderate" | "high"
+  "direction_of_change": string, // "better" | "same" | "worse"
+  "conversation_summary": string, // 1-2 sentence summary
+  "drivers_positive": string[], // Positive wellbeing factors
+  "drivers_negative": string[]  // Negative wellbeing factors
+}
+
+Guidelines:
+- text_score: Higher = better wellbeing. Consider language tone, sentiment, life satisfaction indicators.
+- mood_score: Only include if user explicitly states a number (e.g., "I'd say an 8")
+- themes: Extract 3-6 main topics (e.g., "sleep", "work", "exercise", "relationships")
+- risk_level: "high" only for crisis indicators (self-harm, suicidal ideation)
+- direction_of_change: Compare to context if provided, otherwise use "same"
+- conversation_summary: Second person ("You mentioned..."), warm and supportive tone
+`;
+```
+
+## Text Score Calculation
+
+Claude determines the text_score based on:
+
+| Indicator | Effect on Score |
+|-----------|-----------------|
+| Positive language ("great", "happy", "productive") | ↑ Increases score |
+| Negative language ("stressed", "anxious", "tired") | ↓ Decreases score |
+| Coping statements ("I'm managing", "getting better") | ↑ Increases score |
+| Hopelessness markers ("nothing helps", "can't cope") | ↓ Decreases score |
+| Social connection ("friends", "family", "support") | ↑ Increases score |
+| Isolation markers ("alone", "no one understands") | ↓ Decreases score |
+| Physical activity mentions | ↑ Increases score |
+| Sleep problems mentioned | ↓ Decreases score |
+
+## Mood Score Extraction
+
+The `mood_score` field is the user's explicit 1-10 rating:
+
+```typescript
+// Claude extracts from statements like:
+// "I'd put it at an 8"
+// "Maybe a 7"
+// "About a six out of ten"
+
+// If not explicitly stated, field is omitted
+```
+
+## Risk Level Detection
+
+| Level | Indicators |
+|-------|------------|
+| **none** | Normal conversation, no concerning content |
+| **mild** | Stress, mild anxiety, temporary difficulties |
+| **moderate** | Persistent negative mood, significant struggles |
+| **high** | Crisis indicators, self-harm mention, suicidal ideation |
+
+**High-risk responses trigger immediate clinical review protocols.**
+
+## Implementation
+
+### Bedrock Client Setup
+
+```typescript
+import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
+
+const bedrockClient = new BedrockRuntimeClient({
+  region: "eu-west-2",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
+  }
+});
+
+const MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0";
+```
+
+### API Handler
+
+```typescript
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const { transcript, context } = req.body;
+  
+  const command = new InvokeModelCommand({
+    modelId: MODEL_ID,
+    contentType: "application/json",
+    accept: "application/json",
+    body: JSON.stringify({
+      anthropic_version: "bedrock-2023-05-31",
+      max_tokens: 2048,
+      messages: [{
+        role: "user",
+        content: buildPrompt(transcript, context)
+      }],
+      system: SYSTEM_PROMPT
+    })
+  });
+  
+  const response = await bedrockClient.send(command);
+  const result = parseAndValidate(response);
+  
+  return res.json(result);
+}
+```
+
+### Response Validation
+
+All Claude responses are validated and sanitised:
+
+```typescript
+function validateAndSanitize(parsed: any): TextAnalysisResult {
+  // Validate text_score
+  if (typeof parsed.text_score !== 'number' || 
+      parsed.text_score < 0 || 
+      parsed.text_score > 100) {
+    parsed.text_score = 50; // Default
+  }
+  
+  // Validate mood_score (optional, 1-10)
+  if (parsed.mood_score !== undefined) {
+    if (typeof parsed.mood_score !== 'number' ||
+        parsed.mood_score < 1 || 
+        parsed.mood_score > 10) {
+      delete parsed.mood_score;
+    }
+  }
+  
+  // Validate uncertainty
+  if (typeof parsed.uncertainty !== 'number' ||
+      parsed.uncertainty < 0 || 
+      parsed.uncertainty > 1) {
+    parsed.uncertainty = 0.5; // Default moderate uncertainty
+  }
+  
+  // Validate risk_level
+  const validRiskLevels = ['none', 'mild', 'moderate', 'high'];
+  if (!validRiskLevels.includes(parsed.risk_level)) {
+    parsed.risk_level = 'none';
+  }
+  
+  // Ensure arrays
+  parsed.themes = Array.isArray(parsed.themes) ? parsed.themes : [];
+  parsed.keywords = Array.isArray(parsed.keywords) ? parsed.keywords : [];
+  parsed.drivers_positive = Array.isArray(parsed.drivers_positive) ? parsed.drivers_positive : [];
+  parsed.drivers_negative = Array.isArray(parsed.drivers_negative) ? parsed.drivers_negative : [];
+  
+  return parsed;
+}
+```
+
+## Error Handling
+
+If Bedrock analysis fails, fallback values are used:
+
+```typescript
+function getEmptyResult(summary: string): TextAnalysisResult {
+  return {
+    text_score: 50,
+    mood_score: 5,
+    uncertainty: 0.9,  // High uncertainty for fallback
+    themes: [],
+    keywords: [],
+    risk_level: 'none',
+    direction_of_change: 'same',
+    conversation_summary: summary || 'Assessment completed.',
+    drivers_positive: [],
+    drivers_negative: []
+  };
+}
+```
+
+## Performance
+
+- **Latency**: Typically 2-5 seconds
+- **Token usage**: ~500-1500 tokens per request
+- **Cost**: Approximately $0.001-0.003 per analysis
+- **Availability**: 99.9% uptime (AWS Bedrock SLA)
+
+## Model Selection Rationale
+
+**Claude 3 Haiku** was chosen for:
+
+| Factor | Rationale |
+|--------|-----------|
+| **Speed** | Fastest Claude model (~2s response) |
+| **Cost** | Lowest cost per token |
+| **Quality** | Sufficient for structured extraction |
+| **JSON reliability** | Good at following output schemas |
+| **Safety** | Built-in content filtering |
+
+For more nuanced clinical analysis, Claude 3 Sonnet or Opus could be considered.
+
+---
+
+*Last Updated: December 2025*  
+*Model: Claude 3 Haiku (anthropic.claude-3-haiku-20240307-v1:0)*
+
+
+

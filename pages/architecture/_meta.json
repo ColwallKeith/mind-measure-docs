@@ -1,6 +1,9 @@
 {
-  "architecture": "System Overview",
-  "aurora-serverless-v2": "Aurora Database",
+  "title": "Architecture",
+  "overview": "System Overview",
+  "components": "Core Components",
+  "database": "Database",
   "backend": "Backend Services",
-  "database": "Database & RLS"
+  "mobile": "Mobile App",
+  "aurora-serverless-v2": "Aurora Serverless v2"
 }

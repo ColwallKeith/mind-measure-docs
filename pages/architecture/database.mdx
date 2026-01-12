@@ -1,10 +1,6 @@
-# Database Documentation
+# Database Schema Documentation
 
-This document provides comprehensive documentation for the Mind Measure Aurora Serverless v2 PostgreSQL database, including schemas, tables, relationships, indexes, and access patterns.
-
-**Database**: Aurora Serverless v2 (PostgreSQL)  
-**Host**: mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com  
-**Schemas**: `public` (main app) and `assessment_engine` (multimodal assessment)
+This document provides comprehensive documentation for the MindMeasure PostgreSQL database schema, including tables, relationships, indexes, and security policies.
 
 ## Schema Overview
 
@@ -55,40 +51,14 @@ erDiagram
 
 ---
 
-## Database Connection
+## Scoring-related Tables
 
-### From Vercel API Functions
-```typescript
-import { Pool } from 'pg';
-
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  ssl: { rejectUnauthorized: false }
-});
-```
-
-### From AWS Lambda Functions
-```typescript
-import { Pool } from 'pg';
-
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: 5432,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  ssl: { rejectUnauthorized: false }
-});
-```
-
-### Access Control
-- **Vercel API**: Uses database credentials from environment variables
-- **Lambda Functions**: Use IAM-based authentication or connection credentials
-- **Application-level**: User data access controlled by application logic (user_id filtering)
+- user_feature_baselines
+  - Columns: id, user_id, feature_name, mean, sd, created_at, updated_at
+  - RLS: System ALL; Users can INSERT/UPDATE/SELECT their own
+- user_calibration
+  - Columns: id, user_id, modality, a, b, n_points, created_at, updated_at
+  - RLS: System ALL; Users can SELECT their own
 
 ## Table Definitions
 
@@ -125,10 +95,23 @@ CREATE TRIGGER update_profiles_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 ```
 
-**Access Control**
-- Application-level access control via user_id filtering
-- All queries must include user_id check: `WHERE user_id = $1`
-- No direct database access from client - all access via API
+**RLS Policies**
+```sql
+-- Users can view their own profile
+CREATE POLICY "Users can view their own profile" 
+ON profiles FOR SELECT 
+USING (auth.uid() = user_id);
+
+-- Users can create their own profile
+CREATE POLICY "Users can create their own profile" 
+ON profiles FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own profile
+CREATE POLICY "Users can update their own profile" 
+ON profiles FOR UPDATE 
+USING (auth.uid() = user_id);
+```
 
 **JSON Schema - wellness_goals**
 ```typescript
@@ -188,9 +171,23 @@ ADD CONSTRAINT check_assessment_type_valid
 CHECK (assessment_type IN ('full', 'quick', 'voice-only'));
 ```
 
-**Access Control**
-- Application-level access control via user_id filtering
-- Users can only access their own sessions via API endpoints
+**RLS Policies**
+```sql
+-- Users can view their own sessions
+CREATE POLICY "Users can view their own assessment sessions" 
+ON assessment_sessions FOR SELECT 
+USING (auth.uid() = user_id);
+
+-- Users can create their own sessions
+CREATE POLICY "Users can create their own assessment sessions" 
+ON assessment_sessions FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own sessions
+CREATE POLICY "Users can update their own assessment sessions" 
+ON assessment_sessions FOR UPDATE 
+USING (auth.uid() = user_id);
+```
 
 **JSON Schemas**
 
@@ -251,9 +248,22 @@ CREATE INDEX idx_text_analysis_score ON text_analysis(text_wellness_score);
 CREATE INDEX idx_text_analysis_processed ON text_analysis(processed_at);
 ```
 
-**Access Control**
-- Lambda functions create analysis records
-- Users access via API with user_id validation
+**RLS Policies**
+```sql
+-- System can create analysis
+CREATE POLICY "System can create text analysis" 
+ON text_analysis FOR INSERT 
+WITH CHECK (true);
+
+-- Users can view their own analysis
+CREATE POLICY "Users can view their own text analysis" 
+ON text_analysis FOR SELECT 
+USING (EXISTS (
+    SELECT 1 FROM assessment_sessions 
+    WHERE assessment_sessions.id = text_analysis.session_id 
+    AND assessment_sessions.user_id = auth.uid()
+));
+```
 
 **JSON Schemas**
 
@@ -536,24 +546,27 @@ END;
 $$ LANGUAGE plpgsql;
 ```
 
-### create_user_profile()
-**Purpose**: Creates a profile for a new user (called from application code)
+### handle_new_user()
+**Purpose**: Automatically creates a profile for new users
 
-```typescript
-// Called from Vercel API or Lambda after Cognito user creation
-async function createUserProfile(userId: string, email: string, metadata?: any) {
-  await pool.query(
-    `INSERT INTO public.profiles (user_id, display_name, first_name, last_name)
-     VALUES ($1, $2, $3, $4)`,
-    [
-      userId,
-      metadata?.display_name || email,
-      metadata?.first_name || null,
-      metadata?.last_name || null
-    ]
-  );
-}
-```
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+    INSERT INTO public.profiles (user_id, display_name, first_name, last_name)
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data ->> 'display_name', NEW.email),
+        NEW.raw_user_meta_data ->> 'first_name',
+        NEW.raw_user_meta_data ->> 'last_name'
+    );
+    RETURN NEW;
+END;
+$$;
 ```
 
 ---
@@ -568,8 +581,11 @@ CREATE TRIGGER update_profiles_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Profile creation handled by application code after Cognito user creation
--- No database trigger needed - called from API endpoint
+-- Auto-create profile for new users
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW
+    EXECUTE FUNCTION handle_new_user();
 ```
 
 ### Session Triggers
@@ -583,59 +599,15 @@ CREATE TRIGGER update_sessions_updated_at
 
 ---
 
-## Assessment Engine Schema
-
-The `assessment_engine` schema contains tables for the multimodal assessment pipeline (deployed November 28, 2025).
-
-### Schema Overview
-
-**Tables:**
-- `check_ins` - Main check-in records
-- `audio_analysis` - 23 audio features per check-in
-- `visual_analysis` - 18 visual features per check-in  
-- `text_analysis` - 16 text features per check-in
-- `fusion_results` - Final Mind Measure scores (0-100)
-- `user_baselines` - Personal baseline data for z-score normalization
-
-**Connection:**
-```typescript
-// From Lambda functions
-import { Pool } from 'pg';
-
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD
-});
-
-// Query Assessment Engine tables
-const result = await pool.query(
-  'SELECT * FROM assessment_engine.fusion_results WHERE user_id = $1',
-  [userId]
-);
-```
-
-**Full Schema Documentation:**
-See `/assessment-engine/migrations/checkin-pipeline-v2.sql` for complete schema definition.
-
----
-
 ## Security & Privacy
 
-### Access Control
+### Row Level Security (RLS)
 
-**Application-Level Security:**
-- All database access goes through API endpoints (Vercel serverless functions or Lambda)
-- User authentication via AWS Cognito (JWT tokens)
-- Application logic enforces user_id filtering on all queries
-- No direct database access from client applications
-
-**Database-Level Security:**
-- Aurora Serverless v2 with encryption at rest
-- TLS 1.3 for all connections
-- IAM-based authentication for Lambda functions
-- Connection credentials stored in environment variables (not in code)
+All tables have RLS enabled with policies ensuring:
+- Users can only access their own data
+- System functions can create analysis records
+- No direct user access to sensitive analysis data
+- Audit trail for all data access
 
 ### Data Encryption
 
@@ -671,7 +643,7 @@ $$ LANGUAGE plpgsql;
 
 ---
 
-## Performance Optimisation
+## Performance Optimization
 
 ### Indexing Strategy
 
@@ -681,7 +653,7 @@ $$ LANGUAGE plpgsql;
 - Score fields for analysis queries
 - Composite indexes for common query patterns
 
-**Query Optimisation**
+**Query Optimization**
 ```sql
 -- Optimized query for user dashboard
 EXPLAIN (ANALYZE, BUFFERS) 

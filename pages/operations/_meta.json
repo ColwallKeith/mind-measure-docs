@@ -1,4 +1,5 @@
 {
-  "coding-standards": "Coding Standards",
-  "playbooks": "Operational Playbooks"
+  "title": "Operations",
+  "playbooks": "Operational Playbooks",
+  "coding-standards": "Coding Standards"
 }

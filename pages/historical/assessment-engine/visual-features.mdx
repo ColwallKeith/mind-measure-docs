@@ -1,0 +1,260 @@
+# Visual Features
+
+## Overview
+
+Mind Measure extracts 10 visual features from video frames captured during assessments. Visual feature extraction uses **AWS Rekognition** for facial analysis.
+
+## Feature List
+
+| ID | Feature | Range | Description |
+|----|---------|-------|-------------|
+| V1 | **smileFrequency** | 0-1 | Proportion of frames with smile detected |
+| V2 | **smileIntensity** | 0-1 | Average smile confidence when present |
+| V3 | **eyeContact** | 0-1 | Proportion of frames with direct gaze |
+| V4 | **eyebrowPosition** | 0-1 | Average eyebrow height (lowered = concern) |
+| V5 | **facialTension** | 0-1 | Composite tension indicator |
+| V6 | **blinkRate** | 0-100 | Blinks per minute estimation |
+| V7 | **headMovement** | 0-1 | Average frame-to-frame head position change |
+| V8 | **affect** | -1 to 1 | Composite emotional valence |
+| V9 | **facePresenceQuality** | 0-1 | Proportion of frames with face detected |
+| V10 | **overallQuality** | 0-1 | Composite quality metric |
+
+## Video Capture
+
+Frames are captured during the conversation:
+
+```typescript
+class MediaCapture {
+  async start(config: CaptureConfig) {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: 640, height: 480 },
+      audio: true
+    });
+    
+    // Capture frames at configured rate (default: 0.5 fps = 1 frame every 2 seconds)
+    this.frameInterval = setInterval(() => {
+      this.captureFrame();
+    }, 1000 / config.videoFrameRate);
+  }
+  
+  captureFrame() {
+    const canvas = document.createElement('canvas');
+    canvas.width = this.video.videoWidth;
+    canvas.height = this.video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(this.video, 0, 0);
+    
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    this.frames.push(imageData);
+  }
+}
+```
+
+## Rekognition Integration
+
+Frames are sent to AWS Rekognition for analysis:
+
+```typescript
+async analyzeFrames(frames: ImageData[]): Promise<RekognitionResult[]> {
+  const response = await fetch('/api/rekognition/batch-analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      frames: frames.map(f => this.imageDataToBase64(f))
+    })
+  });
+  
+  return response.json();
+}
+```
+
+### Rekognition Response Structure
+
+```json
+{
+  "FaceDetails": [{
+    "BoundingBox": { "Width": 0.5, "Height": 0.6, "Left": 0.25, "Top": 0.1 },
+    "Smile": { "Value": true, "Confidence": 95.2 },
+    "Eyeglasses": { "Value": false, "Confidence": 99.1 },
+    "EyesOpen": { "Value": true, "Confidence": 98.7 },
+    "MouthOpen": { "Value": false, "Confidence": 97.3 },
+    "Emotions": [
+      { "Type": "HAPPY", "Confidence": 45.2 },
+      { "Type": "CALM", "Confidence": 30.1 },
+      { "Type": "SAD", "Confidence": 5.3 }
+    ],
+    "Pose": { "Roll": -2.1, "Yaw": 5.3, "Pitch": -3.2 },
+    "Quality": { "Brightness": 75.2, "Sharpness": 82.1 }
+  }]
+}
+```
+
+## Extraction Methods
+
+### V1-V2: Smile Analysis
+
+```typescript
+extractSmileFrequency(analyses: RekognitionResult[]): number {
+  const smilingFrames = analyses.filter(a => 
+    a.FaceDetails?.[0]?.Smile?.Value === true &&
+    a.FaceDetails?.[0]?.Smile?.Confidence > 70
+  );
+  return smilingFrames.length / analyses.length;
+}
+
+extractSmileIntensity(analyses: RekognitionResult[]): number {
+  const smileConfidences = analyses
+    .filter(a => a.FaceDetails?.[0]?.Smile?.Value)
+    .map(a => a.FaceDetails[0].Smile.Confidence / 100);
+  
+  return smileConfidences.length > 0
+    ? smileConfidences.reduce((a, b) => a + b) / smileConfidences.length
+    : 0;
+}
+```
+
+### V3: Eye Contact
+
+Approximated from pose angles:
+
+```typescript
+extractEyeContact(analyses: RekognitionResult[]): number {
+  const eyeContactFrames = analyses.filter(a => {
+    const pose = a.FaceDetails?.[0]?.Pose;
+    if (!pose) return false;
+    
+    // Looking at camera: yaw and pitch close to 0
+    return Math.abs(pose.Yaw) < 15 && Math.abs(pose.Pitch) < 15;
+  });
+  
+  return eyeContactFrames.length / analyses.length;
+}
+```
+
+### V4-V5: Facial Tension
+
+```typescript
+extractFacialTension(analyses: RekognitionResult[]): number {
+  // Composite of negative emotions + eyebrow position
+  return analyses.reduce((sum, a) => {
+    const emotions = a.FaceDetails?.[0]?.Emotions || [];
+    const angry = emotions.find(e => e.Type === 'ANGRY')?.Confidence || 0;
+    const fear = emotions.find(e => e.Type === 'FEAR')?.Confidence || 0;
+    const confused = emotions.find(e => e.Type === 'CONFUSED')?.Confidence || 0;
+    
+    return sum + (angry + fear + confused) / 300;
+  }, 0) / analyses.length;
+}
+```
+
+### V6: Blink Rate
+
+```typescript
+extractBlinkRate(analyses: RekognitionResult[], duration: number): number {
+  let blinks = 0;
+  let previousEyesOpen = true;
+  
+  for (const analysis of analyses) {
+    const eyesOpen = analysis.FaceDetails?.[0]?.EyesOpen?.Value ?? true;
+    if (previousEyesOpen && !eyesOpen) {
+      blinks++;
+    }
+    previousEyesOpen = eyesOpen;
+  }
+  
+  const minutes = duration / 60;
+  return blinks / minutes;
+}
+```
+
+### V7: Head Movement
+
+```typescript
+extractHeadMovement(analyses: RekognitionResult[]): number {
+  let totalMovement = 0;
+  
+  for (let i = 1; i < analyses.length; i++) {
+    const prev = analyses[i - 1].FaceDetails?.[0]?.Pose;
+    const curr = analyses[i].FaceDetails?.[0]?.Pose;
+    
+    if (prev && curr) {
+      const movement = Math.sqrt(
+        Math.pow(curr.Yaw - prev.Yaw, 2) +
+        Math.pow(curr.Pitch - prev.Pitch, 2) +
+        Math.pow(curr.Roll - prev.Roll, 2)
+      );
+      totalMovement += movement;
+    }
+  }
+  
+  return totalMovement / (analyses.length - 1) / 50; // Normalise
+}
+```
+
+### V8: Affect (Emotional Valence)
+
+```typescript
+extractAffect(analyses: RekognitionResult[]): number {
+  const affectScores = analyses.map(a => {
+    const emotions = a.FaceDetails?.[0]?.Emotions || [];
+    
+    // Positive emotions
+    const happy = (emotions.find(e => e.Type === 'HAPPY')?.Confidence || 0) / 100;
+    const calm = (emotions.find(e => e.Type === 'CALM')?.Confidence || 0) / 100;
+    
+    // Negative emotions
+    const sad = (emotions.find(e => e.Type === 'SAD')?.Confidence || 0) / 100;
+    const angry = (emotions.find(e => e.Type === 'ANGRY')?.Confidence || 0) / 100;
+    const fear = (emotions.find(e => e.Type === 'FEAR')?.Confidence || 0) / 100;
+    
+    // Valence: -1 (negative) to +1 (positive)
+    return (happy + calm * 0.5) - (sad + angry + fear);
+  });
+  
+  return affectScores.reduce((a, b) => a + b) / affectScores.length;
+}
+```
+
+## Scoring
+
+Visual features are converted to a 0-100 score:
+
+```typescript
+calculateVisualScore(features: VisualFeatures): number {
+  const scores: number[] = [];
+  
+  // Smile frequency: more smiling = higher score
+  scores.push(features.smileFrequency * 100);
+  
+  // Eye contact: more engagement = higher score
+  scores.push(features.eyeContact * 100);
+  
+  // Blink rate: optimal around 15-20 bpm
+  const blinkScore = 100 - Math.abs(features.blinkRate - 17) * 3;
+  scores.push(Math.max(0, Math.min(100, blinkScore)));
+  
+  // Affect: map -1 to +1 onto 0 to 100
+  const affectScore = (features.affect + 1) * 50;
+  scores.push(Math.max(0, Math.min(100, affectScore)));
+  
+  // Low tension = higher score
+  scores.push((1 - features.facialTension) * 100);
+  
+  return scores.reduce((a, b) => a + b) / scores.length;
+}
+```
+
+## Limitations
+
+- **Lighting dependency**: Poor lighting reduces Rekognition accuracy
+- **Camera angle**: Off-angle faces may not be detected
+- **Frame rate**: Low capture rate (0.5 fps) may miss expressions
+- **Cultural bias**: Emotion detection models may have cultural biases
+- **No baseline normalisation**: Doesn't account for individual expression patterns
+
+---
+
+*Last Updated: December 2025*
+
+
+
