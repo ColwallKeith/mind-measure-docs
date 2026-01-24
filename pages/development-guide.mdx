@@ -1,0 +1,536 @@
+# Development Guide
+
+Complete guide to Mind Measure development workflow, architecture, and deployment procedures.
+
+## Overview
+
+This guide consolidates all development protocols, architectural decisions, and deployment workflows for the Mind Measure platform. It reflects the current state as of November 28, 2025, including the newly deployed Assessment Engine.
+
+## Quick Links
+
+- [Core Principles](#core-principles)
+- [System Architecture](#system-architecture)
+- [Mobile App Development](#mobile-app-development)
+- [Assessment Engine](#assessment-engine)
+- [Deployment Workflows](#deployment-workflows)
+- [Monitoring](#monitoring)
+- [Emergency Procedures](#emergency-procedures)
+
+---
+
+## Core Principles
+
+### Production-First Development
+
+**There is NO local development environment. Production IS our development environment.**
+
+Critical rules:
+- NO localhost:3000 development
+- NO local API servers
+- NO mixing environments
+- ALL development against live domains
+- Production = Development = Testing
+
+### Mandatory Pre-Work Protocol
+
+Before ANY major work:
+
+- Read `DEVELOPMENT_PROTOCOL_MASTER.md` first
+- Read ALL relevant documentation
+- Understand existing architecture - never assume
+- Ask clarifying questions
+- Get explicit approval for architectural changes
+- Test frequently during development
+- Deploy incrementally
+
+This protocol was created after 2 days of lost work due to architectural mistakes.
+
+### User Flow Preservation
+
+**NEVER replace sophisticated user flows without explicit permission.**
+
+Existing flows (DO NOT CHANGE):
+
+**New User:**
+```
+Splash → Registration → Baseline Welcome → Baseline Assessment → Dashboard
+```
+
+**Returning User (No Baseline):**
+```
+Returning Splash → Baseline Welcome → Baseline Assessment → Dashboard
+```
+
+**Returning User (With Baseline):**
+```
+Returning Splash → Dashboard
+```
+
+**Rule**: Integrate new systems BEHIND existing screens, not instead of them.
+
+---
+
+## System Architecture
+
+### Platform Domains
+
+| Domain | Purpose | Access | Stack |
+|--------|---------|--------|-------|
+| `mobile.mindmeasure.app` | Student Mobile App | iOS/Android + Web API | React + Capacitor + Vercel |
+| `admin.mindmeasure.co.uk` | Admin Dashboard | Web browsers | React + Vercel |
+| `mindmeasure.co.uk` | Marketing Site | Web browsers | Static site |
+| `https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/` | Assessment Engine API | Mobile app via JWT | AWS Lambda + Step Functions |
+
+### AWS Configuration
+
+- **Account ID**: `459338929203`
+- **Region**: eu-west-2 (London)
+- **Cognito User Pool**: eu-west-2_ClAG4fQXR
+- **Cognito Client ID**: 7vu03ppv6alkpphs1ksopll8us
+
+### Database
+
+- **Host**: mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com
+- **Database**: mindmeasure
+- **Type**: Aurora Serverless v2 (PostgreSQL)
+- **Schemas**:
+ - `public` - Main app tables
+ - `assessment_engine` - Multimodal assessment (6 tables)
+
+---
+
+## Mobile App Development
+
+### Required Environment Variables
+
+```bash
+export VITE_API_BASE_URL=https://mobile.mindmeasure.app/api
+export VITE_AWS_REGION=eu-west-2
+export VITE_AWS_COGNITO_USER_POOL_ID=eu-west-2_ClAG4fQXR
+export VITE_AWS_COGNITO_CLIENT_ID=7vu03ppv6alkpphs1ksopll8us
+export VITE_BACKEND_PROVIDER=aurora-serverless
+export VITE_DB_HOST=mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com
+export VITE_DB_PORT=5432
+export VITE_DB_NAME=mindmeasure
+```
+
+### Deployment Sequence
+
+** CRITICAL**: Before running `npm run build` or `npx vercel`, ALWAYS ask:
+
+**"Ready to deploy? This will take 5-6 minutes."**
+
+Wait for explicit user confirmation before proceeding.
+
+```bash
+# Set environment variables first
+# Then build
+npm run build
+
+# Deploy to Vercel
+npx vercel --prod
+
+# Alias domain
+npx vercel alias mobile.mindmeasure.app
+
+# Sync to iOS
+npx cap sync ios
+
+# Test on device
+npx cap run ios
+```
+
+### Verification Checklist
+
+Before mobile testing:
+- [ ] API health check: `curl https://mobile.mindmeasure.app/api/database/health`
+- [ ] Database schema exists
+- [ ] Cognito configuration matches
+- [ ] App logs show correct API URL
+- [ ] Capacitor config points to production URL
+
+### Mobile App API Endpoints
+
+**Base URL**: `https://mobile.mindmeasure.app/api`
+
+- `GET /api/database/health` - Health check
+- `POST /api/database/select` - Query data
+- `POST /api/database/insert` - Insert data
+- `POST /api/database/update` - Update data
+- `POST /api/database/delete` - Delete data
+- `POST /api/database/setup-tables` - Schema management
+
+---
+
+## Assessment Engine
+
+### Overview
+
+Standalone serverless module deployed November 28, 2025.
+
+**Features extracted:**
+- 23 audio features (prosody, speech dynamics, voice quality)
+- 18 visual features (emotion, expression, gaze - from still images)
+- 16 text features (sentiment, emotion, cognitive load, resilience)
+
+**Output**: Mind Measure Score (0-100) with uncertainty, direction, and risk level.
+
+### Architecture Flow
+
+```
+Mobile App
+ → API Gateway (Cognito JWT auth)
+ → HTTP Lambdas (start, complete, get)
+ → Step Functions State Machine
+ → Parallel Analysis (Audio, Visual, Text Lambdas)
+ → Fusion Engine Lambda
+ → Aurora Database (assessment_engine schema)
+```
+
+### API Endpoints
+
+**Base URL**: `https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/`
+
+**Endpoints:**
+- `POST /checkins/start` - Create check-in, get S3 upload URLs
+- `POST /checkins/{id}/complete` - Start processing pipeline
+- `GET /checkins/{id}` - Get status and results
+
+**Authentication**: Same Cognito JWT as mobile app
+
+### AWS Resources
+
+**Lambda Functions (10):**
+- CheckInStartLambda (512MB, 30s)
+- CheckInCompleteLambda (512MB, 30s)
+- CheckInGetLambda (512MB, 15s)
+- AudioAnalysisLambda (2048MB, 60s)
+- VisualAnalysisLambda (3008MB, 90s)
+- TextAnalysisLambda (1024MB, 30s)
+- FusionEngineLambda (1024MB, 30s)
+- BaselineUpdateLambda (512MB, 15s)
+- MarkCheckInCompleteLambda (512MB, 15s)
+- MarkCheckInFailedLambda (512MB, 15s)
+
+**Infrastructure:**
+- S3 Bucket: `mindmeasure-checkin-media-staging`
+- Step Functions: CheckInStateMachine785DC833-VyX9ebODxxhN
+- API Gateway: REST API with Cognito authorizer
+- CloudWatch: Log groups for all Lambdas
+
+### Database Schema
+
+**Status**: Schema pending deployment (password issue)
+
+**Tables** (in `assessment_engine` schema):
+- `check_ins` - Main check-in records
+- `audio_analysis` - 23 audio features
+- `visual_analysis` - 18 visual features
+- `text_analysis` - 16 text features
+- `fusion_results` - Final Mind Measure scores
+- `user_baselines` - Personal baseline data
+
+**Migration**: `assessment-engine/migrations/checkin-pipeline-v2.sql`
+
+### Mobile App Integration
+
+**Add API URL:**
+```typescript
+// mobile-app/src/config/assessmentEngine.ts
+export const ASSESSMENT_ENGINE_API =
+ 'https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1';
+```
+
+**Feature flag for gradual rollout:**
+```typescript
+export const USE_ASSESSMENT_ENGINE = (userId: string) => {
+ return ['keith@mindmeasure.co.uk', 'test1@uni.ac.uk'].includes(userId);
+};
+```
+
+**Integration points:**
+- Same ElevenLabs conversation (different agent for check-ins)
+- Capture 8-12 still images during conversation
+- Upload to S3, poll for results
+- Display score in existing dashboard
+
+See `/assessment-engine/MOBILE_APP_INTEGRATION.md` for complete guide.
+
+### Cost Estimate
+
+**Per check-in**: ~$0.01
+
+**Monthly** (1,000 students × 7 check-ins/week): ~$400/month
+
+**Breakdown:**
+- Lambda execution: $0.0007
+- Rekognition (10 images): $0.01
+- Comprehend: $0.0001
+- Step Functions: $0.000025
+- S3 & API Gateway: ~$0.0001
+
+### Monitoring
+
+**CloudWatch Log Groups:**
+```
+/aws/lambda/CheckInStartLambda
+/aws/lambda/AudioAnalysisLambda
+/aws/lambda/VisualAnalysisLambda
+/aws/lambda/TextAnalysisLambda
+/aws/lambda/FusionEngineLambda
+/aws/states/CheckInStateMachine785DC833-VyX9ebODxxhN
+```
+
+**View logs:**
+```bash
+aws logs tail /aws/lambda/CheckInStartLambda --follow --region eu-west-2
+```
+
+### Deployment
+
+**Deploy infrastructure:**
+```bash
+cd assessment-engine
+npm run build
+cd infrastructure/cdk
+npx cdk deploy --context env=staging
+```
+
+**Deploy database schema:**
+```bash
+PGPASSWORD="PASSWORD" psql \
+ -h mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com \
+ -U mindmeasure_admin \
+ -d mindmeasure \
+ -f migrations/checkin-pipeline-v2.sql
+```
+
+**Rollback:**
+```bash
+# Disable in mobile app
+export const USE_ASSESSMENT_ENGINE = false;
+
+# Destroy AWS resources
+cd assessment-engine/infrastructure/cdk
+npx cdk destroy --force
+```
+
+---
+
+## Deployment Workflows
+
+### Mobile App Deployment
+
+**Pre-deployment:**
+- Read development protocol
+- Verify production status
+- Set environment variables
+- Ask: "Ready to deploy? This will take 5-6 minutes."
+- Wait for confirmation
+
+**Deployment:**
+```bash
+npm run build
+npx vercel --prod
+npx vercel alias mobile.mindmeasure.app
+npx cap sync ios
+npx cap run ios
+```
+
+**Verification:**
+- [ ] App loads on iOS
+- [ ] Authentication works
+- [ ] Database queries work
+- [ ] ElevenLabs conversation works
+- [ ] Dashboard loads data
+
+### Assessment Engine Deployment
+
+**Deploy infrastructure:**
+```bash
+cd assessment-engine
+npm run build
+cd infrastructure/cdk
+npx cdk deploy --context env=staging
+```
+
+**Test API:**
+```bash
+export JWT_TOKEN="..." # From Cognito
+curl -X POST "https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/start" \
+ -H "Authorization: Bearer $JWT_TOKEN" \
+ -H "Content-Type: application/json" \
+ -d '{"type": "daily"}'
+```
+
+---
+
+## Monitoring
+
+### Health Checks
+
+**Mobile App:**
+```bash
+curl https://mobile.mindmeasure.app/api/database/health
+```
+
+**Assessment Engine:**
+```bash
+curl https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/start \
+ -H "Authorization: Bearer $JWT_TOKEN"
+```
+
+### CloudWatch Dashboards
+
+https://eu-west-2.console.aws.amazon.com/cloudwatch/home?region=eu-west-2
+
+**Key metrics:**
+- Check-in completion rate (target: greater than 95%)
+- Processing time (target: less than 120s P95)
+- Lambda error rate (target: less than 1%)
+- API Gateway 5xx errors (target: near zero)
+
+### Cost Monitoring
+
+```bash
+aws ce get-cost-and-usage \
+ --time-period Start=2025-11-01,End=2025-11-30 \
+ --granularity MONTHLY \
+ --metrics BlendedCost \
+ --region us-east-1
+```
+
+**Expected monthly costs:**
+- Mobile app (Vercel): ~$50
+- Aurora: ~$50-100
+- Assessment Engine: ~$400 (at 1,000 students)
+- **Total: ~$500-550/month**
+
+---
+
+## Emergency Procedures
+
+### Mobile App Issues
+
+**Immediate actions:**
+- STOP - Don't make more changes
+- ROLLBACK - Redeploy last known good version
+- CHECK LOGS - Vercel + CloudWatch
+- VERIFY - Test with device
+- DOCUMENT - What broke and why
+
+**Rollback:**
+```bash
+npx vercel ls mobile.mindmeasure.app
+npx vercel rollback mobile.mindmeasure.app <deployment-url>
+```
+
+### Assessment Engine Issues
+
+**Immediate actions:**
+- DISABLE feature flag in mobile app
+- CHECK CloudWatch logs
+- IDENTIFY failing Lambda
+- FIX or destroy stack
+
+**Disable:**
+```typescript
+export const USE_ASSESSMENT_ENGINE = false;
+```
+
+**Destroy:**
+```bash
+cd assessment-engine/infrastructure/cdk
+npx cdk destroy --force
+```
+
+### Database Connection Lost
+
+**Check status:**
+```bash
+aws rds describe-db-clusters \
+ --db-cluster-identifier mindmeasure-aurora \
+ --region eu-west-2
+```
+
+**Restart if needed:**
+```bash
+aws rds reboot-db-cluster \
+ --db-cluster-identifier mindmeasure-aurora \
+ --region eu-west-2
+```
+
+---
+
+## Documentation Index
+
+### Core Documentation
+- **DEVELOPMENT_PROTOCOL_MASTER.md** - This guide (local repo)
+- **AI_ASSISTANT_PROTOCOL.md** - AI development rules
+- **BUILD_PIPELINE.md** - Safe build process
+
+### Assessment Engine
+Location: `/assessment-engine/`
+
+- **DEPLOYMENT_SUMMARY.md** - Nov 28, 2025 deployment results
+- **DEPLOYMENT_GUIDE.md** - Comprehensive manual (662 lines)
+- **MOBILE_APP_INTEGRATION.md** - Integration guide
+- **DASHBOARD_INTEGRATION.md** - Dashboard wiring
+- **README.md** - Architecture overview
+- **docs/FUSION_ALGORITHM_IMPLEMENTATION.md** - Mathematical spec
+
+### Online Documentation
+- **Main site**: https://docs.mindmeasure.co.uk
+- **Mobile App**: https://docs.mindmeasure.co.uk/mobile
+- **Admin UI**: https://docs.mindmeasure.co.uk/admin-ui
+- **Methodology**: https://docs.mindmeasure.co.uk/methodology
+
+---
+
+## Quick Reference
+
+### Before Starting Development
+- [ ] Read DEVELOPMENT_PROTOCOL_MASTER.md
+- [ ] Read section-specific docs
+- [ ] Understand existing architecture
+- [ ] Ask clarifying questions
+- [ ] Get approval for changes
+
+### Before Mobile Deployment
+- [ ] Set environment variables
+- [ ] Test API health
+- [ ] Ask: "Ready to deploy?"
+- [ ] Wait for confirmation
+- [ ] Build, deploy, alias, sync
+
+### After Deployment
+- [ ] Verify health checks
+- [ ] Test authentication
+- [ ] Check database
+- [ ] Test core flows
+- [ ] Monitor logs for 10 minutes
+
+---
+
+## Success Criteria
+
+**Mobile App:**
+- App loads on iOS
+- Sign in/sign up works
+- Database queries work
+- ElevenLabs works
+- Dashboard displays data
+
+**Assessment Engine:**
+- API auth works (401 without JWT, 200 with JWT)
+- /start returns presigned URLs
+- Database tables accessible
+- Step Functions complete successfully
+- Scores in reasonable range (10-90)
+
+---
+
+**Last Updated**: November 28, 2025
+**Version**: 2.0 (Assessment Engine deployed)
+**Maintained By**: Keith Duddy + AI Assistant
+

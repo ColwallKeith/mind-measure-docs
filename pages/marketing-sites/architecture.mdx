@@ -23,13 +23,13 @@ The marketing sites use an npm workspaces monorepo:
 
 ```
 mindmeasure-marketing/
-├── sites/              # Individual sites (independent deployments)
-│   ├── university/     # mindmeasure.co.uk
-│   ├── student/        # mindmeasure.app
-│   └── workplace/      # [2026] Mind Measure Pro
-│
-└── packages/
-    └── shared/         # Shared code (components, utils, types)
+ sites/ # Individual sites (independent deployments)
+ university/ # mindmeasure.co.uk
+ student/ # mindmeasure.app
+ workplace/ # [2026] Mind Measure Pro
+
+ packages/
+ shared/ # Shared code (components, utils, types)
 ```
 
 ### Benefits
@@ -68,13 +68,13 @@ mindmeasure-marketing/
 
 ```mermaid
 graph TB
-    A[Content Editor] -->|Creates Content| B[Sanity Studio]
-    B -->|Stores| C[Sanity CMS]
-    D[Developer] -->|Pushes Code| E[GitHub]
-    E -->|Triggers| F[Vercel Build]
-    C -->|Fetches at Build| F
-    F -->|Deploys| G[Static Site on CDN]
-    H[Visitor] -->|Requests| G
+ A[Content Editor] -->|Creates Content| B[Sanity Studio]
+ B -->|Stores| C[Sanity CMS]
+ D[Developer] -->|Pushes Code| E[GitHub]
+ E -->|Triggers| F[Vercel Build]
+ C -->|Fetches at Build| F
+ F -->|Deploys| G[Static Site on CDN]
+ H[Visitor] -->|Requests| G
 ```
 
 ### Build Process
@@ -103,22 +103,22 @@ Located in `packages/shared/components/`:
 // Example: BlogCard component
 ---
 interface Props {
-  title: string;
-  excerpt: string;
-  image: string;
-  slug: string;
-  date: string;
-  author: Author;
+ title: string;
+ excerpt: string;
+ image: string;
+ slug: string;
+ date: string;
+ author: Author;
 }
 
 const { title, excerpt, image, slug, date, author } = Astro.props;
 ---
 
 <article class="blog-card">
-  <img src={image} alt={title} />
-  <h3>{title}</h3>
-  <p>{excerpt}</p>
-  <a href={`/blog/${slug}`}>Read more</a>
+ <img src={image} alt={title} />
+ <h3>{title}</h3>
+ <p>{excerpt}</p>
+ <a href={`/blog/${slug}`}>Read more</a>
 </article>
 ```
 
@@ -128,9 +128,9 @@ Each site can override or extend shared components:
 
 ```
 sites/university/src/components/
-├── HeroUniversity.astro    # University-specific hero
-├── PricingTable.astro      # University-specific pricing
-└── TestimonialsCarousel.astro
+ HeroUniversity.astro # University-specific hero
+ PricingTable.astro # University-specific pricing
+ TestimonialsCarousel.astro
 ```
 
 ## Deployment Strategy
@@ -163,9 +163,9 @@ Each site has `vercel.json`:
 
 ```json
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "framework": "astro"
+ "buildCommand": "npm run build",
+ "outputDirectory": "dist",
+ "framework": "astro"
 }
 ```
 
@@ -244,10 +244,6 @@ Each site has `vercel.json`:
 
 ---
 
-**Architecture Version**: 1.0  
+**Architecture Version**: 1.0
 **Last Updated**: December 16, 2024
-
-
-
-
 

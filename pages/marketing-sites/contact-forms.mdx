@@ -18,11 +18,11 @@ Unified contact form system across all marketing sites with:
 - **Spam Protection**: Cloudflare Turnstile
 
 ### Why This Stack?
-- ✅ Full control over validation and processing
-- ✅ Server-side security (no exposed API keys)
-- ✅ Can integrate with CRM later
-- ✅ Site-specific routing (university vs student inquiries)
-- ✅ Built into existing infrastructure
+- Full control over validation and processing
+- Server-side security (no exposed API keys)
+- Can integrate with CRM later
+- Site-specific routing (university vs student inquiries)
+- Built into existing infrastructure
 
 ## Implementation
 
@@ -33,76 +33,76 @@ Located at `packages/shared/components/ContactForm.astro`:
 ```astro
 ---
 interface Props {
-  site: 'university' | 'student' | 'workplace';
-  title?: string;
-  description?: string;
+ site: 'university' | 'student' | 'workplace';
+ title?: string;
+ description?: string;
 }
 
 const { site, title = 'Get in Touch', description } = Astro.props;
 ---
 
 <section class="contact-form">
-  <h2>{title}</h2>
-  {description && <p>{description}</p>}
-  
-  <form id="contact-form" data-site={site}>
-    <div class="form-group">
-      <label for="name">Name *</label>
-      <input type="text" id="name" name="name" required />
-    </div>
-    
-    <div class="form-group">
-      <label for="email">Email *</label>
-      <input type="email" id="email" name="email" required />
-    </div>
-    
-    <div class="form-group">
-      <label for="organization">Organization</label>
-      <input type="text" id="organization" name="organization" />
-    </div>
-    
-    <div class="form-group">
-      <label for="message">Message *</label>
-      <textarea id="message" name="message" rows="5" required></textarea>
-    </div>
-    
-    <button type="submit">Send Message</button>
-  </form>
-  
-  <div id="form-status" class="hidden"></div>
+ <h2>{title}</h2>
+ {description && <p>{description}</p>}
+ 
+ <form id="contact-form" data-site={site}>
+ <div class="form-group">
+ <label for="name">Name *</label>
+ <input type="text" id="name" name="name" required />
+ </div>
+ 
+ <div class="form-group">
+ <label for="email">Email *</label>
+ <input type="email" id="email" name="email" required />
+ </div>
+ 
+ <div class="form-group">
+ <label for="organization">Organization</label>
+ <input type="text" id="organization" name="organization" />
+ </div>
+ 
+ <div class="form-group">
+ <label for="message">Message *</label>
+ <textarea id="message" name="message" rows="5" required></textarea>
+ </div>
+ 
+ <button type="submit">Send Message</button>
+ </form>
+ 
+ <div id="form-status" class="hidden"></div>
 </section>
 
 <script>
-  const form = document.getElementById('contact-form') as HTMLFormElement;
-  const status = document.getElementById('form-status') as HTMLElement;
-  
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData);
-    
-    try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      
-      if (response.ok) {
-        status.textContent = 'Thank you! We will be in touch soon.';
-        status.className = 'success';
-        form.reset();
-      } else {
-        throw new Error('Failed to send message');
-      }
-    } catch (error) {
-      status.textContent = 'Sorry, something went wrong. Please try again.';
-      status.className = 'error';
-    }
-    
-    status.classList.remove('hidden');
-  });
+ const form = document.getElementById('contact-form') as HTMLFormElement;
+ const status = document.getElementById('form-status') as HTMLElement;
+ 
+ form.addEventListener('submit', async (e) => {
+ e.preventDefault();
+ 
+ const formData = new FormData(form);
+ const data = Object.fromEntries(formData);
+ 
+ try {
+ const response = await fetch('/api/contact', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify(data),
+ });
+ 
+ if (response.ok) {
+ status.textContent = 'Thank you! We will be in touch soon.';
+ status.className = 'success';
+ form.reset();
+ } else {
+ throw new Error('Failed to send message');
+ }
+ } catch (error) {
+ status.textContent = 'Sorry, something went wrong. Please try again.';
+ status.className = 'error';
+ }
+ 
+ status.classList.remove('hidden');
+ });
 </script>
 ```
 
@@ -117,42 +117,42 @@ import { Resend } from 'resend';
 const resend = new Resend(import.meta.env.RESEND_API_KEY);
 
 export const POST: APIRoute = async ({ request }) => {
-  try {
-    const { name, email, organization, message, site } = await request.json();
-    
-    // Validation
-    if (!name || !email || !message) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400 }
-      );
-    }
-    
-    // Send email
-    await resend.emails.send({
-      from: 'Mind Measure <noreply@mindmeasure.co.uk>',
-      to: 'hello@mindmeasure.co.uk',
-      subject: `New ${site} inquiry from ${name}`,
-      html: `
-        <h2>New Contact Form Submission</h2>
-        <p><strong>From:</strong> ${name} (${email})</p>
-        ${organization ? `<p><strong>Organization:</strong> ${organization}</p>` : ''}
-        <p><strong>Message:</strong></p>
-        <p>${message}</p>
-      `,
-    });
-    
-    return new Response(
-      JSON.stringify({ success: true }),
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('Contact form error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Failed to send message' }),
-      { status: 500 }
-    );
-  }
+ try {
+ const { name, email, organization, message, site } = await request.json();
+ 
+ // Validation
+ if (!name || !email || !message) {
+ return new Response(
+ JSON.stringify({ error: 'Missing required fields' }),
+ { status: 400 }
+ );
+ }
+ 
+ // Send email
+ await resend.emails.send({
+ from: 'Mind Measure <noreply@mindmeasure.co.uk>',
+ to: 'hello@mindmeasure.co.uk',
+ subject: `New ${site} inquiry from ${name}`,
+ html: `
+ <h2>New Contact Form Submission</h2>
+ <p><strong>From:</strong> ${name} (${email})</p>
+ ${organization ? `<p><strong>Organization:</strong> ${organization}</p>` : ''}
+ <p><strong>Message:</strong></p>
+ <p>${message}</p>
+ `,
+ });
+ 
+ return new Response(
+ JSON.stringify({ success: true }),
+ { status: 200 }
+ );
+ } catch (error) {
+ console.error('Contact form error:', error);
+ return new Response(
+ JSON.stringify({ error: 'Failed to send message' }),
+ { status: 500 }
+ );
+ }
 };
 ```
 
@@ -175,16 +175,16 @@ import ContactForm from '@mindmeasure/shared/components/ContactForm.astro';
 ---
 
 <Layout title="Contact Us">
-  <main>
-    <h1>Get in Touch</h1>
-    <p>We would love to hear from you about implementing Mind Measure at your institution.</p>
-    
-    <ContactForm 
-      site="university"
-      title="Contact Our Team"
-      description="Fill out the form below and we will get back to you within 24 hours."
-    />
-  </main>
+ <main>
+ <h1>Get in Touch</h1>
+ <p>We would love to hear from you about implementing Mind Measure at your institution.</p>
+ 
+ <ContactForm
+ site="university"
+ title="Contact Our Team"
+ description="Fill out the form below and we will get back to you within 24 hours."
+ />
+ </main>
 </Layout>
 ```
 
@@ -238,10 +238,6 @@ import ContactForm from '@mindmeasure/shared/components/ContactForm.astro';
 
 ---
 
-**Status**: Planned  
+**Status**: Planned
 **Implementation Date**: TBD
-
-
-
-
 

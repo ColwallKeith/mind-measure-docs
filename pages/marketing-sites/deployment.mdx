@@ -71,9 +71,9 @@ Each site has `.vercel/project.json`:
 
 ```json
 {
-  "projectId": "prj_xxx",
-  "orgId": "team_xxx",
-  "projectName": "mindmeasure-uni"
+ "projectId": "prj_xxx",
+ "orgId": "team_xxx",
+ "projectName": "mindmeasure-uni"
 }
 ```
 
@@ -167,13 +167,13 @@ Proxy: DNS only (grey cloud)
 1. **Check Vercel Dashboard** for deployment logs
 2. **Identify the Issue** in build logs or runtime logs
 3. **Rollback to Previous Deployment**:
-   ```bash
-   # List recent deployments
-   npx vercel ls --prod
-   
-   # Promote a previous deployment
-   npx vercel promote [previous-deployment-url]
-   ```
+ ```bash
+ # List recent deployments
+ npx vercel ls --prod
+ 
+ # Promote a previous deployment
+ npx vercel promote [previous-deployment-url]
+ ```
 
 ### Quick Rollback via Dashboard
 
@@ -217,10 +217,10 @@ Proxy: DNS only (grey cloud)
 1. Go to Vercel → Deployments → Click failed deployment
 2. Review "Building" section for errors
 3. Common issues:
-   - Missing environment variables
-   - TypeScript errors
-   - Import errors
-   - Sanity query errors
+ - Missing environment variables
+ - TypeScript errors
+ - Import errors
+ - Sanity query errors
 
 **Fix:**
 ```bash
@@ -313,10 +313,6 @@ Vercel logs show:
 
 ---
 
-**Last Updated**: December 16, 2024  
+**Last Updated**: December 16, 2024
 **Vercel Status**: https://www.vercel-status.com
-
-
-
-
 

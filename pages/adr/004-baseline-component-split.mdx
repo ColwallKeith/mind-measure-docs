@@ -32,42 +32,42 @@ Originally, all three screens were managed within a single `BaselineAssessmentSD
 
 **We will split the baseline assessment into two separate components:**
 
-- **`BaselineWelcome.tsx`**: 
-   - Exports `BaselineAssessmentScreen` component
-   - Manages internal state for Welcome → "What to Expect" transition
-   - No ElevenLabs SDK dependencies
-   - Takes `onStartAssessment` callback prop
+- **`BaselineWelcome.tsx`**:
+ - Exports `BaselineAssessmentScreen` component
+ - Manages internal state for Welcome → "What to Expect" transition
+ - No ElevenLabs SDK dependencies
+ - Takes `onStartAssessment` callback prop
 
 - **`BaselineAssessmentSDK.tsx`**:
-   - Handles only the conversation screen
-   - Uses ElevenLabs SDK
-   - Manages conversation state and assessment data
-   - Takes `onComplete` and `onBack` callback props
+ - Handles only the conversation screen
+ - Uses ElevenLabs SDK
+ - Manages conversation state and assessment data
+ - Takes `onComplete` and `onBack` callback props
 
 **Component responsibilities:**
 
 ```typescript
 // BaselineWelcome.tsx
-export function BaselineAssessmentScreen({ 
-  onStartAssessment 
-}: { 
-  onStartAssessment: () => void 
+export function BaselineAssessmentScreen({
+ onStartAssessment
+}: {
+ onStartAssessment: () => void
 }) {
-  const [showWelcome, setShowWelcome] = useState(true);
-  
-  // Internal: Welcome → What to Expect
-  // External: What to Expect → calls onStartAssessment()
+ const [showWelcome, setShowWelcome] = useState(true);
+ 
+ // Internal: Welcome → What to Expect
+ // External: What to Expect → calls onStartAssessment()
 }
 
 // BaselineAssessmentSDK.tsx
-export function BaselineAssessmentSDK({ 
-  onComplete, 
-  onBack 
-}: { 
-  onComplete: () => void; 
-  onBack?: () => void;
+export function BaselineAssessmentSDK({
+ onComplete,
+ onBack
+}: {
+ onComplete: () => void;
+ onBack?: () => void;
 }) {
-  // Only handles conversation and assessment logic
+ // Only handles conversation and assessment logic
 }
 ```
 
@@ -75,15 +75,15 @@ export function BaselineAssessmentSDK({
 
 ```typescript
 case 'baseline_welcome':
-  return <BaselineAssessmentScreen 
-    onStartAssessment={() => setOnboardingScreen('baseline_assessment')} 
-  />;
+ return <BaselineAssessmentScreen
+ onStartAssessment={() => setOnboardingScreen('baseline_assessment')}
+ />;
 
 case 'baseline_assessment':
-  return <BaselineAssessmentSDK 
-    onComplete={() => { /* go to dashboard */ }}
-    onBack={() => setOnboardingScreen('baseline_welcome')}
-  />;
+ return <BaselineAssessmentSDK
+ onComplete={() => { /* go to dashboard */ }}
+ onBack={() => setOnboardingScreen('baseline_welcome')}
+ />;
 ```
 
 ## Consequences
@@ -149,28 +149,28 @@ case 'baseline_assessment':
 **If this decision needs to be reverted:**
 
 - **Get the original combined component**:
-   ```bash
-   git log --all --full-history -- "**/BaselineAssessmentSDK.tsx" | head -20
-   # Find commit before the split
-   git show <commit>:src/components/mobile/BaselineAssessmentSDK.tsx > BaselineAssessmentSDK.backup.tsx
-   ```
+ ```bash
+ git log --all --full-history -- "**/BaselineAssessmentSDK.tsx" | head -20
+ # Find commit before the split
+ git show <commit>:src/components/mobile/BaselineAssessmentSDK.tsx > BaselineAssessmentSDK.backup.tsx
+ ```
 
 - **Restore the monolithic component**:
-   - Copy welcome screen JSX from `BaselineWelcome.tsx` back into `BaselineAssessmentSDK.tsx`
-   - Add back internal state for screen toggling
-   - Remove `onStartAssessment` prop, use internal state instead
+ - Copy welcome screen JSX from `BaselineWelcome.tsx` back into `BaselineAssessmentSDK.tsx`
+ - Add back internal state for screen toggling
+ - Remove `onStartAssessment` prop, use internal state instead
 
 - **Update MobileAppStructure**:
-   ```typescript
-   case 'baseline_welcome':
-     // Change to render BaselineAssessmentSDK directly
-     return <BaselineAssessmentSDK onComplete={...} />;
-   ```
+ ```typescript
+ case 'baseline_welcome':
+ // Change to render BaselineAssessmentSDK directly
+ return <BaselineAssessmentSDK onComplete={...} />;
+ ```
 
 - **Delete the separate file**:
-   ```bash
-   git rm src/components/mobile/BaselineWelcome.tsx
-   ```
+ ```bash
+ git rm src/components/mobile/BaselineWelcome.tsx
+ ```
 
 **Critical checks before reverting:**
 - [ ] Verify both welcome screens are present in combined component
@@ -189,32 +189,32 @@ case 'baseline_assessment':
 **Key patterns to follow:**
 
 - **BaselineWelcome manages internal transitions:**
-   ```typescript
-   const [showWelcome, setShowWelcome] = useState(true);
-   
-   if (showWelcome) {
-     return <WelcomeUI onContinue={() => setShowWelcome(false)} />;
-   }
-   return <WhatToExpectUI onStart={onStartAssessment} />;
-   ```
+ ```typescript
+ const [showWelcome, setShowWelcome] = useState(true);
+ 
+ if (showWelcome) {
+ return <WelcomeUI onContinue={() => setShowWelcome(false)} />;
+ }
+ return <WhatToExpectUI onStart={onStartAssessment} />;
+ ```
 
 - **MobileAppStructure handles cross-component navigation:**
-   ```typescript
-   const [onboardingScreen, setOnboardingScreen] = useState('baseline_welcome');
-   
-   // baseline_welcome → baseline_assessment
-   // baseline_assessment → null (dashboard)
-   ```
+ ```typescript
+ const [onboardingScreen, setOnboardingScreen] = useState('baseline_welcome');
+ 
+ // baseline_welcome → baseline_assessment
+ // baseline_assessment → null (dashboard)
+ ```
 
 - **Each component is self-contained:**
-   - BaselineWelcome: Own logo, title, cards
-   - BaselineAssessmentSDK: Own header, conversation UI
+ - BaselineWelcome: Own logo, title, cards
+ - BaselineAssessmentSDK: Own header, conversation UI
 
 **Common pitfalls to avoid:**
 
-- ❌ Don't forget to import both components in MobileAppStructure
-- ❌ Don't remove the "What to Expect" screen from BaselineAssessmentSDK if it's being used there (check current version)
-- ❌ Don't mix the two approaches (internal state + external state)
+- Don't forget to import both components in MobileAppStructure
+- Don't remove the "What to Expect" screen from BaselineAssessmentSDK if it's being used there (check current version)
+- Don't mix the two approaches (internal state + external state)
 
 **Testing requirements:**
 

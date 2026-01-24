@@ -36,37 +36,37 @@ Each site maintains its own Sanity project:
 
 ```typescript
 {
-  name: 'blogPost',
-  type: 'document',
-  fields: [
-    // Content
-    { name: 'title', type: 'string', required: true },
-    { name: 'slug', type: 'slug', required: true },
-    { name: 'excerpt', type: 'text', maxLength: 200 },
-    { name: 'coverImage', type: 'image' },
-    { name: 'content', type: 'array' }, // Portable Text
-    
-    // Author & Taxonomy
-    { name: 'author', type: 'reference', to: [{ type: 'author' }] },
-    { name: 'categories', type: 'array' },
-    { name: 'tags', type: 'array' },
-    
-    // SEO
-    { name: 'seoTitle', type: 'string', maxLength: 60 },
-    { name: 'seoDescription', type: 'text', maxLength: 160 },
-    { name: 'ogImage', type: 'image' },
-    
-    // Publishing
-    { name: 'publishedAt', type: 'datetime', required: true },
-    { name: 'unpublishAt', type: 'datetime' },
-    { name: 'featured', type: 'boolean' },
-    
-    // Multi-site
-    { name: 'sites', type: 'array' }, // ['university', 'student']
-    
-    // Related Content
-    { name: 'relatedPosts', type: 'array' }
-  ]
+ name: 'blogPost',
+ type: 'document',
+ fields: [
+ // Content
+ { name: 'title', type: 'string', required: true },
+ { name: 'slug', type: 'slug', required: true },
+ { name: 'excerpt', type: 'text', maxLength: 200 },
+ { name: 'coverImage', type: 'image' },
+ { name: 'content', type: 'array' }, // Portable Text
+ 
+ // Author & Taxonomy
+ { name: 'author', type: 'reference', to: [{ type: 'author' }] },
+ { name: 'categories', type: 'array' },
+ { name: 'tags', type: 'array' },
+ 
+ // SEO
+ { name: 'seoTitle', type: 'string', maxLength: 60 },
+ { name: 'seoDescription', type: 'text', maxLength: 160 },
+ { name: 'ogImage', type: 'image' },
+ 
+ // Publishing
+ { name: 'publishedAt', type: 'datetime', required: true },
+ { name: 'unpublishAt', type: 'datetime' },
+ { name: 'featured', type: 'boolean' },
+ 
+ // Multi-site
+ { name: 'sites', type: 'array' }, // ['university', 'student']
+ 
+ // Related Content
+ { name: 'relatedPosts', type: 'array' }
+ ]
 }
 ```
 
@@ -86,30 +86,30 @@ Portable Text supports:
 
 ```typescript
 {
-  name: 'whitepaper',
-  type: 'document',
-  fields: [
-    // Content
-    { name: 'title', type: 'string', required: true },
-    { name: 'slug', type: 'slug', required: true },
-    { name: 'description', type: 'text', maxLength: 300 },
-    { name: 'coverImage', type: 'image', required: true },
-    { name: 'keyTakeaways', type: 'array' }, // Bullet points
-    
-    // File
-    { name: 'file', type: 'file', accept: 'application/pdf' },
-    { name: 'fileSize', type: 'string' }, // "2.5 MB"
-    { name: 'pages', type: 'number' },
-    
-    // Form Requirements
-    { name: 'requiresForm', type: 'boolean', default: true },
-    { name: 'formFields', type: 'array' }, // name, email, organization, etc.
-    
-    // Categories & Publishing
-    { name: 'categories', type: 'array' },
-    { name: 'publishedAt', type: 'datetime', required: true },
-    { name: 'sites', type: 'array' }
-  ]
+ name: 'whitepaper',
+ type: 'document',
+ fields: [
+ // Content
+ { name: 'title', type: 'string', required: true },
+ { name: 'slug', type: 'slug', required: true },
+ { name: 'description', type: 'text', maxLength: 300 },
+ { name: 'coverImage', type: 'image', required: true },
+ { name: 'keyTakeaways', type: 'array' }, // Bullet points
+ 
+ // File
+ { name: 'file', type: 'file', accept: 'application/pdf' },
+ { name: 'fileSize', type: 'string' }, // "2.5 MB"
+ { name: 'pages', type: 'number' },
+ 
+ // Form Requirements
+ { name: 'requiresForm', type: 'boolean', default: true },
+ { name: 'formFields', type: 'array' }, // name, email, organization, etc.
+ 
+ // Categories & Publishing
+ { name: 'categories', type: 'array' },
+ { name: 'publishedAt', type: 'datetime', required: true },
+ { name: 'sites', type: 'array' }
+ ]
 }
 ```
 
@@ -126,20 +126,20 @@ Portable Text supports:
 
 ```typescript
 {
-  name: 'author',
-  type: 'document',
-  fields: [
-    { name: 'name', type: 'string', required: true },
-    { name: 'slug', type: 'slug', required: true },
-    { name: 'image', type: 'image' },
-    { name: 'bio', type: 'text', rows: 4 },
-    { name: 'role', type: 'string' }, // e.g., "Clinical Psychologist"
-    { name: 'social', type: 'object', fields: [
-      { name: 'twitter', type: 'url' },
-      { name: 'linkedin', type: 'url' },
-      { name: 'website', type: 'url' }
-    ]}
-  ]
+ name: 'author',
+ type: 'document',
+ fields: [
+ { name: 'name', type: 'string', required: true },
+ { name: 'slug', type: 'slug', required: true },
+ { name: 'image', type: 'image' },
+ { name: 'bio', type: 'text', rows: 4 },
+ { name: 'role', type: 'string' }, // e.g., "Clinical Psychologist"
+ { name: 'social', type: 'object', fields: [
+ { name: 'twitter', type: 'url' },
+ { name: 'linkedin', type: 'url' },
+ { name: 'website', type: 'url' }
+ ]}
+ ]
 }
 ```
 
@@ -152,20 +152,20 @@ Create a shared Sanity Studio that manages content for all projects:
 ```typescript
 // sanity.config.ts
 export default defineConfig([
-  {
-    name: 'university',
-    title: 'Mind Measure University',
-    projectId: 'xxx',
-    dataset: 'production',
-    schema: { types: [blogPost, whitepaper, author, category] }
-  },
-  {
-    name: 'student',
-    title: 'Mind Measure Student',
-    projectId: 'yyy',
-    dataset: 'production',
-    schema: { types: [blogPost, whitepaper, author, category] }
-  }
+ {
+ name: 'university',
+ title: 'Mind Measure University',
+ projectId: 'xxx',
+ dataset: 'production',
+ schema: { types: [blogPost, whitepaper, author, category] }
+ },
+ {
+ name: 'student',
+ title: 'Mind Measure Student',
+ projectId: 'yyy',
+ dataset: 'production',
+ schema: { types: [blogPost, whitepaper, author, category] }
+ }
 ])
 ```
 
@@ -272,10 +272,6 @@ Sanity dashboard shows:
 
 ---
 
-**Status**: Planned  
+**Status**: Planned
 **Implementation Date**: Q1 2025
-
-
-
-
 

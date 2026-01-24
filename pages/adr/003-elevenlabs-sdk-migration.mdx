@@ -37,26 +37,26 @@ Key changes:
 **Code pattern:**
 
 ```typescript
-// OLD (❌ Don't use)
+// OLD ( Don't use)
 import { Conversation } from '@11labs/client';
 
 const conversation = await Conversation.startSession({
-  agentId: 'agent_xxx',
-  onConnect: () => setConnected(true),
-  onMessage: (msg) => setMessages(prev => [...prev, msg])
+ agentId: 'agent_xxx',
+ onConnect: () => setConnected(true),
+ onMessage: (msg) => setMessages(prev => [...prev, msg])
 });
 
-// NEW (✅ Use this)
+// NEW ( Use this)
 import { useConversation } from '@elevenlabs/react';
 
 const conversation = useConversation({
-  onConnect: () => console.log('Connected'),
-  onMessage: (msg) => setMessages(prev => [...prev, msg])
+ onConnect: () => console.log('Connected'),
+ onMessage: (msg) => setMessages(prev => [...prev, msg])
 });
 
 // Start session
-const sessionId = await conversation.startSession({ 
-  agentId: 'agent_xxx' 
+const sessionId = await conversation.startSession({
+ agentId: 'agent_xxx'
 });
 ```
 
@@ -119,33 +119,33 @@ const sessionId = await conversation.startSession({
 
 ## Rollback Safety
 
-**⚠️ CRITICAL: This is a breaking change that cannot be partially reverted.**
+** CRITICAL: This is a breaking change that cannot be partially reverted.**
 
 **If this decision needs to be reverted:**
 
 - **First**, check if `@11labs/client` is still installed:
-   ```bash
-   npm list @11labs/client
-   ```
-   
+ ```bash
+ npm list @11labs/client
+ ```
+ 
 - **If not**, reinstall it:
-   ```bash
-   npm install @11labs/client
-   npm uninstall @elevenlabs/react
-   ```
+ ```bash
+ npm install @11labs/client
+ npm uninstall @elevenlabs/react
+ ```
 
 - **For each file** using the new SDK:
-   - Find all `import { useConversation } from '@elevenlabs/react'`
-   - Replace with `import { Conversation } from '@11labs/client'`
-   - Replace hook usage with manual session management
-   - Add refs to store conversation instance
-   - Manually handle cleanup in useEffect
+ - Find all `import { useConversation } from '@elevenlabs/react'`
+ - Replace with `import { Conversation } from '@11labs/client'`
+ - Replace hook usage with manual session management
+ - Add refs to store conversation instance
+ - Manually handle cleanup in useEffect
 
 - **Verify the rollback**:
-   ```bash
-   npm run build
-   npm run check-layout  # Should fail - update this check!
-   ```
+ ```bash
+ npm run build
+ npm run check-layout # Should fail - update this check!
+ ```
 
 **Critical checks before reverting:**
 - [ ] Confirm all files have been converted (use grep: `rg "useConversation"`)
@@ -165,43 +165,43 @@ const sessionId = await conversation.startSession({
 **Key patterns to follow:**
 
 - **Always use the hook at component level:**
-   ```typescript
-   function MyComponent() {
-     const conversation = useConversation({ ... });
-     // ...
-   }
-   ```
+ ```typescript
+ function MyComponent() {
+ const conversation = useConversation({ ... });
+ // ...
+ }
+ ```
 
 - **Store session ID in state:**
-   ```typescript
-   const [sessionId, setSessionId] = useState<string | null>(null);
-   
-   const startConversation = async () => {
-     const sid = await conversation.startSession({ agentId: 'xxx' });
-     setSessionId(sid);
-   };
-   ```
+ ```typescript
+ const [sessionId, setSessionId] = useState<string | null>(null);
+ 
+ const startConversation = async () => {
+ const sid = await conversation.startSession({ agentId: 'xxx' });
+ setSessionId(sid);
+ };
+ ```
 
 - **Always end session on cleanup:**
-   ```typescript
-   const handleFinish = async () => {
-     await conversation.endSession();
-   };
-   ```
+ ```typescript
+ const handleFinish = async () => {
+ await conversation.endSession();
+ };
+ ```
 
 - **Check conversation status:**
-   ```typescript
-   if (conversation.status === 'connected') {
-     // Show active UI
-   }
-   ```
+ ```typescript
+ if (conversation.status === 'connected') {
+ // Show active UI
+ }
+ ```
 
 **Common pitfalls to avoid:**
 
-- ❌ Don't try to use `Conversation.startSession()` - it doesn't exist in new SDK
-- ❌ Don't store conversation in a ref - use the hook's returned object
-- ❌ Don't mix old and new SDK imports
-- ❌ Don't forget to await `startSession()` and `endSession()`
+- Don't try to use `Conversation.startSession()` - it doesn't exist in new SDK
+- Don't store conversation in a ref - use the hook's returned object
+- Don't mix old and new SDK imports
+- Don't forget to await `startSession()` and `endSession()`
 
 **Testing requirements:**
 

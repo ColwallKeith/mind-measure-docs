@@ -10,24 +10,24 @@ Mind Measure was initially built on Supabase for rapid prototyping and developme
 ### Problems with Supabase Architecture
 
 - **HIPAA Compliance Limitations**
-   - Limited Business Associate Agreement (BAA) coverage
-   - Insufficient audit logging capabilities
-   - Limited control over data residency and encryption
+ - Limited Business Associate Agreement (BAA) coverage
+ - Insufficient audit logging capabilities
+ - Limited control over data residency and encryption
 
 - **Scalability Concerns**
-   - Fixed pricing model not suitable for variable university loads
-   - Limited auto-scaling capabilities for compute resources
-   - Connection pooling limitations for high-concurrency scenarios
+ - Fixed pricing model not suitable for variable university loads
+ - Limited auto-scaling capabilities for compute resources
+ - Connection pooling limitations for high-concurrency scenarios
 
 - **Multi-tenancy Challenges**
-   - Difficult to implement university-specific data isolation
-   - Limited customization for different compliance requirements
-   - Complex backup and recovery for individual universities
+ - Difficult to implement university-specific data isolation
+ - Limited customization for different compliance requirements
+ - Complex backup and recovery for individual universities
 
 - **Integration Limitations**
-   - Limited AI/ML service integrations
-   - Restricted serverless function capabilities
-   - Limited real-time processing options
+ - Limited AI/ML service integrations
+ - Restricted serverless function capabilities
+ - Limited real-time processing options
 
 ## Decision
 
@@ -112,14 +112,14 @@ Frontend → Supabase (PostgreSQL + Auth + Storage) → Edge Functions
 ### After (AWS)
 ```
 Frontend → CloudFront → API Gateway → AWS Cognito (Auth)
-                                   ↓
-                              Lambda Functions
-                                   ↓
-                    Aurora Serverless v2 (Database)
-                                   ↓
-                              S3 (Storage)
-                                   ↓
-                         Rekognition (AI/ML)
+ ↓
+ Lambda Functions
+ ↓
+ Aurora Serverless v2 (Database)
+ ↓
+ S3 (Storage)
+ ↓
+ Rekognition (AI/ML)
 ```
 
 ## Technical Specifications
@@ -142,33 +142,33 @@ User Pool ID: eu-west-2_ClAG4fQXR
 Client ID: 7vu03ppv6alkpphs1ksopll8us
 Region: eu-west-2
 Features:
-  - Email verification
-  - Password policies
-  - MFA support
-  - JWT tokens
+ - Email verification
+ - Password policies
+ - MFA support
+ - JWT tokens
 ```
 
 ### Lambda Functions
 ```yaml
 analyze-audio:
-  Runtime: Node.js 18.x
-  Memory: 1024 MB
-  Timeout: 30 seconds
+ Runtime: Node.js 18.x
+ Memory: 1024 MB
+ Timeout: 30 seconds
 
 analyze-visual:
-  Runtime: Node.js 18.x
-  Memory: 2048 MB
-  Timeout: 60 seconds
+ Runtime: Node.js 18.x
+ Memory: 2048 MB
+ Timeout: 60 seconds
 
 analyze-text:
-  Runtime: Node.js 18.x
-  Memory: 512 MB
-  Timeout: 15 seconds
+ Runtime: Node.js 18.x
+ Memory: 512 MB
+ Timeout: 15 seconds
 
 calculate-mind-measure:
-  Runtime: Node.js 18.x
-  Memory: 1024 MB
-  Timeout: 45 seconds
+ Runtime: Node.js 18.x
+ Memory: 1024 MB
+ Timeout: 45 seconds
 ```
 
 ## Consequences
@@ -279,7 +279,7 @@ calculate-mind-measure:
 
 ---
 
-**Author**: Development Team  
-**Date**: October 15, 2025  
-**Status**: Accepted and Implemented  
+**Author**: Development Team
+**Date**: October 15, 2025
+**Status**: Accepted and Implemented
 **Last Updated**: October 28, 2025

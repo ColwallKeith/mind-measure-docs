@@ -1,0 +1,118 @@
+# Assessment Methodology
+
+## Overview
+
+Mind Measure employs a **multimodal assessment approach** combining audio, visual, and text analysis to generate wellness scores. The platform supports two assessment types:
+
+- **[Baseline Assessments](./assessment-engine/baseline-assessment)**: Establish personal baseline using validated clinical questions (PHQ-2, GAD-2, Mood Scale)
+- **[Daily Check-ins](./assessment-engine/checkin-assessment)**: Brief conversational wellness monitoring
+
+## Current Implementation
+
+For detailed technical documentation, see the **[Assessment Engine](./assessment-engine)** section, which covers:
+
+| Component | Documentation |
+|-----------|---------------|
+| System Architecture | [Assessment Engine Overview](./assessment-engine) |
+| Baseline Pipeline | [Baseline Assessment](./assessment-engine/baseline-assessment) |
+| Check-in Pipeline | [Daily Check-ins](./assessment-engine/checkin-assessment) |
+| Audio Analysis | [Audio Features](./assessment-engine/audio-features) |
+| Visual Analysis | [Visual Features](./assessment-engine/visual-features) |
+| Text Analysis | [Text Analysis (Bedrock)](./assessment-engine/text-analysis) |
+| Score Fusion | [Scoring Algorithm](./assessment-engine/scoring-algorithm) |
+
+## Key Technologies
+
+| Component | Technology |
+|-----------|------------|
+| Conversational AI | ElevenLabs React SDK |
+| Text Analysis | AWS Bedrock (Claude 3 Haiku) |
+| Visual Analysis | AWS Rekognition |
+| Audio Analysis | Client-side Web Audio API |
+| Database | Aurora PostgreSQL |
+
+## Scoring Summary
+
+### V2 Scoring (December 2025)
+
+**Daily Check-ins**:
+- 70% Text (Bedrock analysis)
+- 15% Audio (voice features)
+- 15% Visual (facial features)
+- Sanity floor: 60 minimum for positive check-ins
+
+**Baseline Assessments**:
+- 70% Clinical (PHQ-2 + GAD-2 + Mood)
+- 15% Audio
+- 15% Visual
+
+## Validated Scales
+
+### PHQ-2 (Depression Screening)
+- 2 questions, scored 0-6
+- Score ≥3 indicates possible depression (positive screen)
+
+### GAD-2 (Anxiety Screening)
+- 2 questions, scored 0-6
+- Score ≥3 indicates possible anxiety (positive screen)
+
+### Mood Scale
+- Single question: "Where would you put your mood on a scale of 1 to 10?"
+- Direct self-report of current emotional state
+
+## Research Foundation
+
+### Evidence Base
+
+The multimodal approach is grounded in research on:
+
+- **Vocal biomarkers**: Pitch, speaking rate, and voice quality correlate with depression/anxiety
+- **Facial expression**: Smile frequency, eye contact associated with positive affect
+- **Linguistic markers**: Word choice and sentiment indicate emotional state
+
+### Validation Status
+
+| Aspect | Status |
+|--------|--------|
+| PHQ-2/GAD-2 | Validated clinical instruments |
+| Audio features | Research-based, not clinically validated |
+| Visual features | Research-based, not clinically validated |
+| Fusion weights | Initial calibration, pending validation |
+
+### Research Priorities
+
+1. **Longitudinal validation**: Track scores against outcomes
+2. **Clinical correlation**: Compare with PHQ-9, GAD-7
+3. **Population norms**: Establish baseline distributions
+4. **Weight optimisation**: Data-driven calibration
+
+## Limitations
+
+### Technical
+- Browser/device variability affects audio/video quality
+- Requires stable internet for AI processing
+- No control over recording environment
+
+### Clinical
+- **Not diagnostic**: Monitoring tool, not clinical diagnosis
+- **Professional oversight**: Requires clinical interpretation
+- **Crisis detection**: May miss acute mental health crises
+
+## Ethical Considerations
+
+### Data Privacy
+- Minimal data retention
+- Encrypted in transit and at rest
+- User consent required
+- No data shared with third parties
+
+### Algorithmic Fairness
+- Diverse population validation needed
+- Regular algorithm auditing
+- Transparent scoring methods
+
+---
+
+*For full technical details, see the [Assessment Engine](./assessment-engine) documentation.*
+
+*Last Updated: December 2025*

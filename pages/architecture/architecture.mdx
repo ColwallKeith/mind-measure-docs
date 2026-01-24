@@ -11,60 +11,60 @@ Mind Measure is built on a modern, cloud-native architecture using AWS services 
 ### High-Level Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
-│   Mobile App    │    │   Admin Portal   │    │   Documentation    │
-│ (Capacitor/iOS) │    │  (React/Vercel)  │    │    (Static Site)   │
-└─────────┬───────┘    └─────────┬────────┘    └─────────────────────┘
-          │                      │
-          ├──────────────────────┼─────────────────────────────────────┐
-          │                      │                                     │
-          │              ┌────────▼─────────────┐                      │
-          │              │   Vercel API          │                      │
-          │              │ (Serverless Functions)│                      │
-          │              └────────┬─────────────┘                      │
-          │                      │                                     │
-          │              ┌────────▼─────────────┐                      │
-          │              │    AWS Cognito       │                      │
-          │              │ (Authentication)     │                      │
-          │              └────────┬─────────────┘                      │
-          │                      │                                     │
-          │              ┌────────▼─────────────┐                      │
-          │              │  Aurora Serverless   │                      │
-          │              │   (PostgreSQL)       │                      │
-          │              └──────────────────────┘                      │
-          │                                                           │
-          │              ┌─────────────────────────────────────────────┐
-          │              │   Assessment Engine API Gateway             │
-          │              │  (ej3hig3gwl.execute-api.eu-west-2...)     │
-          │              └──────────────┬─────────────────────────────┘
-          │                             │
-          │              ┌───────────────▼─────────────────────────────┐
-          │              │   Step Functions State Machine              │
-          │              │   (Orchestrates Parallel Analysis)           │
-          │              └───────────────┬─────────────────────────────┘
-          │                             │
-          │              ┌───────────────┼───────────────┐
-          │              │               │               │
-          │    ┌─────────▼──────┐ ┌─────▼──────┐ ┌─────▼──────┐
-          │    │ Audio Analysis │ │ Visual     │ │ Text       │
-          │    │ Lambda         │ │ Analysis   │ │ Analysis   │
-          │    │ (23 features)  │ │ Lambda     │ │ Lambda     │
-          │    │                │ │ (18 feat.) │ │ (16 feat.) │
-          │    └─────────┬──────┘ └─────┬──────┘ └─────┬──────┘
-          │              │               │               │
-          │              └───────────────┼───────────────┘
-          │                              │
-          │              ┌───────────────▼─────────────────────────────┐
-          │              │   Fusion Engine Lambda                      │
-          │              │   (Mind Measure Score 0-100)               │
-          │              └───────────────┬─────────────────────────────┘
-          │                              │
-          │              ┌───────────────▼─────────────────────────────┐
-          │              │   Aurora (assessment_engine schema)        │
-          │              │   S3 (mindmeasure-checkin-media-staging)   │
-          │              └─────────────────────────────────────────────┘
-          │
-          └─────────────────────────────────────────────────────────────┘
+ 
+ Mobile App Admin Portal Documentation
+ (Capacitor/iOS) (React/Vercel) (Static Site)
+ 
+ 
+ 
+ 
+ 
+ Vercel API
+ (Serverless Functions)
+ 
+ 
+ 
+ AWS Cognito
+ (Authentication)
+ 
+ 
+ 
+ Aurora Serverless
+ (PostgreSQL)
+ 
+ 
+ 
+ Assessment Engine API Gateway
+ (ej3hig3gwl.execute-api.eu-west-2...)
+ 
+ 
+ 
+ Step Functions State Machine
+ (Orchestrates Parallel Analysis)
+ 
+ 
+ 
+ 
+ 
+ Audio Analysis Visual Text
+ Lambda Analysis Analysis
+ (23 features) Lambda Lambda
+ (18 feat.) (16 feat.)
+ 
+ 
+ 
+ 
+ 
+ Fusion Engine Lambda
+ (Mind Measure Score 0-100)
+ 
+ 
+ 
+ Aurora (assessment_engine schema)
+ S3 (mindmeasure-checkin-media-staging)
+ 
+ 
+ 
 ```
 
 ### Core Components
@@ -95,11 +95,11 @@ Mind Measure is built on a modern, cloud-native architecture using AWS services 
 - **User Pool ID**: `eu-west-2_ClAG4fQXR`
 - **Client ID**: `7vu03ppv6alkpphs1ksopll8us`
 - **Region**: `eu-west-2` (London)
-- **Features**: 
-  - Multi-factor authentication
-  - Password policies
-  - Email verification
-  - JWT token generation
+- **Features**:
+ - Multi-factor authentication
+ - Password policies
+ - Email verification
+ - JWT token generation
 
 **Authentication Flow**
 ```typescript
@@ -131,34 +131,34 @@ const token = session.tokens?.accessToken?.toString();
 **Assessment Engine Lambdas** (Deployed Nov 28, 2025)
 ```yaml
 CheckInStartLambda:
-  Runtime: Node.js 20.x
-  Memory: 512 MB
-  Timeout: 30 seconds
-  Purpose: Create check-in, generate S3 upload URLs
+ Runtime: Node.js 20.x
+ Memory: 512 MB
+ Timeout: 30 seconds
+ Purpose: Create check-in, generate S3 upload URLs
 
 AudioAnalysisLambda:
-  Runtime: Node.js 20.x
-  Memory: 2048 MB
-  Timeout: 60 seconds
-  Purpose: Extract 23 audio features (prosody, speech dynamics)
+ Runtime: Node.js 20.x
+ Memory: 2048 MB
+ Timeout: 60 seconds
+ Purpose: Extract 23 audio features (prosody, speech dynamics)
 
 VisualAnalysisLambda:
-  Runtime: Node.js 20.x
-  Memory: 3008 MB
-  Timeout: 90 seconds
-  Purpose: Extract 18 visual features (emotion, expression, gaze)
+ Runtime: Node.js 20.x
+ Memory: 3008 MB
+ Timeout: 90 seconds
+ Purpose: Extract 18 visual features (emotion, expression, gaze)
 
 TextAnalysisLambda:
-  Runtime: Node.js 20.x
-  Memory: 1024 MB
-  Timeout: 30 seconds
-  Purpose: Extract 16 text features (sentiment, cognitive load)
+ Runtime: Node.js 20.x
+ Memory: 1024 MB
+ Timeout: 30 seconds
+ Purpose: Extract 16 text features (sentiment, cognitive load)
 
 FusionEngineLambda:
-  Runtime: Node.js 20.x
-  Memory: 1024 MB
-  Timeout: 30 seconds
-  Purpose: Multimodal fusion scoring (0-100 Mind Measure Score)
+ Runtime: Node.js 20.x
+ Memory: 1024 MB
+ Timeout: 30 seconds
+ Purpose: Multimodal fusion scoring (0-100 Mind Measure Score)
 ```
 
 **Step Functions State Machine**
@@ -169,20 +169,20 @@ FusionEngineLambda:
 **Vercel API Functions**
 ```yaml
 Database Operations:
-  - POST /api/database/select
-  - POST /api/database/insert
-  - POST /api/database/update
-  - POST /api/database/delete
+ - POST /api/database/select
+ - POST /api/database/insert
+ - POST /api/database/update
+ - POST /api/database/delete
 
 Storage Operations:
-  - POST /api/storage/upload
-  - GET /api/storage/download
-  - DELETE /api/storage/delete
+ - POST /api/storage/upload
+ - GET /api/storage/download
+ - DELETE /api/storage/delete
 
 Authentication:
-  - POST /api/auth/signin
-  - POST /api/auth/signup
-  - POST /api/auth/refresh
+ - POST /api/auth/signin
+ - POST /api/auth/signup
+ - POST /api/auth/refresh
 ```
 
 #### **Data Layer**
@@ -193,30 +193,30 @@ Authentication:
 - **Region**: `eu-west-2` (London)
 - **Scaling**: 0.5 - 16 ACUs (Auto-scaling)
 - **Features**:
-  - Automatic scaling
-  - Point-in-time recovery
-  - Encrypted at rest
-  - Multi-AZ deployment
+ - Automatic scaling
+ - Point-in-time recovery
+ - Encrypted at rest
+ - Multi-AZ deployment
 
 **Connection Architecture**
 ```typescript
 // Server-side connection
 const pool = new Pool({
-  host: 'mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com',
-  port: 5432,
-  database: 'mindmeasure',
-  user: 'mindmeasure_admin',
-  password: process.env.RDS_PASSWORD,
-  ssl: { rejectUnauthorized: false },
-  max: 20,
-  idleTimeoutMillis: 30000
+ host: 'mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com',
+ port: 5432,
+ database: 'mindmeasure',
+ user: 'mindmeasure_admin',
+ password: process.env.RDS_PASSWORD,
+ ssl: { rejectUnauthorized: false },
+ max: 20,
+ idleTimeoutMillis: 30000
 });
 
 // Browser-side API calls
 const response = await fetch('/api/database/select', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ table: 'profiles', filters: { user_id } })
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify({ table: 'profiles', filters: { user_id } })
 });
 ```
 
@@ -236,8 +236,8 @@ formData.append('file', file);
 formData.append('university_id', universityId);
 
 const response = await fetch('/api/storage/upload', {
-  method: 'POST',
-  body: formData
+ method: 'POST',
+ body: formData
 });
 ```
 
@@ -257,9 +257,9 @@ const response = await fetch('/api/storage/upload', {
 ```typescript
 // Multi-modal analysis flow
 const analysisResults = await Promise.allSettled([
-  analyzeAudio(sessionId, audioData),
-  analyzeVisual(sessionId, imageData),
-  analyzeText(sessionId, transcriptData)
+ analyzeAudio(sessionId, audioData),
+ analyzeVisual(sessionId, imageData),
+ analyzeText(sessionId, transcriptData)
 ]);
 
 const fusionScore = await calculateMindMeasure(sessionId);
@@ -272,42 +272,42 @@ const fusionScore = await calculateMindMeasure(sessionId);
 **Legacy Pipeline** (Baseline Assessments)
 ```
 Student Assessment → ElevenLabs Widget → Conversation Data
-                                              ↓
-                                    Session Creation (Database)
-                                              ↓
-                              Parallel Analysis → Fusion → Score Storage
+ ↓
+ Session Creation (Database)
+ ↓
+ Parallel Analysis → Fusion → Score Storage
 ```
 
 **Assessment Engine Pipeline** (Daily Check-ins - Deployed Nov 28, 2025)
 ```
 Mobile App → POST /v1/checkins/start → Get S3 Upload URLs
-     ↓
+ ↓
 Upload Audio + Images to S3
-     ↓
+ ↓
 POST /v1/checkins/{id}/complete → Start Step Functions
-     ↓
-┌─────────────────────────────────────────────────────┐
-│  Step Functions State Machine (Parallel Execution)  │
-│                                                       │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────┐│
-│  │ Audio        │  │ Visual       │  │ Text       ││
-│  │ Analysis     │  │ Analysis     │  │ Analysis   ││
-│  │ Lambda      │  │ Lambda       │  │ Lambda     ││
-│  │ (23 features)│  │ (18 features)│  │ (16 features)│
-│  └──────┬───────┘  └──────┬───────┘  └─────┬──────┘│
-│         │                  │                 │       │
-│         └──────────────────┼─────────────────┘       │
-│                            ↓                          │
-│                  Fusion Engine Lambda                 │
-│                  (Mind Measure Score 0-100)          │
-│                            ↓                          │
-│                  Baseline Update (if needed)         │
-│                            ↓                          │
-│                  Mark Complete                        │
-└───────────────────────────────────────────────────────┘
-     ↓
+ ↓
+
+ Step Functions State Machine (Parallel Execution)
+ 
+ 
+ Audio Visual Text
+ Analysis Analysis Analysis
+ Lambda Lambda Lambda
+ (23 features) (18 features) (16 features)
+ 
+ 
+ 
+ ↓
+ Fusion Engine Lambda
+ (Mind Measure Score 0-100)
+ ↓
+ Baseline Update (if needed)
+ ↓
+ Mark Complete
+
+ ↓
 GET /v1/checkins/{id} → Return Score + Modality Breakdown
-     ↓
+ ↓
 Display in Mobile App Dashboard
 ```
 
@@ -319,10 +319,10 @@ Display in Mobile App Dashboard
 
 ```
 University Admin → CMS Interface → API Gateway → Lambda Functions
-                                                        ↓
-                                              Aurora Database
-                                                        ↓
-                                              Student Dashboard
+ ↓
+ Aurora Database
+ ↓
+ Student Dashboard
 ```
 
 ## Security Architecture
@@ -461,15 +461,15 @@ University Admin → CMS Interface → API Gateway → Lambda Functions
 **Frontend Deployment**
 ```yaml
 GitHub → Vercel Build → Production Deployment
-         ↓
-    Automatic Testing → Preview Deployments
+ ↓
+ Automatic Testing → Preview Deployments
 ```
 
 **Backend Deployment**
 ```yaml
 GitHub → AWS CodeBuild → Lambda Deployment
-         ↓
-    Unit Tests → Integration Tests → Production
+ ↓
+ Unit Tests → Integration Tests → Production
 ```
 
 ### Environment Management
@@ -540,6 +540,6 @@ GitHub → AWS CodeBuild → Lambda Deployment
 
 This architecture provides a robust, scalable, and compliant foundation for the Mind Measure platform, supporting multiple universities while maintaining strict security and privacy standards.
 
-**Last Updated**: November 28, 2025  
-**Version**: 2.1 (Assessment Engine Added)  
+**Last Updated**: November 28, 2025
+**Version**: 2.1 (Assessment Engine Added)
 **Next Review**: December 28, 2025

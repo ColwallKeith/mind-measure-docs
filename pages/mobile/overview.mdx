@@ -51,28 +51,55 @@ src/
 
 ### Authentication Flow
 
+**Updated Flow (January 2026):**
+
+The authentication flow now includes intelligent user detection and password recovery:
+
 ```mermaid
 graph TD
     A[App Launch] --> B{User Authenticated?}
-    B -->|No| C[Sign In Screen]
+    B -->|No| C[Name Entry]
     B -->|Yes| D{Email Verified?}
-    C --> E[AWS Cognito Auth]
-    E --> F{Auth Success?}
-    F -->|No| C
-    F -->|Yes| D
-    D -->|No| G[Email Verification]
-    D -->|Yes| H{Profile Complete?}
-    G --> I[Resend/Confirm Email]
-    I --> H
-    H -->|No| J[Profile Creation]
-    H -->|Yes| K{Baseline Complete?}
-    J --> L[Auto-assign University]
-    L --> K
-    K -->|No| M[Baseline Welcome]
-    K -->|Yes| N[Dashboard]
-    M --> O[Baseline Assessment]
-    O --> P[Post-Baseline Dashboard]
+    C --> E[Email Entry]
+    E --> F[User Lookup]
+    F -->|User Found| G[Sign In Screen]
+    F -->|New User| H[Password Creation]
+    G --> I[Password Entry]
+    I --> J[Forgot Password?]
+    J -->|Yes| K[Password Reset Flow]
+    J -->|No| L[AWS Cognito Auth]
+    K --> M[Email Code Entry]
+    M --> N[New Password]
+    N --> L
+    L --> O{Auth Success?}
+    O -->|No| I
+    O -->|Yes| D
+    H --> P[Account Creation]
+    P --> Q[Email Verification]
+    D -->|No| Q
+    D -->|Yes| R{Profile Complete?}
+    Q --> S[Resend/Confirm Email]
+    S --> R
+    R -->|No| T[Profile Creation]
+    R -->|Yes| U{Baseline Complete?}
+    T --> V[Auto-assign University]
+    V --> U
+    U -->|No| W[Baseline Welcome]
+    U -->|Yes| X[Dashboard]
+    W --> Y[Baseline Assessment]
+    Y --> Z[Post-Baseline Dashboard]
 ```
+
+**Key Features:**
+
+1. **User Detection**: After name and email entry, the system checks the `profiles` table for matching name and email. If found, routes to sign-in; if not, continues to password creation.
+
+2. **Forgot Password**: Sign-in screen includes "Forgot Password?" link that initiates a 3-step password reset flow:
+   - Step 1: Enter email to receive reset code
+   - Step 2: Enter code and new password
+   - Step 3: Success confirmation and auto-navigation back to sign-in
+
+3. **Pre-filled Email**: When routing from registration to sign-in (user exists), the email field is automatically pre-filled and read-only.
 
 ### Assessment Flow
 
@@ -108,7 +135,7 @@ const widgetConfig = {
 
 // Conversation event handling
 widget.addEventListener('conversation-started', (event) => {
-  console.log('🎯 Conversation started:', event);
+  console.log('Conversation started:', event);
   setConversationData(prev => ({
     ...prev,
     startTime: Date.now()
@@ -117,7 +144,7 @@ widget.addEventListener('conversation-started', (event) => {
 });
 
 widget.addEventListener('conversation-ended', (event) => {
-  console.log('🔚 Conversation ended with data:', event);
+  console.log('Conversation ended with data:', event);
   const { transcript, duration, metadata } = event.detail;
   setConversationData(prev => ({
     ...prev,
@@ -289,7 +316,7 @@ async function submitCheckIn(audioBlob: Blob, imageBlobs: Blob[]) {
   // 2. Upload media
   await fetch(uploadUrls.audio.url, { method: 'PUT', body: audioBlob });
   await Promise.all(
-    uploadUrls.images.map((img, idx) => 
+    uploadUrls.images.map((img, idx) =>
       fetch(img.url, { method: 'PUT', body: imageBlobs[idx] })
     )
   );
@@ -369,14 +396,14 @@ const PostBaselineDashboard: React.FC = () => {
 
       {/* Subheading */}
       <motion.p className="text-gray-500 text-sm">
-        {isPostBaselineView 
-          ? 'This is your baseline score, we use this to benchmark your future check-ins' 
+        {isPostBaselineView
+          ? 'This is your baseline score, we use this to benchmark your future check-ins'
           : 'Share how you\'re feeling today'
         }
       </motion.p>
 
       {/* Wellness Score Display */}
-      <WellnessScoreCard 
+      <WellnessScoreCard
         score={latestSession?.score || 0}
         isBaseline={isPostBaselineView}
       />
@@ -402,7 +429,7 @@ const PostBaselineDashboard: React.FC = () => {
       </div>
 
       {/* Recent Activity */}
-      <RecentActivityCard 
+      <RecentActivityCard
         activities={[
           {
             type: 'baseline_completed',
@@ -418,7 +445,7 @@ const PostBaselineDashboard: React.FC = () => {
       )}
 
       {!isPostBaselineView && latestSession?.summary && (
-        <TopicsDiscussed 
+        <TopicsDiscussed
           summary={latestSession.summary}
           positiveDrivers={latestSession.driverPositive}
           negativeDrivers={latestSession.driverNegative}
@@ -603,9 +630,9 @@ export const PermissionService = {
   async requestMicrophonePermission(): Promise<boolean> {
     try {
       // Use native getUserMedia for microphone
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: true, 
-        video: false 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false
       });
       stream.getTracks().forEach(track => track.stop());
       return true;
@@ -728,7 +755,7 @@ export const NotificationService = {
 
   async sendTokenToServer(token: string) {
     // Send FCM token to backend for targeted notifications
-    await backendService.update('profiles', 
+    await backendService.update('profiles',
       { push_token: token },
       { user_id: user.id }
     );
@@ -1220,6 +1247,6 @@ export default config;
 
 This comprehensive mobile app documentation covers all aspects of the current implementation, including the post-baseline dashboard functionality, ElevenLabs integration, multi-modal AI analysis, and mobile-specific features. The documentation reflects the actual codebase and provides clear guidance for development and maintenance.
 
-**Last Updated**: October 28, 2025  
-**Version**: 2.0 (AWS Migration)  
+**Last Updated**: October 28, 2025
+**Version**: 2.0 (AWS Migration)
 **Next Review**: November 28, 2025

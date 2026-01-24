@@ -25,11 +25,11 @@ This guide consolidates all development protocols, architectural decisions, and 
 **There is NO local development environment. Production IS our development environment.**
 
 Critical rules:
--  NO localhost:3000 development
--  NO local API servers
--  NO mixing environments
--  ALL development against live domains
--  Production = Development = Testing
+- NO localhost:3000 development
+- NO local API servers
+- NO mixing environments
+- ALL development against live domains
+- Production = Development = Testing
 
 ### Mandatory Pre-Work Protocol
 
@@ -94,8 +94,8 @@ Returning Splash → Dashboard
 - **Database**: mindmeasure
 - **Type**: Aurora Serverless v2 (PostgreSQL)
 - **Schemas**:
-  - `public` - Main app tables
-  - `assessment_engine` - Multimodal assessment (6 tables)
+ - `public` - Main app tables
+ - `assessment_engine` - Multimodal assessment (6 tables)
 
 ---
 
@@ -178,13 +178,13 @@ Standalone serverless module deployed November 28, 2025.
 ### Architecture Flow
 
 ```
-Mobile App 
-  → API Gateway (Cognito JWT auth)
-  → HTTP Lambdas (start, complete, get)
-  → Step Functions State Machine
-  → Parallel Analysis (Audio, Visual, Text Lambdas)
-  → Fusion Engine Lambda
-  → Aurora Database (assessment_engine schema)
+Mobile App
+ → API Gateway (Cognito JWT auth)
+ → HTTP Lambdas (start, complete, get)
+ → Step Functions State Machine
+ → Parallel Analysis (Audio, Visual, Text Lambdas)
+ → Fusion Engine Lambda
+ → Aurora Database (assessment_engine schema)
 ```
 
 ### API Endpoints
@@ -237,14 +237,14 @@ Mobile App
 **Add API URL:**
 ```typescript
 // mobile-app/src/config/assessmentEngine.ts
-export const ASSESSMENT_ENGINE_API = 
-  'https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1';
+export const ASSESSMENT_ENGINE_API =
+ 'https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1';
 ```
 
 **Feature flag for gradual rollout:**
 ```typescript
 export const USE_ASSESSMENT_ENGINE = (userId: string) => {
-  return ['keith@mindmeasure.co.uk', 'test1@uni.ac.uk'].includes(userId);
+ return ['keith@mindmeasure.co.uk', 'test1@uni.ac.uk'].includes(userId);
 };
 ```
 
@@ -299,10 +299,10 @@ npx cdk deploy --context env=staging
 **Deploy database schema:**
 ```bash
 PGPASSWORD="PASSWORD" psql \
-  -h mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com \
-  -U mindmeasure_admin \
-  -d mindmeasure \
-  -f migrations/checkin-pipeline-v2.sql
+ -h mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com \
+ -U mindmeasure_admin \
+ -d mindmeasure \
+ -f migrations/checkin-pipeline-v2.sql
 ```
 
 **Rollback:**
@@ -358,9 +358,9 @@ npx cdk deploy --context env=staging
 ```bash
 export JWT_TOKEN="..." # From Cognito
 curl -X POST "https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/start" \
-  -H "Authorization: Bearer $JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"type": "daily"}'
+ -H "Authorization: Bearer $JWT_TOKEN" \
+ -H "Content-Type: application/json" \
+ -d '{"type": "daily"}'
 ```
 
 ---
@@ -377,7 +377,7 @@ curl https://mobile.mindmeasure.app/api/database/health
 **Assessment Engine:**
 ```bash
 curl https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/start \
-  -H "Authorization: Bearer $JWT_TOKEN"
+ -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
 ### CloudWatch Dashboards
@@ -394,10 +394,10 @@ https://eu-west-2.console.aws.amazon.com/cloudwatch/home?region=eu-west-2
 
 ```bash
 aws ce get-cost-and-usage \
-  --time-period Start=2025-11-01,End=2025-11-30 \
-  --granularity MONTHLY \
-  --metrics BlendedCost \
-  --region us-east-1
+ --time-period Start=2025-11-01,End=2025-11-30 \
+ --granularity MONTHLY \
+ --metrics BlendedCost \
+ --region us-east-1
 ```
 
 **Expected monthly costs:**
@@ -449,15 +449,15 @@ npx cdk destroy --force
 **Check status:**
 ```bash
 aws rds describe-db-clusters \
-  --db-cluster-identifier mindmeasure-aurora \
-  --region eu-west-2
+ --db-cluster-identifier mindmeasure-aurora \
+ --region eu-west-2
 ```
 
 **Restart if needed:**
 ```bash
 aws rds reboot-db-cluster \
-  --db-cluster-identifier mindmeasure-aurora \
-  --region eu-west-2
+ --db-cluster-identifier mindmeasure-aurora \
+ --region eu-west-2
 ```
 
 ---
@@ -515,22 +515,22 @@ Location: `/assessment-engine/`
 ## Success Criteria
 
 **Mobile App:**
--  App loads on iOS
--  Sign in/sign up works
--  Database queries work
--  ElevenLabs works
--  Dashboard displays data
+- App loads on iOS
+- Sign in/sign up works
+- Database queries work
+- ElevenLabs works
+- Dashboard displays data
 
 **Assessment Engine:**
--  API auth works (401 without JWT, 200 with JWT)
--  /start returns presigned URLs
--  Database tables accessible
--  Step Functions complete successfully
--  Scores in reasonable range (10-90)
+- API auth works (401 without JWT, 200 with JWT)
+- /start returns presigned URLs
+- Database tables accessible
+- Step Functions complete successfully
+- Scores in reasonable range (10-90)
 
 ---
 
-**Last Updated**: November 28, 2025  
-**Version**: 2.0 (Assessment Engine deployed)  
+**Last Updated**: November 28, 2025
+**Version**: 2.0 (Assessment Engine deployed)
 **Maintained By**: Keith Duddy + AI Assistant
 

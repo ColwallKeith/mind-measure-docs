@@ -1,0 +1,258 @@
+# How to Add Documentation to Mind Measure Docs
+
+## Overview
+This guide explains how to safely add new documentation to the Mind Measure documentation site at `https://docs.mindmeasure.co.uk/` without breaking existing functionality.
+
+## Critical Background
+- **Documentation Site**: Built with Nextra (Next.js-based static site generator)
+- **Deployment**: Vercel project named `docs` (NOT `mind_measure_docs`)
+- **Repository Structure**: Documentation lives in `/docs/` folder of the main repository
+- **Domain**: `docs.mindmeasure.co.uk` points to the `docs` Vercel project
+
+## IMPORTANT: What NOT to Do
+- **Never add emojis or icons** to documentation headers - keep it professional
+- **Never create duplicate files** (e.g., `architecture 3.mdx`)
+- **Never add authentication code** to the docs site
+- **Never deploy to the wrong Vercel project** (`mind_measure_docs` has duplicates)
+
+## Step-by-Step Process
+
+### 1. Understanding the Structure
+```
+docs/
+ pages/
+ _meta.json # Main navigation structure
+ index.mdx # Homepage
+ architecture.mdx # Individual pages
+ cms/ # Section folders
+ _meta.json # Section navigation
+ index.mdx # Section landing page
+ user-guide.mdx # Section pages
+ theme.config.tsx # Site configuration
+ package.json # Dependencies
+```
+
+### 2. Adding a New Section
+
+#### Step 2a: Create the folder structure
+```bash
+cd docs/pages
+mkdir new-section
+```
+
+#### Step 2b: Create section navigation
+Create `docs/pages/new-section/_meta.json`:
+```json
+{
+ "index": "Overview",
+ "guide": "User Guide",
+ "technical": "Technical Details"
+}
+```
+
+#### Step 2c: Create section pages
+Create `docs/pages/new-section/index.mdx`:
+```markdown
+# New Section Documentation
+
+Brief overview of the new section.
+
+## Getting Started
+...
+```
+
+#### Step 2d: Update main navigation
+Edit `docs/pages/_meta.json` and add your section:
+```json
+{
+ "index": "Overview",
+ "architecture": "Architecture",
+ "mobile": "Mobile App",
+ "backend": "Backend",
+ "supabase": "Database & RLS",
+ "methodology": "Assessment Methodology",
+ "deployment": "Deployment",
+ "privacy": "Privacy & Legal",
+ "development": "Development",
+ "adr": "ADRs",
+ "playbooks": "Playbooks",
+ "admin-ui": "Admin UI",
+ "api": "API",
+ "cms": "CMS Documentation",
+ "new-section": "New Section"
+}
+```
+
+### 3. Adding a Single Page
+
+#### Step 3a: Create the MDX file
+Create `docs/pages/new-page.mdx`:
+```markdown
+# New Page Title
+
+Content goes here...
+```
+
+#### Step 3b: Update navigation
+Add to `docs/pages/_meta.json`:
+```json
+{
+ "existing-pages": "...",
+ "new-page": "New Page"
+}
+```
+
+### 4. Testing Locally
+
+#### Step 4a: Start local development server
+```bash
+cd docs
+npm run dev
+```
+
+#### Step 4b: Verify in browser
+- Open `http://localhost:3000`
+- Check navigation appears correctly
+- Verify no duplicate items
+- Ensure professional appearance (no emojis)
+
+### 5. Deployment
+
+#### Step 5a: Commit changes
+```bash
+git add docs/
+git commit -m "Add new documentation section"
+git push
+```
+
+#### Step 5b: Verify deployment
+- Check `https://docs.mindmeasure.co.uk/`
+- Ensure changes appear correctly
+- Test all navigation links
+
+## Troubleshooting Common Issues
+
+### Issue: Navigation item not appearing
+**Solution**: Check `_meta.json` syntax - must be valid JSON
+
+### Issue: Duplicate menu items
+**Solution**:
+- Check for duplicate files (e.g., `page.mdx` and `page 2.mdx`)
+- Delete duplicates
+- Clear Vercel cache: `rm -rf .vercel && vercel --prod`
+
+### Issue: Emojis appearing in navigation
+**Solution**: Remove all emojis from MDX headers:
+```markdown
+# Bad: User Guide
+# Good: User Guide
+```
+
+### Issue: Site broken after deployment
+**Solution**:
+- Check Vercel deployment logs
+- Revert to last working commit
+- Redeploy: `vercel --prod`
+
+### Issue: Wrong Vercel project
+**Solution**: Ensure `.vercel/project.json` contains:
+```json
+{
+ "projectId": "[docs-project-id]",
+ "orgId": "[your-org-id]"
+}
+```
+
+## File Templates
+
+### Section Landing Page Template
+```markdown
+# Section Name
+
+Brief description of what this section covers.
+
+## Overview
+...
+
+## Key Features
+- Feature 1
+- Feature 2
+
+## Getting Started
+- Step 1
+- Step 2
+
+## Next Steps
+- [Sub-page 1](./sub-page-1)
+- [Sub-page 2](./sub-page-2)
+```
+
+### Regular Page Template
+```markdown
+# Page Title
+
+Brief introduction to the page content.
+
+## Section 1
+
+Content here...
+
+### Subsection
+
+More detailed content...
+
+## Section 2
+
+Additional content...
+
+## Related Pages
+- [Related Page 1](../other-section/page)
+- [Related Page 2](./another-page)
+```
+
+## Best Practices
+
+### Content
+- Use clear, professional language
+- Include code examples where relevant
+- Add cross-references to related pages
+- Keep sections focused and concise
+- Don't use emojis or unprofessional icons
+- Don't duplicate existing content
+
+### Structure
+- Use logical folder organization
+- Keep file names lowercase with hyphens
+- Update navigation files (`_meta.json`)
+- Don't create deeply nested structures
+- Don't use spaces in file names
+
+### Testing
+- Always test locally before deploying
+- Check all navigation links work
+- Verify mobile responsiveness
+- Don't deploy untested changes
+- Don't skip the local development step
+
+## Emergency Rollback
+
+If something breaks:
+
+- **Identify last working deployment** in Vercel dashboard
+- **Revert to that deployment**:
+ ```bash
+ # Find the deployment ID from Vercel dashboard
+ vercel rollback [deployment-url]
+ ```
+- **Fix issues locally** before redeploying
+- **Test thoroughly** before pushing again
+
+## Contact & Support
+
+- **Repository**: [mind-measure-core](https://github.com/mindmeasure/mind-measure-core)
+- **Documentation Site**: https://docs.mindmeasure.co.uk/
+- **Vercel Project**: `docs` (not `mind_measure_docs`)
+
+---
+
+**Remember**: When in doubt, test locally first, keep it professional, and don't break the existing structure!

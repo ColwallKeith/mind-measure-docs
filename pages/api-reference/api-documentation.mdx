@@ -8,16 +8,23 @@ The Mind Measure API provides secure, scalable endpoints for mental health asses
 
 ## Base URLs
 
-### Lambda Functions (AI Analysis)
+### Assessment Engine API (Multimodal Assessment)
 ```
-Production: https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev
+Production: https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/
 Region: eu-west-2 (London)
+Deployed: November 28, 2025
 ```
 
-### Database & Storage APIs (Vercel)
+### Mobile App API (Vercel Serverless)
 ```
 Production: https://mobile.mindmeasure.app/api
-Admin: https://admin.mindmeasure.co.uk/api
+Endpoints: /api/database/*, /api/storage/*, /api/auth/*
+```
+
+### Admin Dashboard API (Vercel Serverless)
+```
+Production: https://admin.mindmeasure.co.uk/api
+Endpoints: Admin-specific endpoints
 ```
 
 ## Authentication
@@ -32,13 +39,13 @@ Authorization: Bearer <jwt_token>
 ### Token Structure
 ```typescript
 interface JWTPayload {
-  sub: string;           // User ID
-  email: string;         // User email
-  email_verified: boolean;
-  aud: string;           // Client ID
-  iss: string;           // Cognito issuer
-  exp: number;           // Expiration timestamp
-  iat: number;           // Issued at timestamp
+ sub: string; // User ID
+ email: string; // User email
+ email_verified: boolean;
+ aud: string; // Client ID
+ iss: string; // Cognito issuer
+ exp: number; // Expiration timestamp
+ iat: number; // Issued at timestamp
 }
 ```
 
@@ -52,28 +59,29 @@ const token = session.tokens?.accessToken?.toString();
 
 // API call with token
 const response = await fetch('/api/endpoint', {
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }
+ headers: {
+ 'Authorization': `Bearer ${token}`,
+ 'Content-Type': 'application/json'
+ }
 });
 ```
 
 ## Rate Limiting
 
-### Lambda Functions
+### Assessment Engine API
 ```yaml
-analyze-audio: 10 requests/minute per user
-analyze-visual: 5 requests/minute per user
-analyze-text: 20 requests/minute per user
-calculate-mind-measure: 10 requests/minute per user
+/checkins/start: 10 requests/minute per user
+/checkins/:id/complete: 10 requests/minute per user
+/checkins/:id: 60 requests/minute per user (polling)
 ```
 
-### Database APIs
+### Vercel Database APIs
 ```yaml
-General APIs: 100 requests/minute per user
+/api/database/select: 100 requests/minute per user
+/api/database/insert: 50 requests/minute per user
+/api/database/update: 50 requests/minute per user
+/api/database/delete: 20 requests/minute per user
 File Upload: 10 requests/minute per user
-Bulk Operations: 5 requests/minute per user
 ```
 
 ## Error Handling
@@ -81,10 +89,10 @@ Bulk Operations: 5 requests/minute per user
 ### Standard Error Response
 ```typescript
 interface ErrorResponse {
-  error: string;           // Error message
-  code?: string;          // Error code
-  details?: any;          // Additional error details
-  timestamp: string;      // ISO timestamp
+ error: string; // Error message
+ code?: string; // Error code
+ details?: any; // Additional error details
+ timestamp: string; // ISO timestamp
 }
 ```
 
@@ -101,7 +109,243 @@ interface ErrorResponse {
 
 ---
 
-## Lambda Function APIs
+## Assessment Engine API
+
+The Assessment Engine provides multimodal wellbeing assessment using 23 audio features, 18 visual features, and 16 text features. Deployed November 28, 2025.
+
+### POST /v1/checkins/start
+
+Creates a new check-in and generates presigned S3 upload URLs for media files.
+
+**Request**
+```typescript
+POST https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/start
+Headers: {
+ Authorization: Bearer <cognito_jwt_token>,
+ Content-Type: application/json
+}
+Body: {
+ type: "daily" | "baseline" | "adhoc"
+}
+```
+
+**Response**
+```typescript
+{
+ checkInId: string; // UUID
+ type: "daily" | "baseline" | "adhoc";
+ uploadUrls: {
+ audio: {
+ url: string; // Presigned S3 PUT URL
+ bucket: string; // S3 bucket name
+ key: string; // S3 object key
+ };
+ images: Array<{
+ url: string;
+ bucket: string;
+ key: string;
+ }>; // 8-12 image URLs
+ };
+}
+```
+
+### POST /v1/checkins/:id/complete
+
+Marks media uploads complete and starts the processing pipeline.
+
+**Request**
+```typescript
+POST https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/:checkInId/complete
+Headers: {
+ Authorization: Bearer <cognito_jwt_token>,
+ Content-Type: application/json
+}
+Body: {
+ type?: "daily" | "baseline" | "adhoc" // Optional, defaults to existing type
+}
+```
+
+**Response**
+```typescript
+{
+ checkInId: string;
+ status: "PROCESSING";
+}
+```
+
+### GET /v1/checkins/:id
+
+Retrieves check-in status and results (when complete).
+
+**Request**
+```typescript
+GET https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/:checkInId
+Headers: {
+ Authorization: Bearer <cognito_jwt_token>
+}
+```
+
+**Response** (Status: PROCESSING)
+```typescript
+{
+ checkInId: string;
+ status: "PROCESSING";
+}
+```
+
+**Response** (Status: COMPLETE)
+```typescript
+{
+ checkInId: string;
+ status: "COMPLETE";
+ score: {
+ mindMeasureScore: number; // 0-100
+ uncertainty: number; // 0-1
+ directionOfChange: "better" | "same" | "worse";
+ riskLevel: "none" | "mild" | "moderate" | "high";
+ };
+ modalities: {
+ audio?: {
+ score: number; // -1 to 1
+ confidence: number; // 0-1
+ };
+ visual?: {
+ score: number;
+ confidence: number;
+ };
+ text?: {
+ score: number;
+ confidence: number;
+ };
+ };
+}
+```
+
+**Response** (Status: FAILED)
+```typescript
+{
+ checkInId: string;
+ status: "FAILED" | "QUALITY_FAILED";
+ error?: string; // Human-readable error message
+}
+```
+
+### Example Usage
+
+```typescript
+// 1. Start check-in
+const startResponse = await fetch(
+ 'https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/start',
+ {
+ method: 'POST',
+ headers: {
+ 'Authorization': `Bearer ${jwtToken}`,
+ 'Content-Type': 'application/json'
+ },
+ body: JSON.stringify({ type: 'daily' })
+ }
+);
+const { checkInId, uploadUrls } = await startResponse.json();
+
+// 2. Upload media to S3
+await fetch(uploadUrls.audio.url, { method: 'PUT', body: audioBlob });
+await Promise.all(
+ uploadUrls.images.map(img =>
+ fetch(img.url, { method: 'PUT', body: imageBlob })
+ )
+);
+
+// 3. Complete check-in
+await fetch(
+ `https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1/checkins/${checkInId}/complete`,
+ {
+ method: 'POST',
+ headers: { 'Authorization': `Bearer ${jwtToken}` }
+ }
+);
+
+// 4. Poll for results
+const result = await pollForResult(checkInId, jwtToken);
+console.log('Mind Measure Score:', result.score.mindMeasureScore);
+```
+
+---
+
+## Vercel API Endpoints
+
+### Database Operations
+
+#### POST /api/database/select
+
+Query data from the database.
+
+**Request**
+```typescript
+POST https://mobile.mindmeasure.app/api/database/select
+Headers: {
+ Content-Type: application/json
+}
+Body: {
+ table: string;
+ filters?: Record<string, any>;
+ limit?: number;
+ orderBy?: string;
+}
+```
+
+**Response**
+```typescript
+{
+ data: Array<Record<string, any>>;
+ count?: number;
+}
+```
+
+#### POST /api/database/insert
+
+Insert data into the database.
+
+**Request**
+```typescript
+POST https://mobile.mindmeasure.app/api/database/insert
+Body: {
+ table: string;
+ data: Record<string, any>;
+}
+```
+
+#### POST /api/database/update
+
+Update database records.
+
+**Request**
+```typescript
+POST https://mobile.mindmeasure.app/api/database/update
+Body: {
+ table: string;
+ filters: Record<string, any>;
+ updates: Record<string, any>;
+}
+```
+
+#### POST /api/database/delete
+
+Delete database records.
+
+**Request**
+```typescript
+POST https://mobile.mindmeasure.app/api/database/delete
+Body: {
+ table: string;
+ filters: Record<string, any>;
+}
+```
+
+---
+
+## Legacy Lambda Function APIs
+
+> **Note**: These endpoints are from the legacy architecture. New assessments should use the Assessment Engine API above.
 
 ### Audio Analysis
 
@@ -112,53 +356,53 @@ Processes voice patterns and emotional tone analysis from conversation data.
 **Request**
 ```typescript
 interface AudioAnalysisRequest {
-  sessionId: string;
-  audioData: {
-    conversation_duration: number;    // Duration in seconds
-    speech_rate: number;             // Words per minute ratio
-    voice_quality: string;           // 'clear' | 'strained' | 'muffled'
-    emotional_tone: string;          // 'positive' | 'negative' | 'neutral'
-    mood_score_1_10: number;        // Self-reported mood (1-10)
-    transcript_length: number;       // Character count
-  };
+ sessionId: string;
+ audioData: {
+ conversation_duration: number; // Duration in seconds
+ speech_rate: number; // Words per minute ratio
+ voice_quality: string; // 'clear' | 'strained' | 'muffled'
+ emotional_tone: string; // 'positive' | 'negative' | 'neutral'
+ mood_score_1_10: number; // Self-reported mood (1-10)
+ transcript_length: number; // Character count
+ };
 }
 ```
 
 **Response**
 ```typescript
 interface AudioAnalysisResponse {
-  sessionId: string;
-  analysis: {
-    vocal_stress_indicators: number;     // 0-1 scale
-    speech_pattern_analysis: {
-      pace_variation: number;
-      pause_frequency: number;
-      volume_consistency: number;
-    };
-    emotional_markers: string[];         // Detected emotional indicators
-    confidence_score: number;            // Analysis confidence (0-1)
-  };
-  processing_time: number;               // Processing time in ms
+ sessionId: string;
+ analysis: {
+ vocal_stress_indicators: number; // 0-1 scale
+ speech_pattern_analysis: {
+ pace_variation: number;
+ pause_frequency: number;
+ volume_consistency: number;
+ };
+ emotional_markers: string[]; // Detected emotional indicators
+ confidence_score: number; // Analysis confidence (0-1)
+ };
+ processing_time: number; // Processing time in ms
 }
 ```
 
 **Example**
 ```bash
 curl -X POST \
-  https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev/analyze-audio \
-  -H "Authorization: Bearer <jwt_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sessionId": "550e8400-e29b-41d4-a716-446655440000",
-    "audioData": {
-      "conversation_duration": 180,
-      "speech_rate": 1.2,
-      "voice_quality": "clear",
-      "emotional_tone": "neutral",
-      "mood_score_1_10": 7,
-      "transcript_length": 245
-    }
-  }'
+ https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev/analyze-audio \
+ -H "Authorization: Bearer <jwt_token>" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+ "audioData": {
+ "conversation_duration": 180,
+ "speech_rate": 1.2,
+ "voice_quality": "clear",
+ "emotional_tone": "neutral",
+ "mood_score_1_10": 7,
+ "transcript_length": 245
+ }
+ }'
 ```
 
 ### Visual Analysis
@@ -170,69 +414,69 @@ Processes facial emotion recognition using AWS Rekognition.
 **Request**
 ```typescript
 interface VisualAnalysisRequest {
-  sessionId: string;
-  imageData: string;                   // Base64 encoded image
-  visualSummary: {
-    samples_captured: number;          // Number of frames captured
-    face_detection_rate: number;       // Percentage of frames with face
-    avg_brightness: number;            // Average brightness (0-1)
-    quality_score: number;             // Image quality (0-1)
-    engagement_level: string;          // 'high' | 'moderate' | 'low'
-  };
+ sessionId: string;
+ imageData: string; // Base64 encoded image
+ visualSummary: {
+ samples_captured: number; // Number of frames captured
+ face_detection_rate: number; // Percentage of frames with face
+ avg_brightness: number; // Average brightness (0-1)
+ quality_score: number; // Image quality (0-1)
+ engagement_level: string; // 'high' | 'moderate' | 'low'
+ };
 }
 ```
 
 **Response**
 ```typescript
 interface VisualAnalysisResponse {
-  sessionId: string;
-  rekognition_results: {
-    emotions: Array<{
-      emotion: string;                 // Emotion name
-      confidence: number;              // Confidence percentage
-    }>;
-    face_details: {
-      quality: {
-        brightness: number;
-        sharpness: number;
-      };
-      pose: {
-        roll: number;
-        yaw: number;
-        pitch: number;
-      };
-    };
-    quality_assessment: {
-      overall_quality: number;
-      lighting_quality: number;
-      face_visibility: number;
-    };
-  };
-  analysis_summary: {
-    primary_emotion: string;
-    emotional_stability: number;       // Consistency across frames
-    engagement_score: number;          // Overall engagement level
-  };
+ sessionId: string;
+ rekognition_results: {
+ emotions: Array<{
+ emotion: string; // Emotion name
+ confidence: number; // Confidence percentage
+ }>;
+ face_details: {
+ quality: {
+ brightness: number;
+ sharpness: number;
+ };
+ pose: {
+ roll: number;
+ yaw: number;
+ pitch: number;
+ };
+ };
+ quality_assessment: {
+ overall_quality: number;
+ lighting_quality: number;
+ face_visibility: number;
+ };
+ };
+ analysis_summary: {
+ primary_emotion: string;
+ emotional_stability: number; // Consistency across frames
+ engagement_score: number; // Overall engagement level
+ };
 }
 ```
 
 **Example**
 ```bash
 curl -X POST \
-  https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev/analyze-visual \
-  -H "Authorization: Bearer <jwt_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sessionId": "550e8400-e29b-41d4-a716-446655440000",
-    "imageData": "/9j/4AAQSkZJRgABAQAAAQABAAD...",
-    "visualSummary": {
-      "samples_captured": 15,
-      "face_detection_rate": 0.8,
-      "avg_brightness": 0.7,
-      "quality_score": 0.85,
-      "engagement_level": "high"
-    }
-  }'
+ https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev/analyze-visual \
+ -H "Authorization: Bearer <jwt_token>" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+ "imageData": "/9j/4AAQSkZJRgABAQAAAQABAAD...",
+ "visualSummary": {
+ "samples_captured": 15,
+ "face_detection_rate": 0.8,
+ "avg_brightness": 0.7,
+ "quality_score": 0.85,
+ "engagement_level": "high"
+ }
+ }'
 ```
 
 ### Text Analysis
@@ -244,47 +488,47 @@ Processes natural language analysis of conversation transcripts.
 **Request**
 ```typescript
 interface TextAnalysisRequest {
-  sessionId: string;
-  conversationText: string;            // Full conversation transcript
+ sessionId: string;
+ conversationText: string; // Full conversation transcript
 }
 ```
 
 **Response**
 ```typescript
 interface TextAnalysisResponse {
-  sessionId: string;
-  analysis: {
-    sentiment_analysis: {
-      overall_sentiment: 'positive' | 'negative' | 'neutral';
-      confidence: number;              // Confidence in sentiment
-      emotional_indicators: string[];  // Specific emotional words/phrases
-    };
-    linguistic_patterns: {
-      complexity_score: number;        // Language complexity (0-1)
-      coherence_score: number;         // Logical flow (0-1)
-      emotional_language_usage: number; // Emotional word frequency
-    };
-    key_themes: string[];              // Main topics discussed
-    risk_indicators: string[];         // Potential risk factors
-    phq_indicators: {                  // PHQ-2/GAD-2 related indicators
-      depression_markers: string[];
-      anxiety_markers: string[];
-      severity_indicators: string[];
-    };
-  };
+ sessionId: string;
+ analysis: {
+ sentiment_analysis: {
+ overall_sentiment: 'positive' | 'negative' | 'neutral';
+ confidence: number; // Confidence in sentiment
+ emotional_indicators: string[]; // Specific emotional words/phrases
+ };
+ linguistic_patterns: {
+ complexity_score: number; // Language complexity (0-1)
+ coherence_score: number; // Logical flow (0-1)
+ emotional_language_usage: number; // Emotional word frequency
+ };
+ key_themes: string[]; // Main topics discussed
+ risk_indicators: string[]; // Potential risk factors
+ phq_indicators: { // PHQ-2/GAD-2 related indicators
+ depression_markers: string[];
+ anxiety_markers: string[];
+ severity_indicators: string[];
+ };
+ };
 }
 ```
 
 **Example**
 ```bash
 curl -X POST \
-  https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev/analyze-text \
-  -H "Authorization: Bearer <jwt_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sessionId": "550e8400-e29b-41d4-a716-446655440000",
-    "conversationText": "I have been feeling quite stressed lately with my coursework..."
-  }'
+ https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev/analyze-text \
+ -H "Authorization: Bearer <jwt_token>" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+ "conversationText": "I have been feeling quite stressed lately with my coursework..."
+ }'
 ```
 
 ### Fusion Score Calculation
@@ -296,51 +540,51 @@ Calculates the final Mind Measure score using multi-modal fusion algorithm.
 **Request**
 ```typescript
 interface FusionRequest {
-  sessionId: string;                   // Session with completed analyses
+ sessionId: string; // Session with completed analyses
 }
 ```
 
 **Response**
 ```typescript
 interface FusionResponse {
-  sessionId: string;
-  fusion_score: {
-    final_score: number;               // Final score (0-100)
-    confidence: number;                // Overall confidence (0-1)
-    component_scores: {
-      audio_score: number;             // Audio component (0-100)
-      visual_score: number;            // Visual component (0-100)
-      text_score: number;              // Text component (0-100)
-      passive_score?: number;          // Passive data if available
-    };
-    risk_assessment: {
-      level: 'low' | 'medium' | 'high';
-      indicators: string[];            // Risk factors identified
-      recommendations: string[];       // Suggested actions
-    };
-    trend_analysis?: {
-      compared_to_baseline: number;    // Difference from baseline
-      trend_direction: 'improving' | 'stable' | 'declining';
-      significance: 'low' | 'medium' | 'high';
-    };
-  };
-  metadata: {
-    algorithm_version: string;
-    processing_time: number;
-    data_quality_score: number;
-  };
+ sessionId: string;
+ fusion_score: {
+ final_score: number; // Final score (0-100)
+ confidence: number; // Overall confidence (0-1)
+ component_scores: {
+ audio_score: number; // Audio component (0-100)
+ visual_score: number; // Visual component (0-100)
+ text_score: number; // Text component (0-100)
+ passive_score?: number; // Passive data if available
+ };
+ risk_assessment: {
+ level: 'low' | 'medium' | 'high';
+ indicators: string[]; // Risk factors identified
+ recommendations: string[]; // Suggested actions
+ };
+ trend_analysis?: {
+ compared_to_baseline: number; // Difference from baseline
+ trend_direction: 'improving' | 'stable' | 'declining';
+ significance: 'low' | 'medium' | 'high';
+ };
+ };
+ metadata: {
+ algorithm_version: string;
+ processing_time: number;
+ data_quality_score: number;
+ };
 }
 ```
 
 **Example**
 ```bash
 curl -X POST \
-  https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev/calculate-mind-measure \
-  -H "Authorization: Bearer <jwt_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sessionId": "550e8400-e29b-41d4-a716-446655440000"
-  }'
+ https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev/calculate-mind-measure \
+ -H "Authorization: Bearer <jwt_token>" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "sessionId": "550e8400-e29b-41d4-a716-446655440000"
+ }'
 ```
 
 ---
@@ -356,41 +600,41 @@ Retrieves data from database tables with filtering and pagination.
 **Request**
 ```typescript
 interface SelectRequest {
-  table: string;                       // Table name
-  columns?: string;                    // Comma-separated columns (* for all)
-  filters?: Record<string, any>;       // WHERE conditions
-  orderBy?: Array<{
-    column: string;
-    ascending?: boolean;               // Default: true
-  }>;
-  limit?: number;                      // Max records to return
-  offset?: number;                     // Records to skip
+ table: string; // Table name
+ columns?: string; // Comma-separated columns (* for all)
+ filters?: Record<string, any>; // WHERE conditions
+ orderBy?: Array<{
+ column: string;
+ ascending?: boolean; // Default: true
+ }>;
+ limit?: number; // Max records to return
+ offset?: number; // Records to skip
 }
 ```
 
 **Response**
 ```typescript
 interface SelectResponse {
-  data: any[];                         // Query results
-  count: number;                       // Total matching records
-  error: string | null;                // Error message if failed
+ data: any[]; // Query results
+ count: number; // Total matching records
+ error: string | null; // Error message if failed
 }
 ```
 
 **Example**
 ```bash
 curl -X POST \
-  https://mobile.mindmeasure.app/api/database/select \
-  -H "Authorization: Bearer <jwt_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "table": "profiles",
-    "columns": "first_name, last_name, university_id",
-    "filters": {
-      "user_id": "550e8400-e29b-41d4-a716-446655440000"
-    },
-    "limit": 1
-  }'
+ https://mobile.mindmeasure.app/api/database/select \
+ -H "Authorization: Bearer <jwt_token>" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "table": "profiles",
+ "columns": "first_name, last_name, university_id",
+ "filters": {
+ "user_id": "550e8400-e29b-41d4-a716-446655440000"
+ },
+ "limit": 1
+ }'
 ```
 
 ### Insert Data
@@ -402,40 +646,40 @@ Inserts new records into database tables.
 **Request**
 ```typescript
 interface InsertRequest {
-  table: string;                       // Table name
-  data: Record<string, any> | Record<string, any>[]; // Data to insert
-  returning?: string;                  // Columns to return
+ table: string; // Table name
+ data: Record<string, any> | Record<string, any>[]; // Data to insert
+ returning?: string; // Columns to return
 }
 ```
 
 **Response**
 ```typescript
 interface InsertResponse {
-  data: any[] | null;                  // Inserted records (if returning specified)
-  count: number;                       // Number of records inserted
-  error: string | null;                // Error message if failed
+ data: any[] | null; // Inserted records (if returning specified)
+ count: number; // Number of records inserted
+ error: string | null; // Error message if failed
 }
 ```
 
 **Example**
 ```bash
 curl -X POST \
-  https://mobile.mindmeasure.app/api/database/insert \
-  -H "Authorization: Bearer <jwt_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "table": "assessment_sessions",
-    "data": {
-      "user_id": "550e8400-e29b-41d4-a716-446655440000",
-      "assessment_type": "baseline",
-      "status": "processing",
-      "session_data": {
-        "platform": "mobile",
-        "widget_type": "elevenlabs"
-      }
-    },
-    "returning": "id, created_at"
-  }'
+ https://mobile.mindmeasure.app/api/database/insert \
+ -H "Authorization: Bearer <jwt_token>" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "table": "assessment_sessions",
+ "data": {
+ "user_id": "550e8400-e29b-41d4-a716-446655440000",
+ "assessment_type": "baseline",
+ "status": "processing",
+ "session_data": {
+ "platform": "mobile",
+ "widget_type": "elevenlabs"
+ }
+ },
+ "returning": "id, created_at"
+ }'
 ```
 
 ### Update Data
@@ -447,39 +691,39 @@ Updates existing records in database tables.
 **Request**
 ```typescript
 interface UpdateRequest {
-  table: string;                       // Table name
-  data: Record<string, any>;           // Data to update
-  filters: Record<string, any>;        // WHERE conditions
-  returning?: string;                  // Columns to return
+ table: string; // Table name
+ data: Record<string, any>; // Data to update
+ filters: Record<string, any>; // WHERE conditions
+ returning?: string; // Columns to return
 }
 ```
 
 **Response**
 ```typescript
 interface UpdateResponse {
-  data: any[] | null;                  // Updated records (if returning specified)
-  count: number;                       // Number of records updated
-  error: string | null;                // Error message if failed
+ data: any[] | null; // Updated records (if returning specified)
+ count: number; // Number of records updated
+ error: string | null; // Error message if failed
 }
 ```
 
 **Example**
 ```bash
 curl -X POST \
-  https://mobile.mindmeasure.app/api/database/update \
-  -H "Authorization: Bearer <jwt_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "table": "assessment_sessions",
-    "data": {
-      "status": "completed",
-      "updated_at": "2025-10-28T20:30:00Z"
-    },
-    "filters": {
-      "id": "550e8400-e29b-41d4-a716-446655440000"
-    },
-    "returning": "id, status, updated_at"
-  }'
+ https://mobile.mindmeasure.app/api/database/update \
+ -H "Authorization: Bearer <jwt_token>" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "table": "assessment_sessions",
+ "data": {
+ "status": "completed",
+ "updated_at": "2025-10-28T20:30:00Z"
+ },
+ "filters": {
+ "id": "550e8400-e29b-41d4-a716-446655440000"
+ },
+ "returning": "id, status, updated_at"
+ }'
 ```
 
 ### Delete Data
@@ -491,35 +735,35 @@ Deletes records from database tables.
 **Request**
 ```typescript
 interface DeleteRequest {
-  table: string;                       // Table name
-  filters: Record<string, any>;        // WHERE conditions (required)
-  returning?: string;                  // Columns to return
+ table: string; // Table name
+ filters: Record<string, any>; // WHERE conditions (required)
+ returning?: string; // Columns to return
 }
 ```
 
 **Response**
 ```typescript
 interface DeleteResponse {
-  data: any[] | null;                  // Deleted records (if returning specified)
-  count: number;                       // Number of records deleted
-  error: string | null;                // Error message if failed
+ data: any[] | null; // Deleted records (if returning specified)
+ count: number; // Number of records deleted
+ error: string | null; // Error message if failed
 }
 ```
 
 **Example**
 ```bash
 curl -X POST \
-  https://mobile.mindmeasure.app/api/database/delete \
-  -H "Authorization: Bearer <jwt_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "table": "assessment_sessions",
-    "filters": {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
-      "status": "failed"
-    },
-    "returning": "id"
-  }'
+ https://mobile.mindmeasure.app/api/database/delete \
+ -H "Authorization: Bearer <jwt_token>" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "table": "assessment_sessions",
+ "filters": {
+ "id": "550e8400-e29b-41d4-a716-446655440000",
+ "status": "failed"
+ },
+ "returning": "id"
+ }'
 ```
 
 ---
@@ -536,30 +780,30 @@ Uploads files to university-specific S3 buckets.
 ```typescript
 // Multipart form data
 interface UploadRequest {
-  file: File;                          // File to upload
-  university_id: string;               // University identifier
-  folder?: string;                     // Optional folder path
+ file: File; // File to upload
+ university_id: string; // University identifier
+ folder?: string; // Optional folder path
 }
 ```
 
 **Response**
 ```typescript
 interface UploadResponse {
-  success: boolean;
-  url?: string;                        // File URL if successful
-  key?: string;                        // S3 object key
-  error?: string;                      // Error message if failed
+ success: boolean;
+ url?: string; // File URL if successful
+ key?: string; // S3 object key
+ error?: string; // Error message if failed
 }
 ```
 
 **Example**
 ```bash
 curl -X POST \
-  https://admin.mindmeasure.co.uk/api/storage/upload \
-  -H "Authorization: Bearer <jwt_token>" \
-  -F "file=@logo.png" \
-  -F "university_id=worcester" \
-  -F "folder=branding"
+ https://admin.mindmeasure.co.uk/api/storage/upload \
+ -H "Authorization: Bearer <jwt_token>" \
+ -F "file=@logo.png" \
+ -F "university_id=worcester" \
+ -F "folder=branding"
 ```
 
 **JavaScript Example**
@@ -570,11 +814,11 @@ formData.append('university_id', 'worcester');
 formData.append('folder', 'branding');
 
 const response = await fetch('/api/storage/upload', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`
-  },
-  body: formData
+ method: 'POST',
+ headers: {
+ 'Authorization': `Bearer ${token}`
+ },
+ body: formData
 });
 
 const result = await response.json();
@@ -589,27 +833,27 @@ Generates signed URLs for secure file access.
 **Request**
 ```typescript
 interface DownloadRequest {
-  key: string;                         // S3 object key
-  university_id: string;               // University identifier
-  expires?: number;                    // URL expiration in seconds (default: 3600)
+ key: string; // S3 object key
+ university_id: string; // University identifier
+ expires?: number; // URL expiration in seconds (default: 3600)
 }
 ```
 
 **Response**
 ```typescript
 interface DownloadResponse {
-  success: boolean;
-  url?: string;                        // Signed URL if successful
-  expires?: string;                    // Expiration timestamp
-  error?: string;                      // Error message if failed
+ success: boolean;
+ url?: string; // Signed URL if successful
+ expires?: string; // Expiration timestamp
+ error?: string; // Error message if failed
 }
 ```
 
 **Example**
 ```bash
 curl -X GET \
-  "https://admin.mindmeasure.co.uk/api/storage/download?key=branding/logo.png&university_id=worcester" \
-  -H "Authorization: Bearer <jwt_token>"
+ "https://admin.mindmeasure.co.uk/api/storage/download?key=branding/logo.png&university_id=worcester" \
+ -H "Authorization: Bearer <jwt_token>"
 ```
 
 ---
@@ -625,28 +869,28 @@ Authenticates users with email and password.
 **Request**
 ```typescript
 interface SignInRequest {
-  email: string;
-  password: string;
+ email: string;
+ password: string;
 }
 ```
 
 **Response**
 ```typescript
 interface SignInResponse {
-  success: boolean;
-  user?: {
-    id: string;
-    email: string;
-    email_verified: boolean;
-    first_name?: string;
-    last_name?: string;
-  };
-  tokens?: {
-    access_token: string;
-    refresh_token: string;
-    expires_in: number;
-  };
-  error?: string;
+ success: boolean;
+ user?: {
+ id: string;
+ email: string;
+ email_verified: boolean;
+ first_name?: string;
+ last_name?: string;
+ };
+ tokens?: {
+ access_token: string;
+ refresh_token: string;
+ expires_in: number;
+ };
+ error?: string;
 }
 ```
 
@@ -659,21 +903,21 @@ Registers new users with email verification.
 **Request**
 ```typescript
 interface SignUpRequest {
-  email: string;
-  password: string;
-  first_name: string;
-  last_name: string;
-  university_id?: string;
+ email: string;
+ password: string;
+ first_name: string;
+ last_name: string;
+ university_id?: string;
 }
 ```
 
 **Response**
 ```typescript
 interface SignUpResponse {
-  success: boolean;
-  user_id?: string;
-  verification_required?: boolean;
-  error?: string;
+ success: boolean;
+ user_id?: string;
+ verification_required?: boolean;
+ error?: string;
 }
 ```
 
@@ -686,19 +930,19 @@ Refreshes expired access tokens.
 **Request**
 ```typescript
 interface RefreshRequest {
-  refresh_token: string;
+ refresh_token: string;
 }
 ```
 
 **Response**
 ```typescript
 interface RefreshResponse {
-  success: boolean;
-  tokens?: {
-    access_token: string;
-    expires_in: number;
-  };
-  error?: string;
+ success: boolean;
+ tokens?: {
+ access_token: string;
+ expires_in: number;
+ };
+ error?: string;
 }
 ```
 
@@ -715,29 +959,29 @@ Retrieves university configuration and settings.
 **Response**
 ```typescript
 interface UniversityResponse {
-  id: string;
-  name: string;
-  short_name: string;
-  domain: string;
-  branding: {
-    logo_url?: string;
-    primary_color: string;
-    secondary_color: string;
-  };
-  settings: {
-    features_enabled: string[];
-    assessment_frequency: string;
-    privacy_settings: object;
-  };
-  contacts: {
-    support_email: string;
-    crisis_phone: string;
-    resources: Array<{
-      name: string;
-      phone: string;
-      website: string;
-    }>;
-  };
+ id: string;
+ name: string;
+ short_name: string;
+ domain: string;
+ branding: {
+ logo_url?: string;
+ primary_color: string;
+ secondary_color: string;
+ };
+ settings: {
+ features_enabled: string[];
+ assessment_frequency: string;
+ privacy_settings: object;
+ };
+ contacts: {
+ support_email: string;
+ crisis_phone: string;
+ resources: Array<{
+ name: string;
+ phone: string;
+ website: string;
+ }>;
+ };
 }
 ```
 
@@ -750,26 +994,26 @@ Updates university configuration (admin only).
 **Request**
 ```typescript
 interface UpdateUniversityRequest {
-  name?: string;
-  branding?: {
-    logo_url?: string;
-    primary_color?: string;
-    secondary_color?: string;
-  };
-  settings?: {
-    features_enabled?: string[];
-    assessment_frequency?: string;
-    privacy_settings?: object;
-  };
-  contacts?: {
-    support_email?: string;
-    crisis_phone?: string;
-    resources?: Array<{
-      name: string;
-      phone: string;
-      website: string;
-    }>;
-  };
+ name?: string;
+ branding?: {
+ logo_url?: string;
+ primary_color?: string;
+ secondary_color?: string;
+ };
+ settings?: {
+ features_enabled?: string[];
+ assessment_frequency?: string;
+ privacy_settings?: object;
+ };
+ contacts?: {
+ support_email?: string;
+ crisis_phone?: string;
+ resources?: Array<{
+ name: string;
+ phone: string;
+ website: string;
+ }>;
+ };
 }
 ```
 
@@ -786,46 +1030,46 @@ Retrieves dashboard analytics for university administrators.
 **Query Parameters**
 ```typescript
 interface DashboardQuery {
-  university_id: string;
-  date_range?: string;               // '7d', '30d', '90d', '1y'
-  cohort_filters?: {
-    faculty?: string;
-    year?: string;
-    residence?: string;
-  };
+ university_id: string;
+ date_range?: string; // '7d', '30d', '90d', '1y'
+ cohort_filters?: {
+ faculty?: string;
+ year?: string;
+ residence?: string;
+ };
 }
 ```
 
 **Response**
 ```typescript
 interface DashboardResponse {
-  summary: {
-    total_students: number;
-    active_students: number;
-    assessments_completed: number;
-    average_wellbeing_score: number;
-  };
-  trends: {
-    wellbeing_trend: Array<{
-      date: string;
-      average_score: number;
-      student_count: number;
-    }>;
-    engagement_trend: Array<{
-      date: string;
-      completion_rate: number;
-    }>;
-  };
-  risk_analysis: {
-    high_risk_count: number;
-    medium_risk_count: number;
-    intervention_recommendations: string[];
-  };
-  cohort_breakdown: {
-    by_faculty: Record<string, number>;
-    by_year: Record<string, number>;
-    by_residence: Record<string, number>;
-  };
+ summary: {
+ total_students: number;
+ active_students: number;
+ assessments_completed: number;
+ average_wellbeing_score: number;
+ };
+ trends: {
+ wellbeing_trend: Array<{
+ date: string;
+ average_score: number;
+ student_count: number;
+ }>;
+ engagement_trend: Array<{
+ date: string;
+ completion_rate: number;
+ }>;
+ };
+ risk_analysis: {
+ high_risk_count: number;
+ medium_risk_count: number;
+ intervention_recommendations: string[];
+ };
+ cohort_breakdown: {
+ by_faculty: Record<string, number>;
+ by_year: Record<string, number>;
+ by_residence: Record<string, number>;
+ };
 }
 ```
 
@@ -844,24 +1088,24 @@ wss://mobile.mindmeasure.app/ws/assessment/\{sessionId\}
 ```typescript
 // Client to Server
 interface AssessmentMessage {
-  type: 'status_update' | 'progress_update' | 'completion';
-  data: {
-    session_id: string;
-    status?: string;
-    progress?: number;
-    result?: any;
-  };
+ type: 'status_update' | 'progress_update' | 'completion';
+ data: {
+ session_id: string;
+ status?: string;
+ progress?: number;
+ result?: any;
+ };
 }
 
 // Server to Client
 interface ServerMessage {
-  type: 'analysis_complete' | 'score_calculated' | 'error';
-  data: {
-    session_id: string;
-    analysis_type?: string;
-    score?: number;
-    error?: string;
-  };
+ type: 'analysis_complete' | 'score_calculated' | 'error';
+ data: {
+ session_id: string;
+ analysis_type?: string;
+ score?: number;
+ error?: string;
+ };
 }
 ```
 
@@ -874,60 +1118,60 @@ interface ServerMessage {
 ```typescript
 // Mind Measure API Client
 class MindMeasureAPI {
-  private baseUrl: string;
-  private token: string;
+ private baseUrl: string;
+ private token: string;
 
-  constructor(baseUrl: string, token: string) {
-    this.baseUrl = baseUrl;
-    this.token = token;
-  }
+ constructor(baseUrl: string, token: string) {
+ this.baseUrl = baseUrl;
+ this.token = token;
+ }
 
-  private async request(endpoint: string, options: RequestInit = {}) {
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers: {
-        'Authorization': `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-        ...options.headers
-      }
-    });
+ private async request(endpoint: string, options: RequestInit = {}) {
+ const response = await fetch(`${this.baseUrl}${endpoint}`, {
+ ...options,
+ headers: {
+ 'Authorization': `Bearer ${this.token}`,
+ 'Content-Type': 'application/json',
+ ...options.headers
+ }
+ });
 
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
+ if (!response.ok) {
+ throw new Error(`API Error: ${response.status} ${response.statusText}`);
+ }
 
-    return response.json();
-  }
+ return response.json();
+ }
 
-  // Database operations
-  async select(table: string, options: any = {}) {
-    return this.request('/api/database/select', {
-      method: 'POST',
-      body: JSON.stringify({ table, ...options })
-    });
-  }
+ // Database operations
+ async select(table: string, options: any = {}) {
+ return this.request('/api/database/select', {
+ method: 'POST',
+ body: JSON.stringify({ table, ...options })
+ });
+ }
 
-  async insert(table: string, data: any, returning?: string) {
-    return this.request('/api/database/insert', {
-      method: 'POST',
-      body: JSON.stringify({ table, data, returning })
-    });
-  }
+ async insert(table: string, data: any, returning?: string) {
+ return this.request('/api/database/insert', {
+ method: 'POST',
+ body: JSON.stringify({ table, data, returning })
+ });
+ }
 
-  // Lambda functions
-  async analyzeAudio(sessionId: string, audioData: any) {
-    return this.request('/analyze-audio', {
-      method: 'POST',
-      body: JSON.stringify({ sessionId, audioData })
-    });
-  }
+ // Lambda functions
+ async analyzeAudio(sessionId: string, audioData: any) {
+ return this.request('/analyze-audio', {
+ method: 'POST',
+ body: JSON.stringify({ sessionId, audioData })
+ });
+ }
 
-  async calculateMindMeasure(sessionId: string) {
-    return this.request('/calculate-mind-measure', {
-      method: 'POST',
-      body: JSON.stringify({ sessionId })
-    });
-  }
+ async calculateMindMeasure(sessionId: string) {
+ return this.request('/calculate-mind-measure', {
+ method: 'POST',
+ body: JSON.stringify({ sessionId })
+ });
+ }
 }
 
 // Usage
@@ -935,9 +1179,9 @@ const api = new MindMeasureAPI('https://mobile.mindmeasure.app', token);
 
 // Create assessment session
 const session = await api.insert('assessment_sessions', {
-  user_id: userId,
-  assessment_type: 'baseline',
-  status: 'processing'
+ user_id: userId,
+ assessment_type: 'baseline',
+ status: 'processing'
 }, 'id, created_at');
 
 // Run analysis
@@ -953,36 +1197,36 @@ import json
 from typing import Dict, Any, Optional
 
 class MindMeasureAPI:
-    def __init__(self, base_url: str, token: str):
-        self.base_url = base_url
-        self.token = token
-        self.headers = {
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json'
-        }
-    
-    def _request(self, endpoint: str, method: str = 'GET', data: Optional[Dict] = None):
-        url = f"{self.base_url}{endpoint}"
-        
-        if method == 'POST':
-            response = requests.post(url, headers=self.headers, json=data)
-        else:
-            response = requests.get(url, headers=self.headers, params=data)
-        
-        response.raise_for_status()
-        return response.json()
-    
-    def select(self, table: str, **options):
-        return self._request('/api/database/select', 'POST', {
-            'table': table,
-            **options
-        })
-    
-    def analyze_audio(self, session_id: str, audio_data: Dict):
-        return self._request('/analyze-audio', 'POST', {
-            'sessionId': session_id,
-            'audioData': audio_data
-        })
+ def __init__(self, base_url: str, token: str):
+ self.base_url = base_url
+ self.token = token
+ self.headers = {
+ 'Authorization': f'Bearer {token}',
+ 'Content-Type': 'application/json'
+ }
+ 
+ def _request(self, endpoint: str, method: str = 'GET', data: Optional[Dict] = None):
+ url = f"{self.base_url}{endpoint}"
+ 
+ if method == 'POST':
+ response = requests.post(url, headers=self.headers, json=data)
+ else:
+ response = requests.get(url, headers=self.headers, params=data)
+ 
+ response.raise_for_status()
+ return response.json()
+ 
+ def select(self, table: str, **options):
+ return self._request('/api/database/select', 'POST', {
+ 'table': table,
+ **options
+ })
+ 
+ def analyze_audio(self, session_id: str, audio_data: Dict):
+ return self._request('/analyze-audio', 'POST', {
+ 'sessionId': session_id,
+ 'audioData': audio_data
+ })
 
 # Usage
 api = MindMeasureAPI('https://mobile.mindmeasure.app', token)
@@ -992,12 +1236,12 @@ profile = api.select('profiles', filters={'user_id': user_id}, limit=1)
 
 # Run audio analysis
 result = api.analyze_audio(session_id, {
-    'conversation_duration': 180,
-    'speech_rate': 1.2,
-    'voice_quality': 'clear',
-    'emotional_tone': 'neutral',
-    'mood_score_1_10': 7,
-    'transcript_length': 245
+ 'conversation_duration': 180,
+ 'speech_rate': 1.2,
+ 'voice_quality': 'clear',
+ 'emotional_tone': 'neutral',
+ 'mood_score_1_10': 7,
+ 'transcript_length': 245
 })
 ```
 
@@ -1010,30 +1254,30 @@ result = api.analyze_audio(session_id, {
 #### Postman Collection
 ```json
 {
-  "info": {
-    "name": "Mind Measure API",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{jwt_token}}",
-        "type": "string"
-      }
-    ]
-  },
-  "variable": [
-    {
-      "key": "base_url",
-      "value": "https://mobile.mindmeasure.app"
-    },
-    {
-      "key": "lambda_url",
-      "value": "https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev"
-    }
-  ]
+ "info": {
+ "name": "Mind Measure API",
+ "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+ },
+ "auth": {
+ "type": "bearer",
+ "bearer": [
+ {
+ "key": "token",
+ "value": "{{jwt_token}}",
+ "type": "string"
+ }
+ ]
+ },
+ "variable": [
+ {
+ "key": "base_url",
+ "value": "https://mobile.mindmeasure.app"
+ },
+ {
+ "key": "lambda_url",
+ "value": "https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev"
+ }
+ ]
 }
 ```
 
@@ -1053,12 +1297,12 @@ VITE_LAMBDA_BASE_URL=https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev
 ```bash
 # Test rate limiting
 for i in {1..15}; do
-  curl -X POST \
-    https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev/analyze-audio \
-    -H "Authorization: Bearer <token>" \
-    -H "Content-Type: application/json" \
-    -d '{"sessionId":"test","audioData":{}}' \
-    -w "Request $i: %{http_code}\n"
+ curl -X POST \
+ https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev/analyze-audio \
+ -H "Authorization: Bearer <token>" \
+ -H "Content-Type: application/json" \
+ -d '{"sessionId":"test","audioData":{}}' \
+ -w "Request $i: %{http_code}\n"
 done
 ```
 
@@ -1066,6 +1310,6 @@ done
 
 This comprehensive API documentation provides all the information needed to integrate with the Mind Measure platform, including authentication, rate limiting, error handling, and complete endpoint specifications.
 
-**Last Updated**: October 28, 2025  
-**Version**: 2.0 (AWS Migration)  
+**Last Updated**: October 28, 2025
+**Version**: 2.0 (AWS Migration)
 **Next Review**: November 28, 2025

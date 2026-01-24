@@ -13,50 +13,50 @@ Unified monorepo for all Mind Measure marketing websites, enabling:
 
 ```
 mindmeasure-marketing/
-│
-├── sites/                          # Individual marketing sites
-│   ├── university/                 # mindmeasure.co.uk
-│   │   ├── src/
-│   │   │   ├── pages/             # Astro pages
-│   │   │   ├── components/        # University-specific components
-│   │   │   ├── layouts/
-│   │   │   └── styles/
-│   │   ├── sanity/                # University Sanity schemas
-│   │   ├── public/                # Static assets
-│   │   ├── astro.config.mjs
-│   │   └── package.json
-│   │
-│   ├── student/                   # mindmeasure.app
-│   │   └── [same structure as university]
-│   │
-│   └── workplace/                 # [2026] Mind Measure Pro
-│       └── package.json (placeholder)
-│
-├── packages/
-│   └── shared/                    # Shared across all sites
-│       ├── components/            # Reusable Astro components
-│       ├── layouts/               # Common layouts
-│       ├── styles/                # Shared CSS
-│       ├── utils/                 # Helper functions
-│       ├── types/                 # TypeScript types
-│       └── package.json
-│
-├── sanity/                        # Organized Sanity schemas
-│   ├── university/                # University-specific schemas
-│   ├── student/                   # Student-specific schemas
-│   ├── workplace/                 # Workplace-specific schemas
-│   └── shared/                    # Shared schemas (blogs, whitepapers)
-│
-└── package.json                   # Workspace root
+
+ sites/ # Individual marketing sites
+ university/ # mindmeasure.co.uk
+ src/
+ pages/ # Astro pages
+ components/ # University-specific components
+ layouts/
+ styles/
+ sanity/ # University Sanity schemas
+ public/ # Static assets
+ astro.config.mjs
+ package.json
+ 
+ student/ # mindmeasure.app
+ [same structure as university]
+ 
+ workplace/ # [2026] Mind Measure Pro
+ package.json (placeholder)
+
+ packages/
+ shared/ # Shared across all sites
+ components/ # Reusable Astro components
+ layouts/ # Common layouts
+ styles/ # Shared CSS
+ utils/ # Helper functions
+ types/ # TypeScript types
+ package.json
+
+ sanity/ # Organized Sanity schemas
+ university/ # University-specific schemas
+ student/ # Student-specific schemas
+ workplace/ # Workplace-specific schemas
+ shared/ # Shared schemas (blogs, whitepapers)
+
+ package.json # Workspace root
 ```
 
 ## Sites & Domains
 
 | Site | Domain | Audience | Status | Vercel Project |
 |------|--------|----------|--------|----------------|
-| **University** | mindmeasure.co.uk | Educational Institutions | ✅ Live | mindmeasure-uni |
-| **Student** | mindmeasure.app | Students | ✅ Live | mindmeasure-student |
-| **Workplace** | TBD | B2B/Enterprise | 🚧 2026 | TBD |
+| **University** | mindmeasure.co.uk | Educational Institutions | Live | mindmeasure-uni |
+| **Student** | mindmeasure.app | Students | Live | mindmeasure-student |
+| **Workplace** | TBD | B2B/Enterprise | 2026 | TBD |
 
 ## Tech Stack
 
@@ -84,21 +84,21 @@ mindmeasure-marketing/
 ## Key Features
 
 ### Current Features
-- ✅ Static site generation with Astro
-- ✅ Sanity CMS integration
-- ✅ Blog functionality
-- ✅ Responsive design
-- ✅ Component-based architecture
-- ✅ Independent deployments
+- Static site generation with Astro
+- Sanity CMS integration
+- Blog functionality
+- Responsive design
+- Component-based architecture
+- Independent deployments
 
 ### Planned Enhancements
-- 🚧 Unified contact form system
-- 🚧 Enhanced blog engine (SEO, scheduling, rich media)
-- 🚧 Whitepaper management system
-- 🚧 Figma → Code workflow
-- 🚧 Shared component library
-- 🚧 Newsletter integration
-- 🚧 Analytics tracking
+- Unified contact form system
+- Enhanced blog engine (SEO, scheduling, rich media)
+- Whitepaper management system
+- Figma → Code workflow
+- Shared component library
+- Newsletter integration
+- Analytics tracking
 
 ## Quick Start
 
@@ -109,13 +109,13 @@ mindmeasure-marketing/
 cd mindmeasure-marketing
 
 # Run a specific site
-npm run dev:university      # localhost:4321
-npm run dev:student         # localhost:4321
+npm run dev:university # localhost:4321
+npm run dev:student # localhost:4321
 
 # Build sites
 npm run build:university
 npm run build:student
-npm run build:all          # Build all sites
+npm run build:all # Build all sites
 
 # Generate Sanity types
 npm run generate:types
@@ -212,10 +212,6 @@ GOOGLE_ANALYTICS_ID=xxx
 
 ---
 
-**Last Updated**: December 16, 2024  
+**Last Updated**: December 16, 2024
 **Repository**: github.com/ColwallKeith/mindmeasure-marketing
-
-
-
-
 

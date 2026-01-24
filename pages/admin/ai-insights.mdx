@@ -6,9 +6,9 @@ Comprehensive guide to the AI-powered insights feature that transforms student w
 
 The AI Insights feature uses AWS Bedrock (Claude 3 Sonnet) to analyze aggregated student wellbeing data and generate comprehensive institutional reports. Instead of manually interpreting keywords and themes, university staff receive AI-generated analysis with specific patterns, affected cohorts, and actionable recommendations.
 
-**Deployment Date**: December 2025  
-**Status**: Production  
-**Location**: Admin Dashboard → Overview → Student Concerns & Positive Themes  
+**Deployment Date**: December 2025
+**Status**: Production
+**Location**: Admin Dashboard → Overview → Student Concerns & Positive Themes
 **Cost**: Approximately £12/month per university (1 daily analysis)
 
 ## Key Features
@@ -108,60 +108,60 @@ Types of support services that would help
 
 ### Backend API Endpoint
 
-**Location**: `/api/ai-insights/generate`  
-**Method**: POST  
+**Location**: `/api/ai-insights/generate`
+**Method**: POST
 **Authentication**: Admin credentials via session
 
 Request format:
 ```json
 {
-  "type": "concern" | "positive",
-  "data": [
-    {
-      "keyword": "overwhelmed",
-      "count": 187,
-      "severity": "high"
-    }
-  ],
-  "universityId": "worcester",
-  "timeRange": "30d"
+ "type": "concern" | "positive",
+ "data": [
+ {
+ "keyword": "overwhelmed",
+ "count": 187,
+ "severity": "high"
+ }
+ ],
+ "universityId": "worcester",
+ "timeRange": "30d"
 }
 ```
 
 Response format:
 ```json
 {
-  "insights": [
-    {
-      "themeName": "Academic Pressure & Time Management",
-      "summary": "Students are reporting...",
-      "studentCount": 287,
-      "severity": "high",
-      "keyPatterns": [
-        {
-          "pattern": "Multiple deadlines same week",
-          "percentage": 67
-        }
-      ],
-      "trendDirection": "increasing",
-      "trendPercentage": 23,
-      "affectedCohorts": ["First years", "STEM students"],
-      "recommendedActions": ["Review assessment scheduling..."],
-      "relatedResources": ["Academic Skills Workshops"]
-    }
-  ],
-  "generatedAt": "2025-12-15T10:30:00Z",
-  "analysisScope": {
-    "studentCount": 287,
-    "timeFrame": "30d"
-  }
+ "insights": [
+ {
+ "themeName": "Academic Pressure & Time Management",
+ "summary": "Students are reporting...",
+ "studentCount": 287,
+ "severity": "high",
+ "keyPatterns": [
+ {
+ "pattern": "Multiple deadlines same week",
+ "percentage": 67
+ }
+ ],
+ "trendDirection": "increasing",
+ "trendPercentage": 23,
+ "affectedCohorts": ["First years", "STEM students"],
+ "recommendedActions": ["Review assessment scheduling..."],
+ "relatedResources": ["Academic Skills Workshops"]
+ }
+ ],
+ "generatedAt": "2025-12-15T10:30:00Z",
+ "analysisScope": {
+ "studentCount": 287,
+ "timeFrame": "30d"
+ }
 }
 ```
 
 ### AWS Bedrock Integration
 
-**Model**: Claude 3 Sonnet (anthropic.claude-3-sonnet-20240229-v1:0)  
-**Region**: eu-west-2  
+**Model**: Claude 3 Sonnet (anthropic.claude-3-sonnet-20240229-v1:0)
+**Region**: eu-west-2
 **Authentication**: Server-side credentials (stored in Vercel environment variables)
 
 Key configuration:
@@ -240,7 +240,7 @@ Key configuration:
 
 ### "The security token included in the request is invalid"
 
-**Cause**: AWS credentials expired or incorrectly formatted  
+**Cause**: AWS credentials expired or incorrectly formatted
 **Solution**:
 1. Verify credentials in Vercel environment variables
 2. Check for extra spaces or newlines
@@ -249,7 +249,7 @@ Key configuration:
 
 ### "r.insights.map is not a function"
 
-**Cause**: API response structure mismatch  
+**Cause**: API response structure mismatch
 **Solution**:
 1. Check API returns `{ insights: [...] }` not `{ insights: { insights: [...] } }`
 2. Verify parseClaudeResponse returns correct structure
@@ -257,7 +257,7 @@ Key configuration:
 
 ### Modal shows "No significant insights generated"
 
-**Cause**: Claude returned empty or malformed JSON  
+**Cause**: Claude returned empty or malformed JSON
 **Solution**:
 1. Check Vercel function logs for Claude's raw response
 2. Verify prompt is constructed correctly
@@ -266,7 +266,7 @@ Key configuration:
 
 ### Analysis takes longer than 15 seconds
 
-**Cause**: Bedrock throttling or network latency  
+**Cause**: Bedrock throttling or network latency
 **Solution**:
 1. Check AWS Bedrock quotas for eu-west-2
 2. Request quota increase if hitting limits
@@ -275,7 +275,7 @@ Key configuration:
 
 ### S3 uploads fail alongside AI Insights
 
-**Cause**: Shared AWS credentials expired  
+**Cause**: Shared AWS credentials expired
 **Solution**:
 1. Update AWS credentials in Vercel (both projects share same credentials)
 2. Test S3 uploads after fixing AI Insights

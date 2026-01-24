@@ -7,341 +7,363 @@ Operational procedures and common tasks for managing the Mind Measure Core platf
 ### Onboard a University
 
 - **Create Institution Record**
-   ```sql
-   INSERT INTO institutions (name, slug) 
-   VALUES ('University Name', 'university-slug');
-   ```
+ ```sql
+ INSERT INTO institutions (name, slug)
+ VALUES ('University Name', 'university-slug');
+ ```
 
 - **Configure Allowed Domains**
-   ```sql
-   INSERT INTO allowed_domains (institution_id, domain) 
-   VALUES (institution_id, 'university.edu');
-   ```
+ ```sql
+ INSERT INTO allowed_domains (institution_id, domain)
+ VALUES (institution_id, 'university.edu');
+ ```
 
 - **Set Up Admin User**
-   ```sql
-   INSERT INTO memberships (user_id, institution_id, role) 
-   VALUES (admin_user_id, institution_id, 'admin');
-   ```
+ ```sql
+ INSERT INTO memberships (user_id, institution_id, role)
+ VALUES (admin_user_id, institution_id, 'admin');
+ ```
 
 - **Configure Institution Settings**
-   - Upload institution branding
-   - Set up mental health resources
-   - Configure assessment parameters
-   - Set up notification preferences
+ - Upload institution branding
+ - Set up mental health resources
+ - Configure assessment parameters
+ - Set up notification preferences
 
 ### Promote a User to Admin
 
 - **Verify User Identity**
-   ```sql
-   SELECT id, email FROM auth.users WHERE email = 'user@university.edu';
-   ```
+ ```sql
+ -- Query Cognito user via AWS CLI or application code
+ -- Or check profiles table:
+ SELECT id, user_id, display_name FROM profiles
+ WHERE display_name LIKE '%user@university.edu%';
+ ```
 
 - **Update Membership Role**
-   ```sql
-   UPDATE memberships 
-   SET role = 'admin' 
-   WHERE user_id = user_id AND institution_id = institution_id;
-   ```
+ ```sql
+ UPDATE memberships
+ SET role = 'admin'
+ WHERE user_id = user_id AND institution_id = institution_id;
+ ```
 
 - **Grant Additional Permissions**
-   - Access to user management
-   - Resource management capabilities
-   - Reporting and analytics access
-   - System configuration rights
+ - Access to user management
+ - Resource management capabilities
+ - Reporting and analytics access
+ - System configuration rights
 
 - **Notify User**
-   - Send email confirmation
-   - Provide admin dashboard access
-   - Share admin documentation
-   - Schedule training if needed
+ - Send email confirmation
+ - Provide admin dashboard access
+ - Share admin documentation
+ - Schedule training if needed
 
 ### Promote a User to Superadmin
 
 - **Verify Superuser Authority**
-   - Confirm authorization from system administrator
-   - Document promotion reason
-   - Update audit logs
+ - Confirm authorisation from system administrator
+ - Document promotion reason
+ - Update audit logs
 
 - **Execute Promotion Function**
-   ```sql
-   SELECT make_superuser_by_email('admin@mindmeasure.co.uk');
-   ```
+ ```sql
+ SELECT make_superuser_by_email('admin@mindmeasure.co.uk');
+ ```
 
 - **Verify Permissions**
-   ```sql
-   SELECT * FROM memberships WHERE user_id = user_id AND role = 'superadmin';
-   ```
+ ```sql
+ SELECT * FROM memberships WHERE user_id = user_id AND role = 'superadmin';
+ ```
 
 - **Update Documentation**
-   - Record in admin user list
-   - Update contact information
-   - Notify other superadmins
+ - Record in admin user list
+ - Update contact information
+ - Notify other superadmins
 
 ## System Administration
 
 ### Rotate Keys
 
 - **Generate New Keys**
-   ```bash
-   # Generate new JWT secret
-   openssl rand -base64 32
-   
-   # Generate new service role key
-   supabase gen keys
-   ```
+ ```bash
+ # Generate new JWT secret (if using custom JWT)
+ openssl rand -base64 32
+ 
+ # Rotate Aurora database password
+ aws rds modify-db-cluster \
+ --db-cluster-identifier mindmeasure-aurora \
+ --master-user-password "new-secure-password" \
+ --apply-immediately \
+ --region eu-west-2
+ ```
 
 - **Update Environment Variables**
-   ```bash
-   # Update production environment
-   SUPABASE_JWT_SECRET=new_jwt_secret
-   SUPABASE_SERVICE_ROLE_KEY=new_service_key
-   ```
+ ```bash
+ # Update Aurora credentials in AWS Secrets Manager
+ aws secretsmanager update-secret \
+ --secret-id aurora-credentials \
+ --secret-string '{"username":"mindmeasure_admin","password":"new-password"}' \
+ --region eu-west-2
+ 
+ # Update Vercel environment variables
+ vercel env add DB_PASSWORD production
+ ```
 
 - **Restart Services**
-   ```bash
-   # Restart Supabase services
-   supabase restart
-   
-   # Restart application servers
-   npm run restart:prod
-   ```
+ ```bash
+ # Lambda functions auto-update on next invocation
+ # Vercel functions restart automatically
+ # Aurora connection pool refreshes automatically
+ 
+ # Force Lambda refresh (if needed)
+ aws lambda update-function-configuration \
+ --function-name CheckInStartLambda \
+ --environment Variables={DB_PASSWORD=new-password} \
+ --region eu-west-2
+ ```
 
 - **Verify Functionality**
-   - Test authentication
-   - Verify API access
-   - Check admin dashboard
-   - Monitor error logs
+ - Test authentication
+ - Verify API access
+ - Check admin dashboard
+ - Monitor error logs
 
 ### Database Maintenance
 
 - **Run Database Vacuum**
-   ```sql
-   VACUUM ANALYZE;
-   ```
+ ```sql
+ VACUUM ANALYZE;
+ ```
 
 - **Check Index Usage**
-   ```sql
-   SELECT schemaname, tablename, attname, n_distinct, correlation
-   FROM pg_stats
-   WHERE schemaname = 'public'
-   ORDER BY tablename, attname;
-   ```
+ ```sql
+ SELECT schemaname, tablename, attname, n_distinct, correlation
+ FROM pg_stats
+ WHERE schemaname = 'public'
+ ORDER BY tablename, attname;
+ ```
 
 - **Monitor Query Performance**
-   ```sql
-   SELECT query, calls, total_time, mean_time
-   FROM pg_stat_statements
-   ORDER BY total_time DESC
-   LIMIT 10;
-   ```
+ ```sql
+ SELECT query, calls, total_time, mean_time
+ FROM pg_stat_statements
+ ORDER BY total_time DESC
+ LIMIT 10;
+ ```
 
 - **Update Statistics**
-   ```sql
-   ANALYZE;
-   ```
+ ```sql
+ ANALYZE;
+ ```
 
 ### Backup and Recovery
 
 - **Create Manual Backup**
-   ```bash
-   # Create database dump
-   pg_dump -h db_host -U postgres -d mind_measure > backup_$(date +%Y%m%d).sql
-   ```
+ ```bash
+ # Create database dump
+ pg_dump -h db_host -U postgres -d mind_measure > backup_$(date +%Y%m%d).sql
+ ```
 
 - **Verify Backup Integrity**
-   ```bash
-   # Test backup restoration
-   psql -h test_host -U postgres -d test_db < backup_file.sql
-   ```
+ ```bash
+ # Test backup restoration
+ psql -h test_host -U postgres -d test_db < backup_file.sql
+ ```
 
 - **Test Recovery Procedure**
-   - Simulate data loss scenario
-   - Restore from backup
-   - Verify data integrity
-   - Update recovery documentation
+ - Simulate data loss scenario
+ - Restore from backup
+ - Verify data integrity
+ - Update recovery documentation
 
 ## Security Operations
 
 ### Incident Response
 
 - **Initial Assessment**
-   - Identify security incident type
-   - Assess potential impact
-   - Document initial findings
-   - Notify relevant stakeholders
+ - Identify security incident type
+ - Assess potential impact
+ - Document initial findings
+ - Notify relevant stakeholders
 
 - **Containment**
-   - Isolate affected systems
-   - Preserve evidence
-   - Prevent further damage
-   - Implement temporary fixes
+ - Isolate affected systems
+ - Preserve evidence
+ - Prevent further damage
+ - Implement temporary fixes
 
 - **Investigation**
-   - Analyze logs and data
-   - Identify attack vectors
-   - Determine scope of compromise
-   - Document findings
+ - Analyze logs and data
+ - Identify attack vectors
+ - Determine scope of compromise
+ - Document findings
 
 - **Recovery**
-   - Restore systems from clean backups
-   - Implement security patches
-   - Update security configurations
-   - Monitor for recurring issues
+ - Restore systems from clean backups
+ - Implement security patches
+ - Update security configurations
+ - Monitor for recurring issues
 
 - **Post-Incident**
-   - Conduct lessons learned review
-   - Update security procedures
-   - Implement additional safeguards
-   - Report to relevant authorities
+ - Conduct lessons learned review
+ - Update security procedures
+ - Implement additional safeguards
+ - Report to relevant authorities
 
 ### Access Review
 
 - **User Access Audit**
-   ```sql
-   SELECT u.email, m.role, i.name as institution
-   FROM auth.users u
-   JOIN memberships m ON u.id = m.user_id
-   JOIN institutions i ON m.institution_id = i.id
-   ORDER BY i.name, m.role;
-   ```
+ ```sql
+ -- Query profiles and memberships
+ SELECT p.display_name, p.user_id, m.role, i.name as institution
+ FROM profiles p
+ JOIN memberships m ON p.user_id = m.user_id
+ JOIN institutions i ON m.institution_id = i.id
+ ORDER BY i.name, m.role;
+ 
+ -- Or via AWS Cognito (using AWS CLI)
+ aws cognito-idp list-users \
+ --user-pool-id eu-west-2_ClAG4fQXR \
+ --region eu-west-2
+ ```
 
 - **Permission Validation**
-   - Review user roles and permissions
-   - Verify access appropriateness
-   - Document access decisions
-   - Update access controls
+ - Review user roles and permissions
+ - Verify access appropriateness
+ - Document access decisions
+ - Update access controls
 
 - **Clean Up**
-   - Remove inactive users
-   - Revoke unnecessary permissions
-   - Update role assignments
-   - Document changes
+ - Remove inactive users
+ - Revoke unnecessary permissions
+ - Update role assignments
+ - Document changes
 
 ## Monitoring and Alerting
 
 ### Health Checks
 
 - **Database Health**
-   ```sql
-   SELECT 
-     pg_database_size('mind_measure') as db_size,
-     (SELECT count(*) FROM pg_stat_activity) as active_connections,
-     (SELECT count(*) FROM pg_stat_activity WHERE state = 'active') as active_queries;
-   ```
+ ```sql
+ SELECT
+ pg_database_size('mind_measure') as db_size,
+ (SELECT count(*) FROM pg_stat_activity) as active_connections,
+ (SELECT count(*) FROM pg_stat_activity WHERE state = 'active') as active_queries;
+ ```
 
 - **Application Health**
-   - Check API response times
-   - Monitor error rates
-   - Verify authentication flows
-   - Test critical user journeys
+ - Check API response times
+ - Monitor error rates
+ - Verify authentication flows
+ - Test critical user journeys
 
 - **Infrastructure Health**
-   - Server resource utilization
-   - Network connectivity
-   - Storage capacity
-   - Backup status
+ - Server resource utilization
+ - Network connectivity
+ - Storage capacity
+ - Backup status
 
 ### Alert Configuration
 
 - **Critical Alerts**
-   - Database connection failures
-   - Authentication system down
-   - High error rates
-   - Security incidents
+ - Database connection failures
+ - Authentication system down
+ - High error rates
+ - Security incidents
 
 - **Warning Alerts**
-   - High resource utilization
-   - Slow query performance
-   - Backup failures
-   - Unusual access patterns
+ - High resource utilization
+ - Slow query performance
+ - Backup failures
+ - Unusual access patterns
 
 - **Info Alerts**
-   - Successful deployments
-   - Scheduled maintenance
-   - User activity summaries
-   - System updates
+ - Successful deployments
+ - Scheduled maintenance
+ - User activity summaries
+ - System updates
 
 ## Deployment Procedures
 
 ### Production Deployment
 
 - **Pre-Deployment**
-   - Run full test suite
-   - Verify staging environment
-   - Review change documentation
-   - Notify stakeholders
+ - Run full test suite
+ - Verify staging environment
+ - Review change documentation
+ - Notify stakeholders
 
 - **Deployment**
-   - Deploy to production
-   - Monitor deployment logs
-   - Verify functionality
-   - Check error rates
+ - Deploy to production
+ - Monitor deployment logs
+ - Verify functionality
+ - Check error rates
 
 - **Post-Deployment**
-   - Monitor system health
-   - Verify user functionality
-   - Check performance metrics
-   - Document any issues
+ - Monitor system health
+ - Verify user functionality
+ - Check performance metrics
+ - Document any issues
 
 ### Rollback Procedures
 
 - **Identify Rollback Need**
-   - Monitor error rates
-   - Check user reports
-   - Review system logs
-   - Assess impact
+ - Monitor error rates
+ - Check user reports
+ - Review system logs
+ - Assess impact
 
 - **Execute Rollback**
-   - Revert to previous version
-   - Restore database if needed
-   - Verify system stability
-   - Notify users if necessary
+ - Revert to previous version
+ - Restore database if needed
+ - Verify system stability
+ - Notify users if necessary
 
 - **Post-Rollback**
-   - Investigate root cause
-   - Plan fix for next deployment
-   - Update procedures
-   - Document lessons learned
+ - Investigate root cause
+ - Plan fix for next deployment
+ - Update procedures
+ - Document lessons learned
 
 ## Compliance and Auditing
 
 ### Data Privacy Compliance
 
 - **GDPR Compliance**
-   - Data subject access requests
-   - Right to deletion
-   - Data portability
-   - Consent management
+ - Data subject access requests
+ - Right to deletion
+ - Data portability
+ - Consent management
 
 - **HIPAA Compliance**
-   - Protected health information handling
-   - Access controls
-   - Audit trails
-   - Breach notification
+ - Protected health information handling
+ - Access controls
+ - Audit trails
+ - Breach notification
 
 - **Institutional Privacy**
-   - Student data protection
-   - FERPA compliance
-   - Institutional policies
-   - Data retention policies
+ - Student data protection
+ - FERPA compliance
+ - Institutional policies
+ - Data retention policies
 
 ### Audit Procedures
 
 - **Regular Audits**
-   - User access reviews
-   - Data usage audits
-   - Security configuration reviews
-   - Compliance assessments
+ - User access reviews
+ - Data usage audits
+ - Security configuration reviews
+ - Compliance assessments
 
 - **Audit Documentation**
-   - Audit findings
-   - Remediation plans
-   - Compliance status
-   - Improvement recommendations
+ - Audit findings
+ - Remediation plans
+ - Compliance status
+ - Improvement recommendations
 
 - **Audit Follow-up**
-   - Implement recommendations
-   - Monitor compliance
-   - Update procedures
-   - Schedule next audit
+ - Implement recommendations
+ - Monitor compliance
+ - Update procedures
+ - Schedule next audit

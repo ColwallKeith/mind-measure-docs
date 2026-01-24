@@ -49,7 +49,7 @@ cp apps/admin/.env.example apps/admin/.env
 cp apps/mobile/.env.example apps/mobile/.env
 
 # Start local development
-npm run dev:admin  # or npm run dev:mobile
+npm run dev:admin # or npm run dev:mobile
 ```
 
 ### Development Workflow
@@ -91,16 +91,16 @@ Follow conventional commits format:
 ```typescript
 // Use explicit types for function parameters and returns
 interface UserProfile {
-  id: string;
-  email: string;
-  institutionId?: string;
+ id: string;
+ email: string;
+ institutionId?: string;
 }
 
 const updateProfile = async (
-  userId: string, 
-  updates: Partial<UserProfile>
+ userId: string,
+ updates: Partial<UserProfile>
 ): Promise<UserProfile> => {
-  // Implementation
+ // Implementation
 };
 
 // Use strict null checks
@@ -111,24 +111,24 @@ const userName = user?.profile?.name ?? 'Unknown User';
 ```typescript
 // Use function components with TypeScript
 interface ButtonProps {
-  variant: 'primary' | 'secondary';
-  children: React.ReactNode;
-  onClick: () => void;
+ variant: 'primary' | 'secondary';
+ children: React.ReactNode;
+ onClick: () => void;
 }
 
-export const Button: React.FC<ButtonProps> = ({ 
-  variant, 
-  children, 
-  onClick 
+export const Button: React.FC<ButtonProps> = ({
+ variant,
+ children,
+ onClick
 }) => {
-  return (
-    <button 
-      className={`btn btn-${variant}`}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  );
+ return (
+ <button
+ className={`btn btn-${variant}`}
+ onClick={onClick}
+ >
+ {children}
+ </button>
+ );
 };
 ```
 
@@ -136,25 +136,25 @@ export const Button: React.FC<ButtonProps> = ({
 ```css
 /* Use Mind Measure brand colors from design system */
 :root {
-  --color-primary: #2563eb;
-  --color-secondary: #7c3aed;
-  --color-accent: #f59e0b;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
+ --color-primary: #2563eb;
+ --color-secondary: #7c3aed;
+ --color-accent: #f59e0b;
+ --color-success: #10b981;
+ --color-warning: #f59e0b;
+ --color-error: #ef4444;
 }
 
 /* Follow BEM naming convention for custom classes */
 .dashboard-card {
-  /* Block */
+ /* Block */
 }
 
 .dashboard-card__header {
-  /* Element */
+ /* Element */
 }
 
 .dashboard-card--featured {
-  /* Modifier */
+ /* Modifier */
 }
 ```
 
@@ -167,46 +167,46 @@ Lambda functions are the core of our serverless backend processing.
 import { APIGatewayProxyHandler } from 'aws-lambda';
 
 export const handler: APIGatewayProxyHandler = async (event) => {
-  try {
-    // Parse request body
-    const body = event.body ? JSON.parse(event.body) : {};
-    
-    // Get user from Cognito authorizer
-    const userId = event.requestContext.authorizer?.claims?.sub;
-    
-    if (!userId) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: 'Unauthorized' })
-      };
-    }
-    
-    // Process request
-    const result = await processRequest(body, userId);
-    
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: JSON.stringify(result)
-    };
-  } catch (error) {
-    console.error('Lambda error:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      })
-    };
-  }
+ try {
+ // Parse request body
+ const body = event.body ? JSON.parse(event.body) : {};
+ 
+ // Get user from Cognito authorizer
+ const userId = event.requestContext.authorizer?.claims?.sub;
+ 
+ if (!userId) {
+ return {
+ statusCode: 401,
+ body: JSON.stringify({ error: 'Unauthorized' })
+ };
+ }
+ 
+ // Process request
+ const result = await processRequest(body, userId);
+ 
+ return {
+ statusCode: 200,
+ headers: {
+ 'Content-Type': 'application/json',
+ 'Access-Control-Allow-Origin': '*'
+ },
+ body: JSON.stringify(result)
+ };
+ } catch (error) {
+ console.error('Lambda error:', error);
+ return {
+ statusCode: 500,
+ body: JSON.stringify({
+ error: 'Internal server error',
+ message: error instanceof Error ? error.message : 'Unknown error'
+ })
+ };
+ }
 };
 
 async function processRequest(data: any, userId: string) {
-  // Your business logic here
-  return { success: true, data };
+ // Your business logic here
+ return { success: true, data };
 }
 ```
 
@@ -220,35 +220,35 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { Pool } from 'pg';
 
 const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  ssl: { rejectUnauthorized: false }
+ host: process.env.DB_HOST,
+ port: parseInt(process.env.DB_PORT || '5432'),
+ database: process.env.DB_NAME,
+ user: process.env.DB_USER,
+ password: process.env.DB_PASSWORD,
+ ssl: { rejectUnauthorized: false }
 });
 
 export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
+ req: NextApiRequest,
+ res: NextApiResponse
 ) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-  
-  try {
-    const { table, limit = 10 } = req.body;
-    
-    const result = await pool.query(
-      `SELECT * FROM ${table} LIMIT $1`,
-      [limit]
-    );
-    
-    res.status(200).json({ data: result.rows });
-  } catch (error) {
-    console.error('API error:', error);
-    res.status(500).json({ error: 'Database query failed' });
-  }
+ if (req.method !== 'POST') {
+ return res.status(405).json({ error: 'Method not allowed' });
+ }
+ 
+ try {
+ const { table, limit = 10 } = req.body;
+ 
+ const result = await pool.query(
+ `SELECT * FROM ${table} LIMIT $1`,
+ [limit]
+ );
+ 
+ res.status(200).json({ data: result.rows });
+ } catch (error) {
+ console.error('API error:', error);
+ res.status(500).json({ error: 'Database query failed' });
+ }
 }
 ```
 
@@ -285,17 +285,17 @@ import { render, screen } from '@testing-library/react';
 import { Button } from './Button';
 
 describe('Button Component', () => {
-  it('renders with correct text', () => {
-    render(<Button variant="primary" onClick={() => {}}>Click me</Button>);
-    expect(screen.getByText('Click me')).toBeInTheDocument();
-  });
+ it('renders with correct text', () => {
+ render(<Button variant="primary" onClick={() => {}}>Click me</Button>);
+ expect(screen.getByText('Click me')).toBeInTheDocument();
+ });
 
-  it('calls onClick when clicked', () => {
-    const handleClick = jest.fn();
-    render(<Button variant="primary" onClick={handleClick}>Click me</Button>);
-    screen.getByText('Click me').click();
-    expect(handleClick).toHaveBeenCalledTimes(1);
-  });
+ it('calls onClick when clicked', () => {
+ const handleClick = jest.fn();
+ render(<Button variant="primary" onClick={handleClick}>Click me</Button>);
+ screen.getByText('Click me').click();
+ expect(handleClick).toHaveBeenCalledTimes(1);
+ });
 });
 ```
 
@@ -319,18 +319,18 @@ describe('Button Component', () => {
 import { ElevenLabsApi } from 'elevenlabs';
 
 const elevenlabs = new ElevenLabsApi({
-  apiKey: process.env.ELEVENLABS_API_KEY,
+ apiKey: process.env.ELEVENLABS_API_KEY,
 });
 
 // Voice synthesis
 const synthesizeVoice = async (text: string, voiceId: string) => {
-  const audio = await elevenlabs.generate({
-    voice: voiceId,
-    text: text,
-    model_id: "eleven_monolingual_v1"
-  });
-  
-  return audio;
+ const audio = await elevenlabs.generate({
+ voice: voiceId,
+ text: text,
+ model_id: "eleven_monolingual_v1"
+ });
+ 
+ return audio;
 };
 ```
 
@@ -357,30 +357,30 @@ const synthesizeVoice = async (text: string, voiceId: string) => {
 ```typescript
 // Standardized API client pattern
 class ApiClient {
-  private baseUrl: string;
-  private apiKey: string;
+ private baseUrl: string;
+ private apiKey: string;
 
-  constructor(baseUrl: string, apiKey: string) {
-    this.baseUrl = baseUrl;
-    this.apiKey = apiKey;
-  }
+ constructor(baseUrl: string, apiKey: string) {
+ this.baseUrl = baseUrl;
+ this.apiKey = apiKey;
+ }
 
-  async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
+ async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+ const response = await fetch(`${this.baseUrl}${endpoint}`, {
+ ...options,
+ headers: {
+ 'Authorization': `Bearer ${this.apiKey}`,
+ 'Content-Type': 'application/json',
+ ...options.headers,
+ },
+ });
 
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.statusText}`);
-    }
+ if (!response.ok) {
+ throw new Error(`API Error: ${response.statusText}`);
+ }
 
-    return response.json();
-  }
+ return response.json();
+ }
 }
 ```
 
@@ -394,35 +394,35 @@ class ApiClient {
 const DEBUG = process.env.NODE_ENV === 'development';
 
 export const debugLog = (message: string, data?: any) => {
-  if (DEBUG) {
-    console.log(`[DEBUG] ${message}`, data);
-  }
+ if (DEBUG) {
+ console.log(`[DEBUG] ${message}`, data);
+ }
 };
 
 // Error boundary for development
 export class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
+ constructor(props) {
+ super(props);
+ this.state = { hasError: false };
+ }
 
-  static getDerivedStateFromError(error) {
-    return { hasError: true };
-  }
+ static getDerivedStateFromError(error) {
+ return { hasError: true };
+ }
 
-  componentDidCatch(error, errorInfo) {
-    if (DEBUG) {
-      console.error('Error Boundary caught an error:', error, errorInfo);
-    }
-  }
+ componentDidCatch(error, errorInfo) {
+ if (DEBUG) {
+ console.error('Error Boundary caught an error:', error, errorInfo);
+ }
+ }
 
-  render() {
-    if (this.state.hasError) {
-      return <div>Something went wrong. Check console for details.</div>;
-    }
+ render() {
+ if (this.state.hasError) {
+ return <div>Something went wrong. Check console for details.</div>;
+ }
 
-    return this.props.children;
-  }
+ return this.props.children;
+ }
 }
 ```
 
@@ -432,16 +432,16 @@ export class ErrorBoundary extends React.Component {
 import * as Sentry from '@sentry/react';
 
 Sentry.init({
-  dsn: process.env.SENTRY_DSN,
-  environment: process.env.NODE_ENV,
+ dsn: process.env.SENTRY_DSN,
+ environment: process.env.NODE_ENV,
 });
 
 // Performance monitoring
 export const trackPerformance = (name: string, fn: () => Promise<any>) => {
-  const transaction = Sentry.startTransaction({ name });
-  
-  return fn()
-    .finally(() => transaction.finish());
+ const transaction = Sentry.startTransaction({ name });
+ 
+ return fn()
+ .finally(() => transaction.finish());
 };
 ```
 
@@ -453,15 +453,15 @@ export const trackPerformance = (name: string, fn: () => Promise<any>) => {
 -- Migration: YYYY-MM-DD-HHMMSS_migration_name.sql
 
 -- Add new column with default value
-ALTER TABLE profiles 
+ALTER TABLE profiles
 ADD COLUMN new_field VARCHAR(255) DEFAULT 'default_value';
 
 -- Create index for performance
 CREATE INDEX idx_profiles_new_field ON profiles(new_field);
 
 -- Update existing data if needed
-UPDATE profiles 
-SET new_field = 'updated_value' 
+UPDATE profiles
+SET new_field = 'updated_value'
 WHERE condition = true;
 ```
 
@@ -469,27 +469,27 @@ WHERE condition = true;
 ```typescript
 // Version migration helper
 interface MigrationScript {
-  version: string;
-  description: string;
-  up: () => Promise<void>;
-  down: () => Promise<void>;
+ version: string;
+ description: string;
+ up: () => Promise<void>;
+ down: () => Promise<void>;
 }
 
 const migrations: MigrationScript[] = [
-  {
-    version: '1.1.0',
-    description: 'Add user preferences table',
-    up: async () => {
-      // Forward migration
-    },
-    down: async () => {
-      // Rollback migration
-    }
-  }
+ {
+ version: '1.1.0',
+ description: 'Add user preferences table',
+ up: async () => {
+ // Forward migration
+ },
+ down: async () => {
+ // Rollback migration
+ }
+ }
 ];
 
 export const runMigrations = async (targetVersion: string) => {
-  // Migration execution logic
+ // Migration execution logic
 };
 ```
 
@@ -497,7 +497,7 @@ export const runMigrations = async (targetVersion: string) => {
 
 #### British English Spelling
 - **Colour** not Color
-- **Centre** not Center  
+- **Centre** not Center
 - **Realise** not Realize
 - **Organisation** not Organisation
 - **Behaviour** not Behavior
@@ -506,15 +506,15 @@ export const runMigrations = async (targetVersion: string) => {
 ```typescript
 // Localization helper
 const text = {
-  en_GB: {
-    'welcome.message': 'Welcome to Mind Measure',
-    'colour.primary': 'Primary Colour',
-    'organisation.settings': 'Organisation Settings',
-  }
+ en_GB: {
+ 'welcome.message': 'Welcome to Mind Measure',
+ 'colour.primary': 'Primary Colour',
+ 'organisation.settings': 'Organisation Settings',
+ }
 };
 
 export const t = (key: string, locale: string = 'en_GB') => {
-  return text[locale]?.[key] || key;
+ return text[locale]?.[key] || key;
 };
 ```
 
@@ -561,13 +561,13 @@ If UI changes, include before/after screenshots.
 import { z } from 'zod';
 
 const UserProfileSchema = z.object({
-  name: z.string().min(1).max(100),
-  email: z.string().email(),
-  institutionId: z.string().uuid().optional(),
+ name: z.string().min(1).max(100),
+ email: z.string().email(),
+ institutionId: z.string().uuid().optional(),
 });
 
 export const validateUserProfile = (data: unknown) => {
-  return UserProfileSchema.parse(data);
+ return UserProfileSchema.parse(data);
 };
 ```
 

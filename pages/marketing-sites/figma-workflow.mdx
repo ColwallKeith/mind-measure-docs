@@ -43,9 +43,9 @@ Designer creates component:
 **Naming Convention:**
 ```
 assets/images/
-  hero-university-desktop.webp (1920px)
-  hero-university-tablet.webp (1024px)
-  hero-university-mobile.webp (768px)
+ hero-university-desktop.webp (1920px)
+ hero-university-tablet.webp (1024px)
+ hero-university-mobile.webp (768px)
 ```
 
 ### Step 3: Code Conversion
@@ -68,10 +68,10 @@ assets/images/
 1. **Open Dev Mode** in Figma
 2. **Select Element** to inspect
 3. **View CSS Properties**:
-   - Spacing (padding, margin)
-   - Colors (fill, stroke)
-   - Typography (font, size, weight)
-   - Effects (shadows, blur)
+ - Spacing (padding, margin)
+ - Colors (fill, stroke)
+ - Typography (font, size, weight)
+ - Effects (shadows, blur)
 4. **Map to Tailwind** classes
 5. **Code Astro Component**
 
@@ -122,57 +122,57 @@ px-8 py-6 bg-blue-600 rounded-lg font-bold text-base
 ---
 // packages/shared/components/HeroSection.astro
 interface Props {
-  title: string;
-  description: string;
-  image: string;
-  cta?: {
-    text: string;
-    href: string;
-  };
-  variant?: 'university' | 'student' | 'workplace';
+ title: string;
+ description: string;
+ image: string;
+ cta?: {
+ text: string;
+ href: string;
+ };
+ variant?: 'university' | 'student' | 'workplace';
 }
 
 const { title, description, image, cta, variant = 'university' } = Astro.props;
 ---
 
 <section class="hero-section" data-variant={variant}>
-  <div class="container">
-    <div class="hero-content">
-      <h1 class="hero-title">{title}</h1>
-      <p class="hero-description">{description}</p>
-      {cta && (
-        <a href={cta.href} class="hero-cta">
-          {cta.text}
-        </a>
-      )}
-    </div>
-    <div class="hero-image">
-      <img src={image} alt={title} loading="eager" />
-    </div>
-  </div>
+ <div class="container">
+ <div class="hero-content">
+ <h1 class="hero-title">{title}</h1>
+ <p class="hero-description">{description}</p>
+ {cta && (
+ <a href={cta.href} class="hero-cta">
+ {cta.text}
+ </a>
+ )}
+ </div>
+ <div class="hero-image">
+ <img src={image} alt={title} loading="eager" />
+ </div>
+ </div>
 </section>
 
 <style>
-  .hero-section {
-    @apply py-20 md:py-32;
-  }
-  
-  .hero-content {
-    @apply max-w-2xl;
-  }
-  
-  .hero-title {
-    @apply text-4xl md:text-6xl font-bold mb-6;
-  }
-  
-  /* Variant-specific styles */
-  [data-variant='university'] {
-    @apply bg-blue-50;
-  }
-  
-  [data-variant='student'] {
-    @apply bg-purple-50;
-  }
+ .hero-section {
+ @apply py-20 md:py-32;
+ }
+ 
+ .hero-content {
+ @apply max-w-2xl;
+ }
+ 
+ .hero-title {
+ @apply text-4xl md:text-6xl font-bold mb-6;
+ }
+ 
+ /* Variant-specific styles */
+ [data-variant='university'] {
+ @apply bg-blue-50;
+ }
+ 
+ [data-variant='student'] {
+ @apply bg-purple-50;
+ }
 </style>
 ```
 
@@ -185,33 +185,33 @@ Map Figma tokens to Tailwind configuration:
 ```typescript
 // tailwind.config.ts
 export default {
-  theme: {
-    extend: {
-      colors: {
-        primary: {
-          50: '#f0f9ff',
-          600: '#0284c7', // Primary brand color
-        },
-        university: '#0066CC',
-        student: '#8B5CF6',
-        workplace: '#059669',
-      },
-      fontFamily: {
-        sans: ['Geist', 'system-ui', 'sans-serif'],
-        display: ['Chillax', 'sans-serif'],
-        mono: ['PP Mori', 'monospace'],
-      },
-      fontSize: {
-        'display-1': ['4rem', { lineHeight: '1.1', fontWeight: '700' }],
-        'display-2': ['3rem', { lineHeight: '1.2', fontWeight: '700' }],
-        'heading-1': ['2.5rem', { lineHeight: '1.2', fontWeight: '600' }],
-      },
-      spacing: {
-        '18': '4.5rem',
-        '22': '5.5rem',
-      },
-    },
-  },
+ theme: {
+ extend: {
+ colors: {
+ primary: {
+ 50: '#f0f9ff',
+ 600: '#0284c7', // Primary brand color
+ },
+ university: '#0066CC',
+ student: '#8B5CF6',
+ workplace: '#059669',
+ },
+ fontFamily: {
+ sans: ['Geist', 'system-ui', 'sans-serif'],
+ display: ['Chillax', 'sans-serif'],
+ mono: ['PP Mori', 'monospace'],
+ },
+ fontSize: {
+ 'display-1': ['4rem', { lineHeight: '1.1', fontWeight: '700' }],
+ 'display-2': ['3rem', { lineHeight: '1.2', fontWeight: '700' }],
+ 'heading-1': ['2.5rem', { lineHeight: '1.2', fontWeight: '600' }],
+ },
+ spacing: {
+ '18': '4.5rem',
+ '22': '5.5rem',
+ },
+ },
+ },
 };
 ```
 
@@ -290,10 +290,10 @@ export default {
 - Target Site: University / Student / Workplace
 - URL Path: /about-us
 - Components Needed:
-  - Hero Section (reuse existing)
-  - Text + Image Section (new)
-  - Testimonials Grid (reuse)
-  - CTA Section (reuse)
+ - Hero Section (reuse existing)
+ - Text + Image Section (new)
+ - Testimonials Grid (reuse)
+ - CTA Section (reuse)
 
 ### New Components to Build
 1. TextImageSection - estimated 1 hour
@@ -336,10 +336,6 @@ export default {
 
 ---
 
-**Status**: Active  
+**Status**: Active
 **Last Updated**: December 16, 2024
-
-
-
-
 

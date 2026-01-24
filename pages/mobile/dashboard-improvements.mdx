@@ -54,14 +54,14 @@ Main container handling swipe gestures and card transitions.
 
 ```typescript
 interface SwipeableScoreCardProps {
-  latestScore: number | null;
-  latestSession: SessionData | null;
-  baselineScore: number | null;
-  trendData: {
-    last7CheckIns: Array<{score: number, date: string}>;
-    last30Days: Array<{score: number, date: string}>;
-  };
-  userCreatedAt: string;
+ latestScore: number | null;
+ latestSession: SessionData | null;
+ baselineScore: number | null;
+ trendData: {
+ last7CheckIns: Array<{score: number, date: string}>;
+ last30Days: Array<{score: number, date: string}>;
+ };
+ userCreatedAt: string;
 }
 ```
 
@@ -126,34 +126,34 @@ Shows bar chart for the last 30 days of check-ins.
 **7-Day Data:**
 ```typescript
 const prepare7DayData = (sessions: SessionData[], baselineScore: number) => {
-  const last7Days = getLast7Days();
-  return last7Days.map(date => {
-    const session = sessions.find(s => 
-      isSameDay(new Date(s.created_at), date)
-    );
-    return {
-      date,
-      score: session?.final_score || null,
-      hasCheckIn: !!session
-    };
-  });
+ const last7Days = getLast7Days();
+ return last7Days.map(date => {
+ const session = sessions.find(s =>
+ isSameDay(new Date(s.created_at), date)
+ );
+ return {
+ date,
+ score: session?.final_score || null,
+ hasCheckIn: !!session
+ };
+ });
 };
 ```
 
 **30-Day Data:**
 ```typescript
 const prepare30DayData = (sessions: SessionData[], baselineScore: number) => {
-  const last30Days = getLast30Days();
-  return last30Days.map(date => {
-    const session = sessions.find(s => 
-      isSameDay(new Date(s.created_at), date)
-    );
-    return {
-      date,
-      score: session?.final_score || null,
-      hasCheckIn: !!session
-    };
-  });
+ const last30Days = getLast30Days();
+ return last30Days.map(date => {
+ const session = sessions.find(s =>
+ isSameDay(new Date(s.created_at), date)
+ );
+ return {
+ date,
+ score: session?.final_score || null,
+ hasCheckIn: !!session
+ };
+ });
 };
 ```
 
@@ -162,15 +162,15 @@ const prepare30DayData = (sessions: SessionData[], baselineScore: number) => {
 Day labels adjust based on the current day of the week:
 ```typescript
 const getDayLabels = () => {
-  const today = new Date();
-  const dayIndex = today.getDay(); // 0 = Sunday, 6 = Saturday
-  const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-  
-  // Rotate array so today is last
-  return [
-    ...days.slice(dayIndex + 1),
-    ...days.slice(0, dayIndex + 1)
-  ];
+ const today = new Date();
+ const dayIndex = today.getDay(); // 0 = Sunday, 6 = Saturday
+ const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+ 
+ // Rotate array so today is last
+ return [
+ ...days.slice(dayIndex + 1),
+ ...days.slice(0, dayIndex + 1)
+ ];
 };
 ```
 
@@ -179,10 +179,10 @@ const getDayLabels = () => {
 Backgrounds change based on score ranges:
 ```typescript
 const getBackgroundGradient = (score: number) => {
-  if (score >= 80) return 'linear-gradient(135deg, #10B981, #059669)'; // Green
-  if (score >= 60) return 'linear-gradient(135deg, #3B82F6, #2563EB)'; // Blue
-  if (score >= 40) return 'linear-gradient(135deg, #F59E0B, #D97706)'; // Amber
-  return 'linear-gradient(135deg, #EF4444, #DC2626)'; // Red
+ if (score >= 80) return 'linear-gradient(135deg, #10B981, #059669)'; // Green
+ if (score >= 60) return 'linear-gradient(135deg, #3B82F6, #2563EB)'; // Blue
+ if (score >= 40) return 'linear-gradient(135deg, #F59E0B, #D97706)'; // Amber
+ return 'linear-gradient(135deg, #EF4444, #DC2626)'; // Red
 };
 ```
 
@@ -193,25 +193,25 @@ const getBackgroundGradient = (score: number) => {
 ```typescript
 // useDashboardData.ts
 const fetchDashboardData = async () => {
-  // Fetch user profile with baseline
-  const profile = await fetchProfile(userId);
-  
-  // Fetch all assessment sessions
-  const sessions = await fetchSessions(userId);
-  
-  // Calculate trend data
-  const trendData = calculateTrendData(sessions);
-  
-  return {
-    profile: {
-      ...profile,
-      baselineScore: profile.baseline_score,
-      createdAt: profile.created_at
-    },
-    latestScore: sessions[0]?.final_score || null,
-    latestSession: sessions[0] || null,
-    trendData
-  };
+ // Fetch user profile with baseline
+ const profile = await fetchProfile(userId);
+ 
+ // Fetch all assessment sessions
+ const sessions = await fetchSessions(userId);
+ 
+ // Calculate trend data
+ const trendData = calculateTrendData(sessions);
+ 
+ return {
+ profile: {
+ ...profile,
+ baselineScore: profile.baseline_score,
+ createdAt: profile.created_at
+ },
+ latestScore: sessions[0]?.final_score || null,
+ latestSession: sessions[0] || null,
+ trendData
+ };
 };
 ```
 
@@ -220,13 +220,13 @@ const fetchDashboardData = async () => {
 Views only shown when account age permits:
 ```typescript
 const canShow7DayView = () => {
-  const accountAge = Date.now() - new Date(userCreatedAt).getTime();
-  return accountAge >= 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+ const accountAge = Date.now() - new Date(userCreatedAt).getTime();
+ return accountAge >= 7 * 24 * 60 * 60 * 1000; // 7 days in ms
 };
 
 const canShow30DayView = () => {
-  const accountAge = Date.now() - new Date(userCreatedAt).getTime();
-  return accountAge >= 30 * 24 * 60 * 60 * 1000; // 30 days in ms
+ const accountAge = Date.now() - new Date(userCreatedAt).getTime();
+ return accountAge >= 30 * 24 * 60 * 60 * 1000; // 30 days in ms
 };
 ```
 
@@ -286,7 +286,7 @@ const canShow30DayView = () => {
 
 ---
 
-**Status:** Complete and deployed  
-**Last Updated:** January 5, 2026  
+**Status:** Complete and deployed
+**Last Updated:** January 5, 2026
 **Components:** SwipeableScoreCard, CurrentScoreCard, SevenDayViewCard, ThirtyDayViewCard
 

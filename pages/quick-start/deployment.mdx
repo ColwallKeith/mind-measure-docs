@@ -19,7 +19,7 @@ Mind Measure consists of three main deployment targets:
 
 ### Deployment Steps
 
-**⚠️ CRITICAL**: Before deploying, ALWAYS ask: "Ready to deploy? This will take 5-6 minutes." Wait for explicit confirmation.
+**CRITICAL**: Before deploying, ALWAYS ask: "Ready to deploy? This will take 5-6 minutes." Wait for explicit confirmation.
 
 ```bash
 # 1. Set environment variables (see Environment Configuration section)
@@ -93,10 +93,10 @@ export DB_PASSWORD="your-password"
 
 # Run migration
 PGPASSWORD="$DB_PASSWORD" psql \
-  -h mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com \
-  -U mindmeasure_admin \
-  -d mindmeasure \
-  -f migrations/checkin-pipeline-v2.sql
+ -h mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com \
+ -U mindmeasure_admin \
+ -d mindmeasure \
+ -f migrations/checkin-pipeline-v2.sql
 ```
 
 **Expected output**: 6 tables created in `assessment_engine` schema
@@ -191,7 +191,7 @@ VITE_AWS_S3_BUCKET_NAME=mindmeasure-user-content-459338929203
 **Assessment Engine Integration (Optional - Feature Flag)**
 ```bash
 VITE_ASSESSMENT_ENGINE_API=https://ej3hig3gwl.execute-api.eu-west-2.amazonaws.com/v1
-VITE_USE_ASSESSMENT_ENGINE=true  # Feature flag for gradual rollout
+VITE_USE_ASSESSMENT_ENGINE=true # Feature flag for gradual rollout
 ```
 
 ### Assessment Engine Lambda Environment Variables
@@ -277,7 +277,7 @@ npx cdk destroy --force
 
 # Drop database schema (if needed)
 PGPASSWORD="password" psql -h ... -d mindmeasure \
-  -c "DROP SCHEMA assessment_engine CASCADE;"
+ -c "DROP SCHEMA assessment_engine CASCADE;"
 ```
 
 ## Troubleshooting

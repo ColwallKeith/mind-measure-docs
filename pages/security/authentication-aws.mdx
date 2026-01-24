@@ -57,27 +57,27 @@ aws configure
 ```bash
 # Create DB subnet group
 aws rds create-db-subnet-group \
-  --db-subnet-group-name mindmeasure-subnet-group \
-  --db-subnet-group-description "Mind Measure DB Subnet Group" \
-  --subnet-ids subnet-12345678 subnet-87654321 \
-  --region eu-west-2
+ --db-subnet-group-name mindmeasure-subnet-group \
+ --db-subnet-group-description "Mind Measure DB Subnet Group" \
+ --subnet-ids subnet-12345678 subnet-87654321 \
+ --region eu-west-2
 
 # Create RDS instance
 aws rds create-db-instance \
-  --db-instance-identifier mindmeasure-db \
-  --db-instance-class db.t3.medium \
-  --engine postgres \
-  --engine-version 15.4 \
-  --master-username mindmeasure_user \
-  --master-user-password YourSecurePassword123! \
-  --allocated-storage 100 \
-  --storage-type gp2 \
-  --storage-encrypted \
-  --vpc-security-group-ids sg-12345678 \
-  --db-subnet-group-name mindmeasure-subnet-group \
-  --backup-retention-period 7 \
-  --multi-az \
-  --region eu-west-2
+ --db-instance-identifier mindmeasure-db \
+ --db-instance-class db.t3.medium \
+ --engine postgres \
+ --engine-version 15.4 \
+ --master-username mindmeasure_user \
+ --master-user-password YourSecurePassword123! \
+ --allocated-storage 100 \
+ --storage-type gp2 \
+ --storage-encrypted \
+ --vpc-security-group-ids sg-12345678 \
+ --db-subnet-group-name mindmeasure-subnet-group \
+ --backup-retention-period 7 \
+ --multi-az \
+ --region eu-west-2
 ```
 
 ### 3. Create Cognito User Pool
@@ -85,53 +85,53 @@ aws rds create-db-instance \
 ```bash
 # Create user pool
 aws cognito-idp create-user-pool \
-  --pool-name MindMeasureUsers \
-  --policies '{
-    "PasswordPolicy": {
-      "MinimumLength": 8,
-      "RequireUppercase": true,
-      "RequireLowercase": true,
-      "RequireNumbers": true,
-      "RequireSymbols": false
-    }
-  }' \
-  --auto-verified-attributes email \
-  --username-attributes email \
-  --schema '[
-    {
-      "Name": "email",
-      "AttributeDataType": "String",
-      "Required": true,
-      "Mutable": true
-    },
-    {
-      "Name": "given_name",
-      "AttributeDataType": "String",
-      "Required": false,
-      "Mutable": true
-    },
-    {
-      "Name": "family_name",
-      "AttributeDataType": "String",
-      "Required": false,
-      "Mutable": true
-    },
-    {
-      "Name": "display_name",
-      "AttributeDataType": "String",
-      "Required": false,
-      "Mutable": true
-    }
-  ]' \
-  --region eu-west-2
+ --pool-name MindMeasureUsers \
+ --policies '{
+ "PasswordPolicy": {
+ "MinimumLength": 8,
+ "RequireUppercase": true,
+ "RequireLowercase": true,
+ "RequireNumbers": true,
+ "RequireSymbols": false
+ }
+ }' \
+ --auto-verified-attributes email \
+ --username-attributes email \
+ --schema '[
+ {
+ "Name": "email",
+ "AttributeDataType": "String",
+ "Required": true,
+ "Mutable": true
+ },
+ {
+ "Name": "given_name",
+ "AttributeDataType": "String",
+ "Required": false,
+ "Mutable": true
+ },
+ {
+ "Name": "family_name",
+ "AttributeDataType": "String",
+ "Required": false,
+ "Mutable": true
+ },
+ {
+ "Name": "display_name",
+ "AttributeDataType": "String",
+ "Required": false,
+ "Mutable": true
+ }
+ ]' \
+ --region eu-west-2
 
 # Create user pool client
 aws cognito-idp create-user-pool-client \
-  --user-pool-id eu-west-2_xxxxxxxxx \
-  --client-name MindMeasureApp \
-  --explicit-auth-flows ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
-  --generate-secret false \
-  --region eu-west-2
+ --user-pool-id eu-west-2_xxxxxxxxx \
+ --client-name MindMeasureApp \
+ --explicit-auth-flows ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
+ --generate-secret false \
+ --region eu-west-2
 ```
 
 ### 4. Create S3 Buckets
@@ -145,22 +145,22 @@ aws s3 mb s3://mindmeasure-public-assets --region eu-west-2
 
 # Configure bucket policies
 aws s3api put-bucket-encryption \
-  --bucket mindmeasure-user-content \
-  --server-side-encryption-configuration '{
-    "Rules": [
-      {
-        "ApplyServerSideEncryptionByDefault": {
-          "SSEAlgorithm": "AES256"
-        }
-      }
-    ]
-  }'
+ --bucket mindmeasure-user-content \
+ --server-side-encryption-configuration '{
+ "Rules": [
+ {
+ "ApplyServerSideEncryptionByDefault": {
+ "SSEAlgorithm": "AES256"
+ }
+ }
+ ]
+ }'
 
 # Block public access for private bucket
 aws s3api put-public-access-block \
-  --bucket mindmeasure-user-content \
-  --public-access-block-configuration \
-    BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+ --bucket mindmeasure-user-content \
+ --public-access-block-configuration \
+ BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
 ```
 
 ### 5. Create Lambda Functions
@@ -168,32 +168,32 @@ aws s3api put-public-access-block \
 ```bash
 # Create execution role for Lambda
 aws iam create-role \
-  --role-name MindMeasureLambdaRole \
-  --assume-role-policy-document '{
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Effect": "Allow",
-        "Principal": {
-          "Service": "lambda.amazonaws.com"
-        },
-        "Action": "sts:AssumeRole"
-      }
-    ]
-  }'
+ --role-name MindMeasureLambdaRole \
+ --assume-role-policy-document '{
+ "Version": "2012-10-17",
+ "Statement": [
+ {
+ "Effect": "Allow",
+ "Principal": {
+ "Service": "lambda.amazonaws.com"
+ },
+ "Action": "sts:AssumeRole"
+ }
+ ]
+ }'
 
 # Attach policies
 aws iam attach-role-policy \
-  --role-name MindMeasureLambdaRole \
-  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+ --role-name MindMeasureLambdaRole \
+ --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
 aws iam attach-role-policy \
-  --role-name MindMeasureLambdaRole \
-  --policy-arn arn:aws:iam::aws:policy/AmazonRDSDataFullAccess
+ --role-name MindMeasureLambdaRole \
+ --policy-arn arn:aws:iam::aws:policy/AmazonRDSDataFullAccess
 
 aws iam attach-role-policy \
-  --role-name MindMeasureLambdaRole \
-  --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
+ --role-name MindMeasureLambdaRole \
+ --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
 ```
 
 ## Application Configuration
@@ -207,26 +207,26 @@ The application will automatically use AWS services when `BACKEND_PROVIDER=aws-r
 ```typescript
 // src/config/aws.ts
 export const awsConfig = {
-  region: process.env.AWS_REGION || 'eu-west-2',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
-  },
-  rds: {
-    host: process.env.AWS_RDS_HOST!,
-    port: parseInt(process.env.AWS_RDS_PORT || '5432'),
-    database: process.env.AWS_RDS_DATABASE!,
-    username: process.env.AWS_RDS_USERNAME!,
-    password: process.env.AWS_RDS_PASSWORD!
-  },
-  cognito: {
-    userPoolId: process.env.AWS_COGNITO_USER_POOL_ID!,
-    clientId: process.env.AWS_COGNITO_CLIENT_ID!
-  },
-  s3: {
-    bucketName: process.env.AWS_S3_BUCKET_NAME!,
-    region: process.env.AWS_S3_REGION || process.env.AWS_REGION || 'eu-west-2'
-  }
+ region: process.env.AWS_REGION || 'eu-west-2',
+ credentials: {
+ accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+ secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
+ },
+ rds: {
+ host: process.env.AWS_RDS_HOST!,
+ port: parseInt(process.env.AWS_RDS_PORT || '5432'),
+ database: process.env.AWS_RDS_DATABASE!,
+ username: process.env.AWS_RDS_USERNAME!,
+ password: process.env.AWS_RDS_PASSWORD!
+ },
+ cognito: {
+ userPoolId: process.env.AWS_COGNITO_USER_POOL_ID!,
+ clientId: process.env.AWS_COGNITO_CLIENT_ID!
+ },
+ s3: {
+ bucketName: process.env.AWS_S3_BUCKET_NAME!,
+ region: process.env.AWS_S3_REGION || process.env.AWS_REGION || 'eu-west-2'
+ }
 };
 ```
 
@@ -238,39 +238,39 @@ Create least-privilege IAM policies for your application:
 
 ```json
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "rds:DescribeDBInstances",
-        "rds:Connect"
-      ],
-      "Resource": "arn:aws:rds:eu-west-2:*:db:mindmeasure-db"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "cognito-idp:AdminCreateUser",
-        "cognito-idp:AdminDeleteUser",
-        "cognito-idp:AdminGetUser",
-        "cognito-idp:AdminUpdateUserAttributes"
-      ],
-      "Resource": "arn:aws:cognito-idp:eu-west-2:*:userpool/eu-west-2_*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:GetObject",
-        "s3:PutObject",
-        "s3:DeleteObject"
-      ],
-      "Resource": [
-        "arn:aws:s3:::mindmeasure-user-content/*",
-        "arn:aws:s3:::mindmeasure-public-assets/*"
-      ]
-    }
-  ]
+ "Version": "2012-10-17",
+ "Statement": [
+ {
+ "Effect": "Allow",
+ "Action": [
+ "rds:DescribeDBInstances",
+ "rds:Connect"
+ ],
+ "Resource": "arn:aws:rds:eu-west-2:*:db:mindmeasure-db"
+ },
+ {
+ "Effect": "Allow",
+ "Action": [
+ "cognito-idp:AdminCreateUser",
+ "cognito-idp:AdminDeleteUser",
+ "cognito-idp:AdminGetUser",
+ "cognito-idp:AdminUpdateUserAttributes"
+ ],
+ "Resource": "arn:aws:cognito-idp:eu-west-2:*:userpool/eu-west-2_*"
+ },
+ {
+ "Effect": "Allow",
+ "Action": [
+ "s3:GetObject",
+ "s3:PutObject",
+ "s3:DeleteObject"
+ ],
+ "Resource": [
+ "arn:aws:s3:::mindmeasure-user-content/*",
+ "arn:aws:s3:::mindmeasure-public-assets/*"
+ ]
+ }
+ ]
 }
 ```
 
@@ -288,16 +288,16 @@ aws ec2 create-subnet --vpc-id vpc-12345678 --cidr-block 10.0.2.0/24 --availabil
 
 # Create security groups
 aws ec2 create-security-group \
-  --group-name mindmeasure-db-sg \
-  --description "Mind Measure Database Security Group" \
-  --vpc-id vpc-12345678
+ --group-name mindmeasure-db-sg \
+ --description "Mind Measure Database Security Group" \
+ --vpc-id vpc-12345678
 
 # Allow PostgreSQL access from application
 aws ec2 authorize-security-group-ingress \
-  --group-id sg-12345678 \
-  --protocol tcp \
-  --port 5432 \
-  --source-group sg-87654321
+ --group-id sg-12345678 \
+ --protocol tcp \
+ --port 5432 \
+ --source-group sg-87654321
 ```
 
 ## Testing the Setup
@@ -314,11 +314,11 @@ psql -h your-rds-instance.region.rds.amazonaws.com -U mindmeasure_user -d mindme
 ```bash
 # Test user creation
 aws cognito-idp admin-create-user \
-  --user-pool-id eu-west-2_xxxxxxxxx \
-  --username test@example.com \
-  --user-attributes Name=email,Value=test@example.com \
-  --temporary-password TempPass123! \
-  --message-action SUPPRESS
+ --user-pool-id eu-west-2_xxxxxxxxx \
+ --username test@example.com \
+ --user-attributes Name=email,Value=test@example.com \
+ --temporary-password TempPass123! \
+ --message-action SUPPRESS
 ```
 
 ### 3. Test S3
@@ -346,17 +346,55 @@ aws logs create-log-group --log-group-name /aws/cognito/mindmeasure-users
 ```bash
 # Create CloudWatch alarms
 aws cloudwatch put-metric-alarm \
-  --alarm-name "MindMeasure-DB-CPU-High" \
-  --alarm-description "Database CPU utilization is too high" \
-  --metric-name CPUUtilization \
-  --namespace AWS/RDS \
-  --statistic Average \
-  --period 300 \
-  --threshold 80 \
-  --comparison-operator GreaterThanThreshold \
-  --dimensions Name=DBInstanceIdentifier,Value=mindmeasure-db \
-  --evaluation-periods 2
+ --alarm-name "MindMeasure-DB-CPU-High" \
+ --alarm-description "Database CPU utilization is too high" \
+ --metric-name CPUUtilization \
+ --namespace AWS/RDS \
+ --statistic Average \
+ --period 300 \
+ --threshold 80 \
+ --comparison-operator GreaterThanThreshold \
+ --dimensions Name=DBInstanceIdentifier,Value=mindmeasure-db \
+ --evaluation-periods 2
 ```
+
+## Mobile App Authentication Flow
+
+### User Registration and Sign-In Flow (Updated January 2026)
+
+The mobile app implements an intelligent authentication flow that detects existing users and provides password recovery:
+
+**Registration Flow:**
+1. User enters name (first name, last name)
+2. User enters email address
+3. **System checks `profiles` table** for matching name + email:
+   - If match found: Routes to sign-in screen with email pre-filled
+   - If no match: Continues to password creation (new user registration)
+4. Password creation and account setup
+5. Email verification
+
+**Sign-In Flow:**
+1. Sign-in screen displays (email may be pre-filled if coming from registration)
+2. User enters password
+3. "Forgot Password?" link available on sign-in screen
+4. AWS Cognito authentication
+5. Dashboard access
+
+**Password Reset Flow:**
+1. User clicks "Forgot Password?" on sign-in screen
+2. Step 1: Enter email address → System sends reset code via AWS Cognito
+3. Step 2: Enter reset code + new password + confirm password
+4. Step 3: Success confirmation → Auto-navigates back to sign-in
+5. User can sign in with new password
+
+**API Endpoints:**
+- `POST /api/auth/forgot-password` - Initiate password reset
+- `POST /api/auth/confirm-forgot-password` - Complete password reset with code
+
+**Implementation:**
+- `ForgotPasswordScreen` component handles 3-step reset flow
+- Uses `forgotPassword()` and `confirmForgotPassword()` from AuthContext
+- Integrated with AWS Cognito `ForgotPasswordCommand` and `ConfirmForgotPasswordCommand`
 
 ## Next Steps
 

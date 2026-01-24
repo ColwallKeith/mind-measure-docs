@@ -9,7 +9,7 @@ This guide explains how to safely add new documentation to the Mind Measure docu
 - **Repository Structure**: Documentation lives in `/docs/` folder of the main repository
 - **Domain**: `docs.mindmeasure.co.uk` points to the `docs` Vercel project
 
-##  IMPORTANT: What NOT to Do
+## IMPORTANT: What NOT to Do
 - **Never add emojis or icons** to documentation headers - keep it professional
 - **Never create duplicate files** (e.g., `architecture 3.mdx`)
 - **Never add authentication code** to the docs site
@@ -21,15 +21,15 @@ This guide explains how to safely add new documentation to the Mind Measure docu
 ```
 docs/
  pages/
-�    _meta.json          # Main navigation structure
-�    index.mdx           # Homepage
-�    architecture.mdx    # Individual pages
-�    cms/                # Section folders
-�        _meta.json      # Section navigation
-�        index.mdx       # Section landing page
-�        user-guide.mdx  # Section pages
- theme.config.tsx        # Site configuration
- package.json           # Dependencies
+ _meta.json # Main navigation structure
+ index.mdx # Homepage
+ architecture.mdx # Individual pages
+ cms/ # Section folders
+ _meta.json # Section navigation
+ index.mdx # Section landing page
+ user-guide.mdx # Section pages
+ theme.config.tsx # Site configuration
+ package.json # Dependencies
 ```
 
 ### 2. Adding a New Section
@@ -44,9 +44,9 @@ mkdir new-section
 Create `docs/pages/new-section/_meta.json`:
 ```json
 {
-  "index": "Overview",
-  "guide": "User Guide",
-  "technical": "Technical Details"
+ "index": "Overview",
+ "guide": "User Guide",
+ "technical": "Technical Details"
 }
 ```
 
@@ -65,21 +65,21 @@ Brief overview of the new section.
 Edit `docs/pages/_meta.json` and add your section:
 ```json
 {
-  "index": "Overview",
-  "architecture": "Architecture",
-  "mobile": "Mobile App",
-  "backend": "Backend",
-  "supabase": "Database & RLS",
-  "methodology": "Assessment Methodology",
-  "deployment": "Deployment",
-  "privacy": "Privacy & Legal",
-  "development": "Development",
-  "adr": "ADRs",
-  "playbooks": "Playbooks",
-  "admin-ui": "Admin UI",
-  "api": "API",
-  "cms": "CMS Documentation",
-  "new-section": "New Section"
+ "index": "Overview",
+ "architecture": "Architecture",
+ "mobile": "Mobile App",
+ "backend": "Backend",
+ "database": "Database",
+ "methodology": "Assessment Methodology",
+ "deployment": "Deployment",
+ "privacy": "Privacy & Legal",
+ "development": "Development",
+ "adr": "ADRs",
+ "playbooks": "Playbooks",
+ "admin-ui": "Admin UI",
+ "api": "API",
+ "cms": "CMS Documentation",
+ "new-section": "New Section"
 }
 ```
 
@@ -97,8 +97,8 @@ Content goes here...
 Add to `docs/pages/_meta.json`:
 ```json
 {
-  "existing-pages": "...",
-  "new-page": "New Page"
+ "existing-pages": "...",
+ "new-page": "New Page"
 }
 ```
 
@@ -136,7 +136,7 @@ git push
 **Solution**: Check `_meta.json` syntax - must be valid JSON
 
 ### Issue: Duplicate menu items
-**Solution**: 
+**Solution**:
 - Check for duplicate files (e.g., `page.mdx` and `page 2.mdx`)
 - Delete duplicates
 - Clear Vercel cache: `rm -rf .vercel && vercel --prod`
@@ -144,8 +144,8 @@ git push
 ### Issue: Emojis appearing in navigation
 **Solution**: Remove all emojis from MDX headers:
 ```markdown
-#  Bad:  User Guide
-#  Good: User Guide
+# Bad: User Guide
+# Good: User Guide
 ```
 
 ### Issue: Site broken after deployment
@@ -158,8 +158,8 @@ git push
 **Solution**: Ensure `.vercel/project.json` contains:
 ```json
 {
-  "projectId": "[docs-project-id]",
-  "orgId": "[your-org-id]"
+ "projectId": "[docs-project-id]",
+ "orgId": "[your-org-id]"
 }
 ```
 
@@ -213,26 +213,26 @@ Additional content...
 ## Best Practices
 
 ### Content
--  Use clear, professional language
--  Include code examples where relevant
--  Add cross-references to related pages
--  Keep sections focused and concise
--  Don't use emojis or unprofessional icons
--  Don't duplicate existing content
+- Use clear, professional language
+- Include code examples where relevant
+- Add cross-references to related pages
+- Keep sections focused and concise
+- Don't use emojis or unprofessional icons
+- Don't duplicate existing content
 
 ### Structure
--  Use logical folder organization
--  Keep file names lowercase with hyphens
--  Update navigation files (`_meta.json`)
--  Don't create deeply nested structures
--  Don't use spaces in file names
+- Use logical folder organisation
+- Keep file names lowercase with hyphens
+- Update navigation files (`_meta.json`)
+- Don't create deeply nested structures
+- Don't use spaces in file names
 
 ### Testing
--  Always test locally before deploying
--  Check all navigation links work
--  Verify mobile responsiveness
--  Don't deploy untested changes
--  Don't skip the local development step
+- Always test locally before deploying
+- Check all navigation links work
+- Verify mobile responsiveness
+- Don't deploy untested changes
+- Don't skip the local development step
 
 ## Emergency Rollback
 
@@ -240,10 +240,10 @@ If something breaks:
 
 - **Identify last working deployment** in Vercel dashboard
 - **Revert to that deployment**:
-   ```bash
-   # Find the deployment ID from Vercel dashboard
-   vercel rollback [deployment-url]
-   ```
+ ```bash
+ # Find the deployment ID from Vercel dashboard
+ vercel rollback [deployment-url]
+ ```
 - **Fix issues locally** before redeploying
 - **Test thoroughly** before pushing again
 
