@@ -2,248 +2,96 @@
 
 ## System Overview
 
-The Mind Measure marketing sites are built as a **monorepo** containing multiple Astro-based static sites that share common components and utilities while maintaining independent deployments.
+Marketing sites use a **design-led, content-unified** architecture:
+
+1. **Figma** – Page layouts and design system
+2. **Marketing CMS** – Blog and article content (single source for marketing sites + mobile app)
+3. **Marketing Sites** – Static pages from Figma + dynamic blog from CMS API
 
 ## Domain Structure
 
-### Complete Platform Domains
-
 | Domain | Type | Purpose | Repository |
 |--------|------|---------|------------|
-| **mindmeasure.co.uk** | Marketing | University/Institution site | mindmeasure-marketing |
-| **mindmeasure.app** | Marketing | Student site | mindmeasure-marketing |
-| **admin.mindmeasure.co.uk** | Admin | Admin dashboard | mind-measure-core |
+| **mindmeasure.co.uk** | Marketing | University/Institution site | mindmeasure-marketing or Figma Make output |
+| **mindmeasure.app** | Marketing | Student site | mindmeasure-marketing or Figma Make output |
+| **marketing.mindmeasure.co.uk** | Marketing CMS | Content management | mind-measure-marketing-cms |
+| **admin.mindmeasure.co.uk** | Admin | Admin dashboard, University CMS | mind-measure-core |
 | **mobile.mindmeasure.app** | Mobile App | Student mobile app | mind-measure-mobile-final |
-| **docs.mindmeasure.co.uk** | Documentation | This site | mind-measure-docs |
-| **investors.mindmeasure.co.uk** | Marketing | Investor relations | mind-measure_investors_new |
-
-## Monorepo Structure
-
-The marketing sites use an npm workspaces monorepo:
-
-```
-mindmeasure-marketing/
- sites/ # Individual sites (independent deployments)
- university/ # mindmeasure.co.uk
- student/ # mindmeasure.app
- workplace/ # [2026] Mind Measure Pro
-
- packages/
- shared/ # Shared code (components, utils, types)
-```
-
-### Benefits
-
-- **Code Reuse**: 80% of components shared across sites
-- **Independent Deployment**: Each site deploys separately
-- **Type Safety**: Shared TypeScript types
-- **Consistent Design**: Shared styles and utilities
-- **Easy Scaling**: Add new sites (e.g., workplace) without duplication
-
-## Technology Stack
-
-### Frontend Framework
-- **Astro 5.7+**: Static site generation with partial hydration
-- **Islands Architecture**: Only interactive components load JavaScript
-- **Zero-JS by Default**: HTML/CSS only, JS added when needed
-
-### Content Management
-- **Sanity.io**: Headless CMS
-- **Separate Projects**: Each site has its own Sanity project
-- **Shared Schemas**: Common content types (blogs, whitepapers)
-- **Portable Text**: Rich content editing
-
-### Styling
-- **Tailwind CSS 4**: Utility-first CSS framework
-- **Design Tokens**: Shared color palette and typography
-- **Responsive**: Mobile-first approach
-
-### Deployment
-- **Vercel**: Edge network hosting
-- **Independent Projects**: Each site is a separate Vercel project
-- **Automatic Deploys**: Push to main = automatic deployment
-- **Preview Deploys**: Every PR gets a preview URL
 
 ## Data Flow
 
-```mermaid
-graph TB
- A[Content Editor] -->|Creates Content| B[Sanity Studio]
- B -->|Stores| C[Sanity CMS]
- D[Developer] -->|Pushes Code| E[GitHub]
- E -->|Triggers| F[Vercel Build]
- C -->|Fetches at Build| F
- F -->|Deploys| G[Static Site on CDN]
- H[Visitor] -->|Requests| G
-```
-
-### Build Process
-
-1. **Code Push**: Developer pushes to GitHub
-2. **Webhook**: GitHub triggers Vercel build
-3. **Fetch Content**: Build fetches latest content from Sanity
-4. **Generate Pages**: Astro generates static HTML pages
-5. **Deploy**: Pages deployed to Vercel edge network
-6. **Live**: Site available globally via CDN
-
-### Content Updates
-
-When content is updated in Sanity:
-- **Manual Rebuild**: Trigger rebuild in Vercel dashboard
-- **Webhook** (coming soon): Sanity auto-triggers rebuild
-- **On-Demand ISR** (future): Incremental static regeneration
-
-## Component Architecture
-
-### Shared Components
-
-Located in `packages/shared/components/`:
-
-```typescript
-// Example: BlogCard component
----
-interface Props {
- title: string;
- excerpt: string;
- image: string;
- slug: string;
- date: string;
- author: Author;
-}
-
-const { title, excerpt, image, slug, date, author } = Astro.props;
----
-
-<article class="blog-card">
- <img src={image} alt={title} />
- <h3>{title}</h3>
- <p>{excerpt}</p>
- <a href={`/blog/${slug}`}>Read more</a>
-</article>
-```
-
-### Site-Specific Components
-
-Each site can override or extend shared components:
+### Page Layouts (Static)
 
 ```
-sites/university/src/components/
- HeroUniversity.astro # University-specific hero
- PricingTable.astro # University-specific pricing
- TestimonialsCarousel.astro
+Figma Design → Figma Make (React) or Hand-Code → React Components → Build → Vercel CDN
 ```
 
-## Deployment Strategy
+- Home, About, Contact, How it works, The science, etc.
+- No CMS for structure – design drives implementation
 
-### Per-Site Deployment
+### Blog Content (Dynamic)
 
-Each site is a separate Vercel project with its own:
-- **Domain**: Unique production domain
-- **Environment Variables**: Site-specific config
-- **Build Settings**: Customized build commands
-- **Analytics**: Separate tracking
-
-### Deployment Commands
-
-```bash
-# University site
-cd sites/university
-npx vercel --prod
-# → Deploys to mindmeasure.co.uk
-
-# Student site
-cd sites/student
-npx vercel --prod
-# → Deploys to mindmeasure.app
+```
+Content Editor → Marketing CMS → Publish
+                                    │
+                    ┌───────────────┼───────────────┐
+                    ▼               ▼               ▼
+            marketing.co.uk   mindmeasure.app   mobile.mindmeasure.app
+            (via public API)  (via public API)  (via University deployments)
 ```
 
-### Vercel Configuration
+### Content Reuse
 
-Each site has `vercel.json`:
+- **Blog post** created in Marketing CMS with `targetSites: ['university', 'student']`
+- **Marketing sites** fetch published posts at build time via `GET /api/public/blog-posts?site=university`
+- **Mobile app** receives same content when a university deploys it to their app via University CMS
 
-```json
-{
- "buildCommand": "npm run build",
- "outputDirectory": "dist",
- "framework": "astro"
-}
-```
+## Marketing CMS
 
-## Performance Optimization
+- **Repository:** [github.com/Mind-Measure/mind-measure-marketing-cms](https://github.com/Mind-Measure/mind-measure-marketing-cms)
+- **Deployed at:** marketing.mindmeasure.co.uk
+- **Stack:** Next.js, Prisma, PostgreSQL, S3
 
-### Static Generation
-- All pages pre-rendered at build time
-- Near-instant page loads
-- Excellent SEO
+### Content Types
 
-### Asset Optimization
-- Images optimized via Astro Image
-- WebP format with fallbacks
-- Lazy loading for below-fold images
+| Type | Use |
+|------|-----|
+| **Blog posts** | Marketing blog pages + mobile app articles |
+| **Pages** | (Optional) Page content if not fully static from Figma |
+| **Media** | Images for blog posts and pages |
 
-### Code Splitting
-- Per-page JavaScript bundles
-- Only load what's needed
-- Shared vendor chunks
+### Public API (Required for Marketing Sites)
 
-### CDN Distribution
-- Vercel edge network (70+ locations)
-- Automatic caching
-- Gzip/Brotli compression
+- `GET /api/public/blog-posts?site=university|student|pro`
+- `GET /api/public/blog-posts/[slug]`
+- `GET /api/public/pages?site=...` (if using CMS for pages)
 
-## Security
+These endpoints are read-only, return only PUBLISHED content, and require no authentication.
 
-### Content Security
-- Sanity API uses read-only tokens in frontend
-- Write tokens kept in Vercel environment variables
-- CORS configured for specific origins
+## Figma Workflow
 
-### Domain Security
-- HTTPS enforced
-- Modern TLS configuration
-- Security headers via Vercel
+1. **Design** – Create page layouts in Figma (shared design system)
+2. **Export** – Figma Make generates code, or developers hand-code from designs
+3. **Integrate** – React components used in marketing site
+4. **Deploy** – Static pages go live on Vercel
 
-### Form Security
-- Spam protection (Turnstile/reCAPTCHA)
-- Rate limiting on submission endpoints
-- Server-side validation
+Figma is the source of truth for layout, typography, spacing, and visual structure.
 
-## Monitoring
+## Build Process
 
-### Performance Monitoring
-- Vercel Analytics built-in
-- Real User Monitoring (RUM)
-- Core Web Vitals tracking
+1. **Code push** – Developer pushes to GitHub
+2. **Vercel build** – Triggers on push (or webhook from CMS)
+3. **Fetch content** – Build fetches published posts from Marketing CMS public API
+4. **Generate pages** – Static pages from code + blog pages from API data
+5. **Deploy** – Output deployed to Vercel edge network
 
-### Error Tracking
-- Client-side errors logged
-- Build failures alert team
-- Deployment status notifications
+## Deprecated: Sanity
 
-### Content Analytics
-- Page views per content
-- Popular blog posts
-- Download tracking for whitepapers
-
-## Future Architecture Plans
-
-### 2025 Q1
-- Implement ISR (Incremental Static Regeneration)
-- Add Sanity webhook for auto-rebuilds
-- Optimize image pipeline further
-
-### 2025 Q2
-- A/B testing infrastructure
-- Personalization based on visitor type
-- Enhanced analytics integration
-
-### 2026
-- Add Mind Measure Pro (Workplace) site
-- Implement multi-language support
-- Advanced SEO features
+- **Previous role:** Page structure, nav, footer, blog
+- **Replaced by:** Figma (pages) + Marketing CMS (blogs)
+- **Action:** Migrate any remaining content; remove Sanity from marketing sites
 
 ---
 
-**Architecture Version**: 1.0
-**Last Updated**: December 16, 2024
-
+**Architecture Version:** 2.0  
+**Last Updated:** January 2026

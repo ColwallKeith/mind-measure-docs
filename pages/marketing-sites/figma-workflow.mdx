@@ -2,340 +2,134 @@
 
 ## Overview
 
-Streamlined workflow for converting Figma designs into production-ready Astro components for marketing sites.
+Marketing site pages are designed in Figma and built using **Figma Make** (React output) or hand-coded from Figma designs. Figma is the source of truth for page layouts, visual structure, and design system.
 
-## Design System Setup
+The current approach uses **Relume** for wireframing/structure, then **Figma Sites** for building production pages.
 
-### Required in Figma
+## Workflow
 
-1. **Component Library** - All reusable components
-2. **Page Templates** - Standard page layouts
-3. **Design Tokens** - Colors, typography, spacing
-4. **Responsive Breakpoints** - Mobile, tablet, desktop
-5. **Export Settings** - Proper asset configurations
+### Step 1: Wireframe in Relume
+
+- Define page structure, sections, and content hierarchy
+- Establish information architecture
+- Generate initial layout for refinement in Figma
+
+### Step 2: Design in Figma
+
+- Refine layouts using shared Mind Measure design system
+- Apply brand colours, typography, and spacing
+- Design responsive breakpoints (mobile, tablet, desktop)
+- Prepare assets (images, icons, illustrations)
+
+### Step 3: Build with Figma Sites / Figma Make
+
+- **Figma Sites** – Build directly from Figma designs; includes hosting and a built-in CMS for blogs (under review)
+- **Figma Make** – Export React components from designs for use in a custom-hosted site
+
+### Step 4: Deploy
+
+- **Figma Sites:** Publish directly from Figma
+- **Custom build:** Push React code to GitHub → Vercel deploys automatically
+
+## Design System
+
+### Shared Across All Sites
+
+All Mind Measure marketing sites share a common design system defined in Figma:
+
+| Token | Value |
+|-------|-------|
+| **University colour** | Blue (#0066CC) |
+| **Student colour** | Purple (#8B5CF6) |
+| **Pro/Workplace colour** | Green (#059669) |
+| **Display font** | Chillax |
+| **Body font** | Geist |
+| **Monospace font** | PP Mori |
+| **Base grid** | 8px |
+| **Container max-width** | 1280px |
 
 ### Naming Conventions
 
-Figma layers map directly to code components:
+Figma layers map to React components:
 - `Button/Primary` → `<PrimaryButton />`
 - `Card/Blog` → `<BlogCard />`
 - `Section/Hero` → `<HeroSection />`
 
-## Recommended Approach: Hybrid Method
+## Asset Export
 
-Combine plugin automation with hand refinement for best results.
+### Images
 
-### Step 1: Design in Figma
+- **Format:** WebP (with PNG fallback)
+- **Sizes:** Desktop (1920px), Tablet (1024px), Mobile (768px)
+- **Naming:**
 
-Designer creates component:
-- Uses design system tokens
-- Annotates interactive elements
-- Exports assets (images, icons)
-- Shares Dev Mode link
-
-### Step 2: Asset Export
-
-**Automated with Figma:**
-- SVG for icons
-- WebP for images (with PNG fallback)
-- Multiple sizes for responsive images
-
-**Naming Convention:**
 ```
 assets/images/
- hero-university-desktop.webp (1920px)
- hero-university-tablet.webp (1024px)
- hero-university-mobile.webp (768px)
+  hero-university-desktop.webp
+  hero-university-tablet.webp
+  hero-university-mobile.webp
 ```
 
-### Step 3: Code Conversion
+### Icons
 
-**For Simple Components** (Buttons, Cards):
-- Inspect in Figma Dev Mode
-- Hand-code with Tailwind CSS
-- Time: ~30 minutes per component
+- **Format:** SVG
+- **Source:** Figma component library
+- **Usage:** Inline or as React components
 
-**For Complex Layouts** (Full pages):
-- Export with plugin (Anima/Locofy)
-- Convert to Astro syntax
-- Refactor and optimize
-- Time: ~1-2 hours per page
+## Pages to Build
 
-## Figma Dev Mode
+### Currently Live (to be rebuilt from Figma)
 
-### Inspection Workflow
+- Home page (university and student variants)
 
-1. **Open Dev Mode** in Figma
-2. **Select Element** to inspect
-3. **View CSS Properties**:
- - Spacing (padding, margin)
- - Colors (fill, stroke)
- - Typography (font, size, weight)
- - Effects (shadows, blur)
-4. **Map to Tailwind** classes
-5. **Code Astro Component**
+### New Pages (designed in Figma)
 
-### Example Inspection
+- About
+- How it works
+- The science behind it
+- Contact
+- Privacy policy
+- How Buddies work
+- Mind Measure Pro (workplace – 2026)
 
-```
-Figma shows:
-- Padding: 24px 32px
-- Background: #0066CC
-- Border Radius: 8px
-- Font: Geist Bold 16px
+## Blog Integration
 
-Maps to Tailwind:
-px-8 py-6 bg-blue-600 rounded-lg font-bold text-base
-```
+Blog pages (listing and individual posts) pull content from the Marketing CMS via public API. The page templates and styling come from Figma designs, but the content is dynamic.
 
-## Plugin Options
+**Note:** Figma Sites includes a built-in CMS for blogging. This is being evaluated as a potential alternative to the Marketing CMS for marketing site blogs. See [CMS & Content Management](/marketing-sites/cms-enhancement) for details.
 
-### Anima
+## Time Estimates
 
-- **URL**: figma.com/community/plugin/857346721138427857
-- **Exports**: React/Vue/HTML
-- **Pros**: Preserves responsive behavior
-- **Cost**: Free tier limited, $31/month Pro
-- **Best For**: Complex layouts
-
-### Locofy
-
-- **URL**: locofy.ai
-- **Exports**: React/Vue/HTML
-- **Pros**: Responsive code generation
-- **Cost**: Free tier, $30+/month Pro
-- **Best For**: Component libraries
-
-### TeleportHQ
-
-- **URL**: teleporthq.io
-- **Exports**: Multiple frameworks
-- **Pros**: Clean code output
-- **Cost**: Free tier, $20+/month
-- **Best For**: Landing pages
-
-## Component Creation
-
-### File Template
-
-```astro
----
-// packages/shared/components/HeroSection.astro
-interface Props {
- title: string;
- description: string;
- image: string;
- cta?: {
- text: string;
- href: string;
- };
- variant?: 'university' | 'student' | 'workplace';
-}
-
-const { title, description, image, cta, variant = 'university' } = Astro.props;
----
-
-<section class="hero-section" data-variant={variant}>
- <div class="container">
- <div class="hero-content">
- <h1 class="hero-title">{title}</h1>
- <p class="hero-description">{description}</p>
- {cta && (
- <a href={cta.href} class="hero-cta">
- {cta.text}
- </a>
- )}
- </div>
- <div class="hero-image">
- <img src={image} alt={title} loading="eager" />
- </div>
- </div>
-</section>
-
-<style>
- .hero-section {
- @apply py-20 md:py-32;
- }
- 
- .hero-content {
- @apply max-w-2xl;
- }
- 
- .hero-title {
- @apply text-4xl md:text-6xl font-bold mb-6;
- }
- 
- /* Variant-specific styles */
- [data-variant='university'] {
- @apply bg-blue-50;
- }
- 
- [data-variant='student'] {
- @apply bg-purple-50;
- }
-</style>
-```
-
-## Tailwind Integration
-
-### Design Tokens → Tailwind Config
-
-Map Figma tokens to Tailwind configuration:
-
-```typescript
-// tailwind.config.ts
-export default {
- theme: {
- extend: {
- colors: {
- primary: {
- 50: '#f0f9ff',
- 600: '#0284c7', // Primary brand color
- },
- university: '#0066CC',
- student: '#8B5CF6',
- workplace: '#059669',
- },
- fontFamily: {
- sans: ['Geist', 'system-ui', 'sans-serif'],
- display: ['Chillax', 'sans-serif'],
- mono: ['PP Mori', 'monospace'],
- },
- fontSize: {
- 'display-1': ['4rem', { lineHeight: '1.1', fontWeight: '700' }],
- 'display-2': ['3rem', { lineHeight: '1.2', fontWeight: '700' }],
- 'heading-1': ['2.5rem', { lineHeight: '1.2', fontWeight: '600' }],
- },
- spacing: {
- '18': '4.5rem',
- '22': '5.5rem',
- },
- },
- },
-};
-```
+| Page Type | Estimated Time |
+|-----------|---------------|
+| Simple page (About, Contact) | 2-4 hours |
+| Complex page (Home, How it works) | 4-8 hours |
+| Blog template (list + post) | 4-6 hours |
 
 ## Quality Checklist
 
 ### Design Fidelity
-- [ ] Matches Figma design accurately
-- [ ] Correct colors, fonts, spacing
-- [ ] Responsive behavior works
-- [ ] Hover/active states implemented
-
-### Code Quality
-- [ ] Semantic HTML elements
-- [ ] Reusable component
-- [ ] Typed props (TypeScript)
-- [ ] Clean, readable code
-- [ ] No hardcoded values
+- [ ] Matches Figma design
+- [ ] Correct colours, fonts, spacing
+- [ ] Responsive across breakpoints
+- [ ] Hover and active states
 
 ### Performance
-- [ ] Optimized images (WebP with fallbacks)
-- [ ] Lazy loading for below-fold images
-- [ ] Minimal CSS (no unused styles)
-- [ ] Fast load time
+- [ ] Optimised images (WebP, lazy loading)
+- [ ] Lighthouse score 90+
+- [ ] Fast load time (FCP < 1.5s)
 
 ### Accessibility
 - [ ] Proper heading hierarchy
 - [ ] Alt text for images
-- [ ] ARIA labels where needed
 - [ ] Keyboard navigation
-- [ ] Color contrast passes WCAG AA
+- [ ] WCAG AA colour contrast
 
-### Testing
-- [ ] Works in Chrome, Safari, Firefox
-- [ ] Mobile responsive (375px to 1920px)
-- [ ] No console errors
-- [ ] Passes Lighthouse audit (90+ scores)
-
-## Time Estimates
-
-| Component Type | Time Required |
-|----------------|---------------|
-| **Simple** (Button, Card, Input) | ~30 minutes |
-| **Medium** (Hero, Pricing, Blog Card) | ~1-2 hours |
-| **Complex** (Full Page, Interactive) | ~4-6 hours |
-
-### Breakdown
-
-**Simple Component:**
-- Asset Export: 5 min
-- Component Code: 20 min
-- Testing & Polish: 5 min
-
-**Medium Component:**
-- Asset Export: 15 min
-- Component Code: 1 hour
-- Testing & Polish: 15 min
-
-**Complex Page:**
-- Asset Export: 30 min
-- Component Code: 4-5 hours
-- Testing & Polish: 30 min
-
-## Design-to-Code Handoff
-
-### Handoff Template
-
-```markdown
-## New Page: [Name]
-
-### Design Files
-- Figma Link: [URL]
-- Dev Mode: [URL]
-- Asset Exports: [Folder/ZIP]
-
-### Page Details
-- Target Site: University / Student / Workplace
-- URL Path: /about-us
-- Components Needed:
- - Hero Section (reuse existing)
- - Text + Image Section (new)
- - Testimonials Grid (reuse)
- - CTA Section (reuse)
-
-### New Components to Build
-1. TextImageSection - estimated 1 hour
-2. [other components]
-
-### Design Tokens Used
-- Colors: Primary Blue, Neutral Gray
-- Fonts: Chillax Bold, Geist Regular
-- Spacing: 8px grid
-
-### Responsive Breakpoints
-- Mobile: 375px - 767px
-- Tablet: 768px - 1023px
-- Desktop: 1024px+
-
-### Notes
-- Hero image should lazy load
-- CTA button uses primary variant
-- Testimonials auto-rotate on mobile
-```
-
-## Tools & Resources
-
-### Figma Plugins
-- **Stark** - Accessibility checks
-- **Iconify** - Icon library
-- **Content Reel** - Content population
-- **Contrast** - Color contrast checker
-
-### Development
-- **Astro** - Framework
-- **Tailwind CSS** - Styling
-- **TypeScript** - Type safety
-- **Prettier** - Code formatting
-
-### Testing
-- **Responsively** - Responsive testing app
-- **Lighthouse** - Performance audit
-- **axe DevTools** - Accessibility testing
+### SEO
+- [ ] Meta title and description
+- [ ] Open Graph tags
+- [ ] Structured data where relevant
 
 ---
 
-**Status**: Active
-**Last Updated**: December 16, 2024
-
+**Last Updated:** January 2026

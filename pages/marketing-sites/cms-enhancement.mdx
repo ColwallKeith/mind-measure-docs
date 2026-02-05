@@ -2,276 +2,152 @@
 
 ## Overview
 
-Enhanced Sanity CMS configuration for professional blog and whitepaper management across all marketing sites.
+Blog and article content for Mind Measure marketing sites is managed through the **Marketing CMS** at [marketing.mindmeasure.co.uk](https://marketing.mindmeasure.co.uk). This replaces the previous Sanity-based approach.
 
-## Goals
+Content written once in the Marketing CMS can be published to multiple surfaces: marketing websites and the mobile app.
 
-1. **Unified Blog System** - Shared blog engine across all sites
-2. **Whitepaper Management** - Upload, manage, and track downloads
-3. **Advanced SEO** - Meta tags, Open Graph, structured data
-4. **Content Scheduling** - Publish and unpublish dates
-5. **Rich Media** - Image galleries, videos, embeds
-6. **Author Management** - Multiple authors with profiles
-7. **Related Content** - Automatic recommendations
+## Content Sources
 
-## Content Architecture
+| Content Type | Source | Notes |
+|-------------|--------|-------|
+| **Blog posts** | Marketing CMS | Published to marketing sites via public API |
+| **Mobile app articles** | Marketing CMS | Same content, deployed via University CMS |
+| **Page layouts** | Figma | Static pages designed in Figma, not CMS-driven |
+| **Media assets** | Marketing CMS (S3) | Images uploaded and managed in CMS media library |
 
-### Sanity Projects
+## Marketing CMS
 
-Each site maintains its own Sanity project:
-- **University Site**: Separate project for institution content
-- **Student Site**: Separate project for student content
-- **Shared Schemas**: Common content types used across sites
+- **URL:** [marketing.mindmeasure.co.uk](https://marketing.mindmeasure.co.uk)
+- **Repository:** [github.com/Mind-Measure/mind-measure-marketing-cms](https://github.com/Mind-Measure/mind-measure-marketing-cms)
+- **Stack:** Next.js, Prisma, PostgreSQL, AWS S3
+- **Vercel Project:** mind-measure-marketing-cms
 
-### Why Separate Projects?
+### Blog Post Schema
 
-- Different content strategies per audience
-- Independent content teams
-- Flexible permissions
-- Separate billing
-
-## Enhanced Blog Schema
-
-### Core Fields
-
-```typescript
-{
- name: 'blogPost',
- type: 'document',
- fields: [
- // Content
- { name: 'title', type: 'string', required: true },
- { name: 'slug', type: 'slug', required: true },
- { name: 'excerpt', type: 'text', maxLength: 200 },
- { name: 'coverImage', type: 'image' },
- { name: 'content', type: 'array' }, // Portable Text
- 
- // Author & Taxonomy
- { name: 'author', type: 'reference', to: [{ type: 'author' }] },
- { name: 'categories', type: 'array' },
- { name: 'tags', type: 'array' },
- 
- // SEO
- { name: 'seoTitle', type: 'string', maxLength: 60 },
- { name: 'seoDescription', type: 'text', maxLength: 160 },
- { name: 'ogImage', type: 'image' },
- 
- // Publishing
- { name: 'publishedAt', type: 'datetime', required: true },
- { name: 'unpublishAt', type: 'datetime' },
- { name: 'featured', type: 'boolean' },
- 
- // Multi-site
- { name: 'sites', type: 'array' }, // ['university', 'student']
- 
- // Related Content
- { name: 'relatedPosts', type: 'array' }
- ]
-}
+```
+MarketingBlogPost:
+  - id (UUID)
+  - title
+  - slug (unique)
+  - excerpt
+  - contentMd (Markdown/Tiptap JSON)
+  - coverImageUrl
+  - coverImagePosition (top | center | bottom)
+  - status (DRAFT | PUBLISHED | ARCHIVED)
+  - publishedAt
+  - authorName
+  - targetSites[] (e.g. ['university', 'student', 'pro'])
+  - category (Anxiety, Sleep, Stress, etc.)
+  - readTime (minutes)
+  - visibility (private | shared)
+  - socialSharingPlatforms[]
 ```
 
-### Rich Content Types
+### Page Schema
 
-Portable Text supports:
-- **Text Blocks**: Headings, paragraphs, lists
-- **Images**: With captions and alt text
-- **Code Blocks**: Syntax-highlighted code
-- **Callouts**: Info, warning, success, tip boxes
-- **Embeds**: YouTube, Twitter, etc.
-- **Internal Links**: Link to other blog posts
-
-## Whitepaper Schema
-
-### Core Fields
-
-```typescript
-{
- name: 'whitepaper',
- type: 'document',
- fields: [
- // Content
- { name: 'title', type: 'string', required: true },
- { name: 'slug', type: 'slug', required: true },
- { name: 'description', type: 'text', maxLength: 300 },
- { name: 'coverImage', type: 'image', required: true },
- { name: 'keyTakeaways', type: 'array' }, // Bullet points
- 
- // File
- { name: 'file', type: 'file', accept: 'application/pdf' },
- { name: 'fileSize', type: 'string' }, // "2.5 MB"
- { name: 'pages', type: 'number' },
- 
- // Form Requirements
- { name: 'requiresForm', type: 'boolean', default: true },
- { name: 'formFields', type: 'array' }, // name, email, organization, etc.
- 
- // Categories & Publishing
- { name: 'categories', type: 'array' },
- { name: 'publishedAt', type: 'datetime', required: true },
- { name: 'sites', type: 'array' }
- ]
-}
+```
+MarketingPage:
+  - id (UUID)
+  - title
+  - slug
+  - template (e.g. 'hero-cta', 'about-page')
+  - sections (JSONB - array of page sections)
+  - seoTitle
+  - seoDescription
+  - ogImageUrl
+  - status (DRAFT | PUBLISHED | ARCHIVED)
+  - targetSites[]
 ```
 
-### Download Flow
+### Key Features
 
-1. User clicks "Download" on whitepaper
-2. Modal appears with contact form (if required)
-3. User fills form and submits
-4. Email sent to sales team
-5. PDF download starts automatically
-6. Download tracked in analytics
+- **Rich text editor** (Tiptap) with live preview
+- **Media library** with approval workflow and S3 storage
+- **Multi-site targeting** – assign content to university, student, or pro sites
+- **Social media posts** – LinkedIn, Instagram, TikTok with export options
+- **Campaign management** – UTM builder, QR codes
+- **University content deployments** – push articles to mobile app
 
-## Author Schema
+## Content Flow
 
-```typescript
-{
- name: 'author',
- type: 'document',
- fields: [
- { name: 'name', type: 'string', required: true },
- { name: 'slug', type: 'slug', required: true },
- { name: 'image', type: 'image' },
- { name: 'bio', type: 'text', rows: 4 },
- { name: 'role', type: 'string' }, // e.g., "Clinical Psychologist"
- { name: 'social', type: 'object', fields: [
- { name: 'twitter', type: 'url' },
- { name: 'linkedin', type: 'url' },
- { name: 'website', type: 'url' }
- ]}
- ]
-}
+### Blog Posts to Marketing Sites
+
+```
+1. Content editor logs in to marketing.mindmeasure.co.uk
+2. Creates/edits blog post
+3. Sets targetSites (e.g. ['university', 'student'])
+4. Publishes
+5. Marketing sites fetch via public API at build time
+6. Static blog pages generated and deployed
 ```
 
-## Sanity Studio Configuration
+### Blog Posts to Mobile App
 
-### Unified Studio
-
-Create a shared Sanity Studio that manages content for all projects:
-
-```typescript
-// sanity.config.ts
-export default defineConfig([
- {
- name: 'university',
- title: 'Mind Measure University',
- projectId: 'xxx',
- dataset: 'production',
- schema: { types: [blogPost, whitepaper, author, category] }
- },
- {
- name: 'student',
- title: 'Mind Measure Student',
- projectId: 'yyy',
- dataset: 'production',
- schema: { types: [blogPost, whitepaper, author, category] }
- }
-])
+```
+1. Same blog post in Marketing CMS
+2. University admin browses shared library
+3. Selects articles to deploy to their app
+4. Articles appear in mobile.mindmeasure.app for that university's students
 ```
 
-### Studio Features
+### Public API Endpoints (for marketing site builds)
 
-- **Multi-project Switching**: Toggle between university and student content
-- **Live Preview**: See changes before publishing
-- **Desk Structure**: Custom organization of content types
-- **Roles & Permissions**: Control who can edit what
+These read-only, unauthenticated endpoints serve published content:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/public/blog-posts?site=university` | List published posts for a site |
+| `GET /api/public/blog-posts/[slug]` | Single post by slug |
+| `GET /api/public/pages?site=university` | List published pages (if CMS-driven) |
+| `GET /api/public/pages/[slug]` | Single page by slug |
 
 ## Content Workflow
 
-### Creating a Blog Post
+### Roles
 
-1. **Draft**: Content editor creates post in Sanity Studio
-2. **Preview**: Review with live preview
-3. **Schedule**: Set publish date/time
-4. **Publish**: Post goes live automatically at scheduled time
-5. **Update**: Edit anytime, changes deploy on next build
+| Role | Access |
+|------|--------|
+| **Admin** | Full CMS access – create, edit, publish, manage media |
+| **Editor** | Create and edit content, submit for review |
+| **Viewer** | Read-only access |
+| **Ambassador** | Read-only access to approved media assets |
 
-### Managing Whitepapers
+### Publishing States
 
-1. **Upload PDF**: Add whitepaper file to Sanity
-2. **Add Metadata**: Title, description, key takeaways
-3. **Configure Form**: Choose required form fields
-4. **Publish**: Make available on site
-5. **Track**: Monitor downloads and form submissions
+- **Draft** – Work in progress, not visible publicly
+- **Published** – Live on marketing sites and available for mobile deployment
+- **Archived** – Removed from public view, retained in system
 
-## SEO Features
+## SEO
 
-### Per-Post Optimization
+Each blog post supports:
 
-- Custom SEO title and description
-- Open Graph image for social sharing
-- Structured data (Article schema)
-- Canonical URLs
-- XML sitemap generation
+- Custom SEO title (max 60 characters)
+- Meta description (max 160 characters)
+- Open Graph image
+- Slug-based URLs (`/blog/your-post-slug`)
+- Category and tag taxonomy
 
-### Content Guidelines
+## Media Library
 
-- **Title**: 50-60 characters
-- **Meta Description**: 150-160 characters
-- **Image Alt Text**: Descriptive, keyword-rich
-- **Headings**: Proper H1-H6 hierarchy
-- **Internal Linking**: Link to related content
+- **Upload** images to S3 via CMS
+- **Approval workflow:** Draft → Pending Review → Approved
+- **Collections** for curated asset groups
+- **Brand rules** for usage guidelines
+- **Public access** for ambassadors via `/api/media-library/public`
 
-## Analytics Integration
+## Figma Sites CMS (Under Review)
 
-### Tracked Events
+Figma Sites includes a built-in CMS for blogging. This is being evaluated as a potential alternative or complement to the Marketing CMS for blog content on marketing sites. If adopted, the Marketing CMS would focus on mobile app content and campaign management, while Figma Sites handles marketing blog publishing directly.
 
-- Page views per post
-- Time on page
-- Scroll depth
-- Social shares
-- Whitepaper downloads
-- Form submissions
+## Deprecated: Sanity
 
-### Popular Content
-
-Sanity dashboard shows:
-- Most viewed blog posts
-- Most downloaded whitepapers
-- Trending topics
-- Author performance
-
-## Implementation Checklist
-
-### Phase 1: Blog Enhancement
-- [ ] Create enhanced blog post schema
-- [ ] Create author schema
-- [ ] Update category schema
-- [ ] Generate TypeScript types
-- [ ] Test in Sanity Studio
-
-### Phase 2: Whitepaper System
-- [ ] Create whitepaper schema
-- [ ] Set up file upload
-- [ ] Configure form requirements
-- [ ] Generate TypeScript types
-- [ ] Test in Sanity Studio
-
-### Phase 3: Frontend Components
-- [ ] Build BlogList component
-- [ ] Build BlogPost layout
-- [ ] Build WhitepaperCard component
-- [ ] Build WhitepaperDownload component
-- [ ] Add to shared package
-
-### Phase 4: Deployment
-- [ ] Connect to Sanity projects
-- [ ] Test queries
-- [ ] Deploy to Vercel
-- [ ] Test live functionality
-
-## Future Enhancements
-
-- Newsletter integration (ConvertKit, Mailchimp)
-- Comment system (Disqus, Commento)
-- Reading progress indicator
-- Bookmark/save functionality
-- PDF generation for blog posts
-- RSS feed generation
-- Multi-language support
+- **Previous role:** Page structure, blog posts, navigation, footer content
+- **Status:** Deprecated for marketing sites
+- **Replaced by:** Figma (pages) + Marketing CMS (blogs) or Figma Sites CMS (under review)
+- **Migration:** Export any remaining Sanity content; remove Sanity dependencies from marketing site builds
 
 ---
 
-**Status**: Planned
-**Implementation Date**: Q1 2025
-
+**Last Updated:** January 2026  
+**Marketing CMS:** [marketing.mindmeasure.co.uk](https://marketing.mindmeasure.co.uk)
