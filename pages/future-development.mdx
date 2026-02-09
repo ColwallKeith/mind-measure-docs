@@ -1,0 +1,124 @@
+# Future Development
+
+A living document tracking planned features, deferred work, and development priorities across the Mind Measure platform. Items are grouped by product area and roughly ordered by priority within each section.
+
+**Last Updated**: 24 January 2026
+
+---
+
+## Mobile App
+
+### Settings Page (Phase 2)
+
+**Status**: Deferred — minimal version deployed  
+**Repository**: `mind-measure-mobile-final`  
+**Current State**: Settings page stripped back to essentials (Privacy Policy, Terms of Service, Your Privacy overlay, Sign Out) as of January 2026. The original implementation was off-brand, non-functional, and crashed on interaction due to a stub `useUserPreferences` hook.
+
+**Planned Work**:
+
+1. **On-brand design** — Settings page must match the mobile app's visual language. No generic icons or emojis. Consistent typeface and colour palette.
+2. **Notification preferences** (persisted to database):
+   - Check-in reminders — opt in/out of daily wellness check-in prompts
+   - Buddy notifications — control whether buddies can check in on you
+   - Wellbeing alerts — toggle important wellbeing updates
+3. **Privacy preferences** (persisted to database):
+   - Data sharing — consent for anonymised research data sharing
+4. **Backend requirements**:
+   - `user_preferences` table in Aurora (or extend `profiles` table)
+   - `useUserPreferences` hook rewritten to read/write via `backendService.database`
+   - Preferences synced on login, cached locally for offline access
+5. **Appearance settings** (lower priority):
+   - Dark mode — requires full theme system across the mobile app
+   - Reduced motion — requires animation wrapper/context
+   - Only implement when the rest of the app supports these features
+6. **Assessment preferences** (lower priority):
+   - Voice vs text input preference for check-ins
+   - Only relevant once the assessment engine supports both modalities
+
+**Design Notes**: The Figma designs for the mobile app should be consulted when this work begins. The settings page should feel native to iOS/Android, not like a web form.
+
+---
+
+### Buddy System Enhancements
+
+**Status**: V1 deployed (email-only)  
+**Repository**: `mind-measure-mobile-final`
+
+**Planned Work**:
+
+- In-app notifications when a buddy accepts an invitation
+- Buddy status visibility on the dashboard
+- Push notification integration for nudge reminders
+- Potential V2: in-app messaging between student and buddy
+
+---
+
+## Admin Dashboard (Core)
+
+### Investor Dashboard
+
+**Status**: Planned — Figma designs exist  
+**Repository**: `mind-measure-core`
+
+**Planned Work**:
+
+- Dedicated investor-facing view with key platform metrics
+- User growth, engagement trends, university adoption
+- Revenue and cost data (if appropriate)
+- Figma designs available in the project files — consult before implementation
+
+---
+
+### University Invite Flow
+
+**Status**: Implemented — needs end-to-end testing  
+**Repository**: `mind-measure-core`
+
+**Planned Work**:
+
+- Full end-to-end test of the university admin invite flow
+- Verify email delivery, code entry, and successful access
+- Confirm university admins can then invite their own users
+- Document the flow once validated
+
+---
+
+## Platform-Wide
+
+### Type Safety Enhancement
+
+**Status**: Planned (previously Phase 5)  
+**Applies to**: Both `mind-measure-core` and `mind-measure-mobile-final`
+
+**Planned Work**:
+
+- Strict TypeScript configuration
+- Centralised type definitions for database schemas and API responses
+- Runtime validation with Zod
+- Type-safe service interfaces
+- See archived `PHASE_5_PLAN.md` for full details
+
+---
+
+### Push Notification Infrastructure
+
+**Status**: Not started  
+**Applies to**: `mind-measure-mobile-final` (Capacitor), backend (AWS)
+
+**Planned Work**:
+
+- FCM/APNs token registration via Capacitor
+- Backend service for sending targeted push notifications
+- Notification types: check-in reminders, buddy nudges, wellbeing alerts, crisis escalation
+- User preference integration (once settings page Phase 2 is complete)
+- Scheduling engine for timed reminders
+
+---
+
+## How to Use This Document
+
+- Add new items as they are identified and deferred
+- Update status as work progresses
+- Move completed items to the relevant product documentation
+- Keep the "Last Updated" date current
+- This is not a sprint backlog — it captures medium-to-long-term planned work
