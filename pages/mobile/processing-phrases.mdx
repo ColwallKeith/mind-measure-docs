@@ -1,0 +1,91 @@
+# Processing Screen Phrases
+
+These phrases cycle during the post-assessment processing animation. White text on Spectra background, one phrase at a time, ending with "MIND MEASURE".
+
+---
+
+## Baseline Assessment
+
+15 phrases at 500ms each = 7.5 seconds total.
+
+| # | Phrase |
+|---|--------|
+| 1 | Capturing voice signal |
+| 2 | Measuring speech rhythm |
+| 3 | Assessing vocal stability |
+| 4 | Tracking facial cues |
+| 5 | Mapping emotional valence |
+| 6 | Parsing language patterns |
+| 7 | Scoring PHQ-2 |
+| 8 | Scoring GAD-2 |
+| 9 | Integrating structured responses |
+| 10 | Aligning multimodal signals |
+| 11 | Normalising feature ranges |
+| 12 | Applying fusion weights |
+| 13 | Calibrating personal baseline |
+| 14 | Computing equilibrium band |
+| 15 | Finalising baseline score |
+
+---
+
+## Check-in Session
+
+27 phrases at 333ms each = ~9 seconds total.
+
+### Voice Analysis
+
+| # | Phrase |
+|---|--------|
+| 1 | Capturing voice signal |
+| 2 | Measuring pitch |
+| 3 | Tracking speech rhythm |
+| 4 | Analysing pause patterns |
+| 5 | Assessing voice stability |
+| 6 | Evaluating audio quality |
+
+### Visual Analysis
+
+| # | Phrase |
+|---|--------|
+| 7 | Tracking facial cues |
+| 8 | Monitoring eye contact |
+| 9 | Measuring facial tension |
+| 10 | Mapping emotional valence |
+| 11 | Assessing blink rate |
+| 12 | Validating visual signal |
+
+### Language Analysis
+
+| # | Phrase |
+|---|--------|
+| 13 | Parsing language tone |
+| 14 | Detecting stress markers |
+| 15 | Identifying coping signals |
+| 16 | Tracking social references |
+| 17 | Monitoring sleep mentions |
+
+### Fusion & Scoring
+
+| # | Phrase |
+|---|--------|
+| 18 | Comparing to baseline |
+| 19 | Measuring variance |
+| 20 | Mapping energy shift |
+| 21 | Calculating stress delta |
+| 22 | Detecting behavioural drift |
+| 23 | Aligning multimodal signals |
+| 24 | Applying fusion weights |
+| 25 | Updating rolling trend |
+| 26 | Recalculating score |
+| 27 | Finalising insight |
+
+---
+
+## Animation Specification
+
+- **Background**: Spectra (`#2D4C4C`)
+- **Logo**: White Mind Measure logo, centred, 120x120px
+- **Phrases**: 15px/500 Inter, white, `whiteSpace: nowrap`
+- **Loading bar**: 60% width, 3px height, Bittersweet (`#FF6B6B`) fill, animates from 0% to 100%
+- **End state**: All phrases complete → "MIND MEASURE" dissolves in (26px/700 Lato, uppercase, 1s fade)
+- **If processing takes longer**: Freezes on "MIND MEASURE" screen until ready

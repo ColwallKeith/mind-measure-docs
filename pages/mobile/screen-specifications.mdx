@@ -1,0 +1,228 @@
+# Screen Specifications
+
+Every screen in the Mind Measure mobile app, specified in detail.
+
+---
+
+## Dashboard — Variant E (Poster Hero)
+
+The poster hero is the centrepiece of the redesign. The score IS the screen — not a card within a card. The background colour changes with the user's wellbeing state.
+
+### Hero Section (624px height)
+
+- Solid background colour from score-state mapping
+- Score number: **285px, weight 900**, `-0.05em` tracking, `tabular-nums`
+- Greeting: "Good morning/afternoon/evening, {firstName}" — 32px, weight 500
+- Affirmation: italic, 26px, weight 300 — different text per score state
+- Entrance animation: opacity + y slide, 1s duration
+
+### Dashboard Grid
+
+White background, 24px padding, 12px gap.
+
+- **Check-in + Help buttons** — 5-column grid:
+  - "Check in" spans 3/5: Spectra bg, white text, 16px radius, 64px height, 18px/500
+  - "Need Help?" spans 2/5: light coral bg, coral text, solid pink hover (`#F66B6B`, white text)
+- **Mood + Streak** — 2-column grid, 80px height:
+  - Adaptive background at 0.18 opacity from hero colour
+  - Score: 28px/900, Label: 12px uppercase, 300 weight
+- **Insight** — full-width, adaptive bg at 0.18, border 1.5px at 0.35 opacity
+- **Enjoying + Worry** — 2-column: 0.20 and 0.45 opacity adaptive bg
+- **Previous Check-in** — score-coloured from *that check-in's* score
+- **NudgeCarousel** — "What's Happening" section with swipeable cards
+
+### Detail Panel Modals
+
+Shared container: fixed overlay, blur backdrop, 24px radius card, 32px accent bar, Pampas body.
+
+| Panel | Accent | Content |
+|-------|--------|---------|
+| **Score** | Sinbad | 56px score, label, delta pill |
+| **Mood** | Buttercup | 48px score "/10", 7-day bar chart |
+| **Streak** | Bittersweet | Flame icon, 48px count, 7-day calendar |
+| **Enjoying** | Sinbad | Stacked items with 8px dots |
+| **On Your Mind** | Bittersweet | Same as Enjoying |
+| **Insight** | Buttercup | Date label, summary heading, narrative |
+
+---
+
+## Content Page
+
+### Hero (Spectra, 260px min-height)
+
+- University name: 13px/500, white at 0.5 opacity
+- Title: "Wellbeing Content" — 32px/700, white, Inter
+- New-articles badge: pill with bell icon
+
+### Filter Pills (sticky)
+
+- Active: Spectra bg, white text, 600 weight
+- Inactive: white bg, Spectra text, 400 weight, 1.5px border
+- Categories: `All | Wellbeing | Anxiety | Sleep | Stress | Relationships | Exercise`
+
+### Article Cards
+
+- White bg, 16px radius, standard shadow
+- Image: 200px height, "NEW" badge top-right (Sinbad bg)
+- Category pill, read time, title (17px/600), excerpt (3-line clamp)
+- Stagger: each card 0.08s delay
+
+---
+
+## Buddies Page
+
+### Hero (Spectra, 220px min-height)
+
+- Title: "Buddies" — 32px/700, white
+- Subtitle: "A Buddy is someone you trust..." — 15px/400, 0.6 opacity
+
+### Buddy Cards
+
+- Drag handle: 3 horizontal bars
+- Numbered circle: 44x44px, buddy colour
+- Name: 16px/600, active dot (7x7px green)
+- Nudge button: pill with bell icon
+
+### Info Modal ("How Buddies Work")
+
+- Sinbad accent bar, 3 sections with coloured bullets
+- "Got it" button: Spectra bg
+
+---
+
+## Profile Page
+
+### Hero (Spectra, 240px min-height)
+
+- Avatar: 56x56 circle, Sinbad bg, initials at 22px/700
+- Name: 26px/700, Email: 14px at 0.5 opacity
+- Institution line: 14px/400, 0.5 opacity
+
+### Stats Row (3-column grid)
+
+- Check-ins | Avg Score | Best Streak
+- Value: 26px/700, Label: 11px/500 uppercase
+
+### Score Trend (12-week bar chart)
+
+- 12 bars, gradient opacity (older = lighter), latest = Sinbad
+
+### Wellbeing Report
+
+- Gradient accent bar: `linear-gradient(90deg, #99CCCE, #DDD6FE, #F59E0B)`
+- Period selector: 14 / 30 / 90 days
+- "Generate & Email Report" button: Spectra bg
+
+---
+
+## Check-in Screen (Lyrics Scroll)
+
+The check-in is a fully immersive, text-based conversation experience inspired by Spotify's lyrics view and Typeform's one-question-at-a-time approach.
+
+> *"Love this idea — let's build it because the execution is everything."*
+
+### Phase 1: Welcome
+
+- Full Spectra background
+- Back button: top-left, Sinbad, 0.5 opacity
+- Title: **48px, Lato, weight 300**, Pampas colour
+- Subtitle: 18px/300, Sinbad at 0.6 opacity
+- **Begin button**: Buttercup bg, Spectra text, 14px radius
+- Bottom-left: Camera + mic SVG icons (Sinbad, 0.3 opacity)
+
+### Phase 2: Conversation (Lyrics Scroll)
+
+- Full Spectra background, no header, no chrome — completely immersive
+- **Bottom nav hidden** during conversation
+- **One message at a time**, centred on screen
+- Speaker label: "JODIE" or "YOU" — 11px/500, Sinbad, uppercase
+- **AI message text**: 34px/300, Pampas colour, Lato, with kinetic typography
+- **User message text**: 30px/300, Sinbad colour, Lato
+- **Baseline options**: staggered write-on, 20px/300 italic, Sinbad
+- Message transitions: `y: 16→0` enter, `y: 0→-12` exit, 0.6s
+
+### Auto-advance Timing
+
+| Context | Delay |
+|---------|-------|
+| First message | 600ms |
+| AI messages | 2800ms |
+| User messages | 1600ms |
+| Messages with options | `1200 + optionCount * 900 + 2800` ms |
+
+### Finish Button
+
+- Floating, bottom-right
+- Before last message: transparent bg, Sinbad border/text
+- On last message: animates to Buttercup bg, Spectra text, glow shadow
+
+### Phase 3: Finished
+
+- "All done" — 36px/300, Pampas, Lato, centred
+- "Thanks, {name}. Take care of yourself." — 17px/300, Sinbad at 0.6
+- Auto-returns to dashboard after 2000ms
+
+---
+
+## Get Support (HelpPage)
+
+### Emergency Pills (severity gradient)
+
+| Service | Background | Text | Actions |
+|---------|-----------|------|---------|
+| 999 | `#DC2626` | White | Call |
+| Samaritans | `#EF4444` | White | Call, Text |
+| NHS 111 | `#F87171` | White | Call, Online |
+| University Security | `#FBBF24` | Spectra | Call |
+
+Top 3 items are hardcoded. University Security comes from the CMS (per-university).
+
+### Accordion Sections
+
+- **University Wellbeing**: CMS-driven per university, expandable
+- **National Support**: CMS-driven (universities choose which to include)
+
+---
+
+## Bottom Navigation
+
+| Property | Value |
+|----------|-------|
+| Background | White |
+| Active colour | Buttercup (`#F59E0B`) |
+| Inactive colour | `rgba(45,76,76,0.25)` |
+| Label size | 9px |
+| **Hidden during** | Check-in conversation |
+
+| Tab | Label | Icon |
+|-----|-------|------|
+| home | Home | House outline |
+| content | Content | Book/pages |
+| buddies | Buddies | Two people |
+| profile | Profile | Single person |
+
+---
+
+## Splash & Processing Screens
+
+### Returning Splash Screen
+
+- White logo centred on screen
+- Background colours cycle rapidly (5 times/sec) through: Spectra, Sinbad, Buttercup, Lilac, Bittersweet
+- Settles on Bittersweet at 2 seconds
+- "MEASURE", "MONITOR", "MANAGE" animate in one at a time (uppercase, 26px/700 Lato)
+- "MIND MEASURE" dissolves in slowly (1s fade) after a beat
+
+### Processing Screens
+
+Two modes sharing the same component:
+
+| Property | Baseline | Check-in |
+|----------|----------|----------|
+| Background | Spectra | Spectra |
+| Logo | White, centred | White, centred |
+| Phrase count | 15 | 27 |
+| Phrase interval | 500ms | 333ms |
+| Total duration | ~7.5s | ~9s |
+| Loading bar | Bittersweet, 60% width, 3px height | Same |
+| End state | "MIND MEASURE" (freezes if processing takes longer) | Same |

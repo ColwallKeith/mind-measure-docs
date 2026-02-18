@@ -1,0 +1,176 @@
+# Design System — Source of Truth
+
+> **Last updated:** 18 February 2026
+> **Primary variant:** Variant E — Poster Hero
+
+---
+
+## Brand Palette
+
+### Core Tokens
+
+| Token | Hex | Role |
+|-------|-----|------|
+| **Spectra** | `#2D4C4C` | Primary text, hero backgrounds, buttons, grounding colour |
+| **Spectra Mid** | `#1E3A3A` | Dark variant page backgrounds |
+| **Spectra Deep** | `#142828` | Dark variant bottom nav |
+| **Sinbad** | `#99CCCE` | Progress indicators, data viz, check-in emphasis accent |
+| **Buttercup** | `#F59E0B` | CTAs, highlights, mood accents, active nav icon |
+| **Bittersweet** | `#FF6B6B` | Alerts, urgent states, Help button, low-score hero |
+| **Pampas** | `#FAF9F7` | Light backgrounds, detail panel body |
+| **Apricot** | `#FF9966` | CTA buttons (dark variants) |
+| **Lilac** | `#DDD6FE` | Nudge card accent, high-score hero state |
+| **White** | `#FFFFFF` | Text on dark, dashboard grid background |
+
+### Score-State Colour Mapping
+
+The poster hero background colour changes based on the user's wellbeing score:
+
+| State | Score Range | Background | Text Colour | Affirmation |
+|-------|-----------|------------|-------------|-------------|
+| Low | &lt; 40 | `#FF6B6B` (Bittersweet) | `#ffffff` | "Something needs attention." |
+| Mid | 40–59 | `#F59E0B` (Buttercup) | `#2D4C4C` | "Let's build momentum." |
+| Stable | 60–79 | `#99CCCE` (Sinbad) | `#2D4C4C` | "You're doing great." |
+| High | 80+ | `#DDD6FE` (Lilac) | `#2D4C4C` | "Strong momentum." |
+
+### Design Philosophy — Gulf Racing Livery
+
+The palette was inspired by the Ford GT in Gulf Racing livery — precision, pride, performance, but inviting. Sinbad + Apricot are deliberately confident, gender-neutral, and performance-oriented. These are not "wellness pastels" — they are iconic colours that signal quality.
+
+> *"Just a reminder — these colours are iconic car colours although not, on the surface, 'aggressive' at all."*
+
+---
+
+## Typography
+
+### Font Families
+
+| Font | Usage | Weights |
+|------|-------|---------|
+| **Lato** | Headings, score numbers, conversational text, welcome titles | 300, 400, 700, 900 |
+| **Inter** | Body text, UI chrome, labels, buttons, navigation | 400, 500, 600 |
+
+### Type Scale
+
+| Element | Font | Size | Weight | Tracking | Line Height |
+|---------|------|------|--------|----------|-------------|
+| Poster Hero score | System | 285px | 900 | -0.05em | 1 |
+| Dashboard score (cards) | Lato | 100–108px | 900 | -0.04em | 0.85 |
+| Mood number | Lato | 48–52px | 900 | -0.03em | 0.85 |
+| Check-in welcome title | Lato | 48px | 300 | -0.03em | 1.1 |
+| "All done" finish text | Lato | 36px | 300 | -0.02em | — |
+| Conversation AI text | Lato | 34px | 300 | -0.015em | 1.45 |
+| Screen titles | Inter | 32px | 700 | -0.025em | 1.15 |
+| Conversation user text | Lato | 30px | 300 | — | 1.45 |
+| Profile name | Inter | 26px | 700 | -0.025em | — |
+| Baseline options | Lato | 20px | 300 (italic) | -0.01em | 1.6 |
+| Nav labels | Inter | 9px | 300/600 | 0.05em | — |
+
+### Core Typographic Principle
+
+The **contrast between light uppercase labels** (11px, 300 weight, wide tracking, muted opacity) and **heavy data numbers** (28–285px, 900 weight, tight tracking) is the personality of the app:
+
+> *"That's the personality of the app — the contrast between the Light labels and Black data."*
+
+---
+
+## Design Tokens
+
+### Border Radius Scale
+
+| Value | Usage |
+|-------|-------|
+| 3–4px | Editorial cards, chart bars, dot indicators |
+| 6px | "NEW" badge |
+| 8px | Buttons within cards |
+| 14px | Standard buttons, stats cards, accordion headers |
+| 16px | Content cards, buddy cards, dashboard cards |
+| 20px | Info modal container, filter pills |
+| 24px | Detail panel modal |
+| 9999px | Full pill shapes |
+
+### Shadow Scale
+
+| Name | Value | Usage |
+|------|-------|-------|
+| Standard | `0 2px 8px rgba(0,0,0,0.06)` | Cards, stats, article cards |
+| Adaptive | `0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)` | Dashboard grid cards |
+| Accordion | `0 1px 6px rgba(0,0,0,0.03)` | Help page accordions |
+| Modal | `0 25px 50px -12px rgba(0,0,0,0.25)` | Detail panel overlay |
+| Dragging | `0 8px 24px rgba(0,0,0,0.12)` | Buddy card while dragged |
+| Finish glow | `0 4px 20px rgba(245,158,11,0.3)` | Buttercup finish button |
+
+### Animation Patterns (Framer Motion)
+
+| Pattern | Config | Usage |
+|---------|--------|-------|
+| Container stagger | `duration: 0.3, staggerChildren: 0.05` | Dashboard grid entry |
+| Block entry | `scale: 0.96→1, opacity: 0→1, duration: 0.3` | Card reveal |
+| whileTap | `scale: 0.95–0.98` | All tappable cards |
+| Lyrics scroll | `y: 16→0 enter, y: 0→-12 exit, duration: 0.6` | Check-in messages |
+| Modal spring | `damping: 25, stiffness: 300–350` | Detail panels |
+| Hero entrance | `opacity: 0→1, y: 30→0, duration: 1s` | Poster hero score |
+| Finish button | `duration: 0.5` (bg, color, border, shadow) | Check-in finish CTA |
+
+---
+
+## Kinetic Typography System
+
+Jodie's AI responses include `*asterisks*` around emotionally resonant words. The `renderEmphasis()` function parses these and renders them with visual emphasis.
+
+```
+Input:  "That's *really* good to hear."
+Output: "That's " + <em style="italic, sinbad, +6px">really</em> + " good to hear."
+```
+
+### Rendering Rules
+
+| Property | Value |
+|----------|-------|
+| Font style | Italic |
+| Font weight | 400 (slightly heavier than surrounding 300) |
+| Colour | Sinbad (`#99CCCE`) accent |
+| Size bump | Base font size + 6px (34px → 40px) |
+| Spacing | If followed by punctuation: `marginRight: 2px` |
+
+### Production Integration
+
+1. Add to Jodie's system prompt: *"Use \*asterisks\* around emotionally resonant or key words to indicate natural spoken emphasis. Use sparingly — typically 1–3 words per response."*
+2. Call `renderEmphasis()` when rendering AI message text
+3. Cap at ~3 emphasized words per message
+
+---
+
+## Design Philosophy
+
+### "Strava meets Headspace"
+
+Confident, data-forward, not patronising. Users should feel like they're using a high-quality performance tool, not a therapeutic intervention.
+
+> *"Should NOT be too touchy feely... hoping we are going to see young men engaging."*
+
+### "Simple Surface, Depth on Demand"
+
+Every dashboard element is a tappable card that opens to a detailed modal. The surface layer shows the minimum — score, mood number, streak count. Tap for the full picture.
+
+### Score-State Colour as Differentiator
+
+> *"An app that changes colour based on how you're feeling is instantly differentiating. No other wellbeing app does this."*
+
+### The Five Hero Screens
+
+1. **Dashboard** (Poster Hero)
+2. **Check-in** (Lyrics Scroll)
+3. **Profile** (Wellbeing Report)
+4. **Content** (Editorial)
+5. **Loading/Splash**
+
+> *"If we can set the tone with these then everything else will fall in behind."*
+
+### Safeguarding Priority
+
+"Need Help?" is always visible on the dashboard — never hidden behind menus. Someone in crisis should not have to hunt for it.
+
+### Phone-First Design
+
+> *"This will be viewed 100% on a phone — contrast will be important."*

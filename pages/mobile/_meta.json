@@ -1,13 +1,11 @@
 {
   "overview": "Overview",
+  "design-system": "Design System",
+  "screen-specifications": "Screen Specifications",
+  "processing-phrases": "Processing Phrases",
   "dashboard-improvements": "Dashboard Improvements",
   "buddy-system": "Buddy System",
   "development-safeguards": "Development Safeguards",
   "testing-setup": "Testing Setup",
   "rollback-checklist": "Rollback Procedures"
 }
-
-
-
-
-
