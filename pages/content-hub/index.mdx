@@ -1,0 +1,191 @@
+# University Content Hub
+
+## Overview
+
+The University Content Hub is a standalone Next.js application that provides university administrators with a dedicated space to create, manage, and share wellbeing content for their students. It is accessed exclusively via the Institutional Dashboard (admin.mindmeasure.co.uk) — there is no standalone login.
+
+| | |
+|---|---|
+| **Repository** | [mind-measure-university-hub](https://github.com/Mind-Measure/mind-measure-university-hub) |
+| **Production URL** | [hub.mindmeasure.co.uk](https://hub.mindmeasure.co.uk) |
+| **Framework** | Next.js 14 (App Router) |
+| **Deployment** | Vercel (auto-deploy from GitHub) |
+| **Database** | AWS Aurora PostgreSQL (shared with core) |
+
+## Why a Separate Application?
+
+The Content Hub was deliberately separated from `mind-measure-core` to prevent codebase contamination. The core repository handles the Institutional Dashboard, superuser controls, and API layer. Content management has distinct dependencies (rich text editor, media upload, content pool) that would bloat the core if co-located.
+
+Separation also enables independent deployment cycles — content features ship without risking the admin dashboard or assessment pipeline.
+
+## Authentication Flow
+
+University admins never log in to the Hub directly. Authentication flows through the Institutional Dashboard:
+
+```
+┌─────────────────────────────────┐
+│  Institutional Dashboard        │
+│  admin.mindmeasure.co.uk        │
+│                                 │
+│  Admin signs in → Content tab   │
+│  → "Open Content Hub" button    │
+└──────────────┬──────────────────┘
+               │
+               │  Token (base64 JSON):
+               │  { email, universityId,
+               │    universityName, role }
+               │
+               ▼
+┌─────────────────────────────────┐
+│  Content Hub                    │
+│  hub.mindmeasure.co.uk          │
+│                                 │
+│  /api/auth/session              │
+│  → Decodes token                │
+│  → Sets hub_session cookie      │
+│  → Redirects to /content        │
+└─────────────────────────────────┘
+```
+
+- The CMS constructs a base64-encoded token containing `email`, `universityId`, `universityName`, and `role`
+- The Hub's session endpoint decodes it, enriches the cookie, and redirects to the content page
+- If anyone hits the Hub without a valid token, they are redirected back to `admin.mindmeasure.co.uk`
+- There is no login page on the Hub — the CMS is the only entry point
+
+## Features
+
+### Content Management
+
+University admins can create and manage long-form wellbeing articles for their students. The editor uses [Tiptap](https://tiptap.dev/) — the same rich text editor used in the Mind Measure Marketing CMS — providing a consistent authoring experience.
+
+Articles support:
+- Title, subtitle, and author attribution
+- Cover images (uploaded to S3 via the Marketing CMS proxy)
+- Categories and tags (stored as JSONB)
+- Draft / Published / Archived status
+- "Share to Content Pool" toggle for cross-university visibility
+
+### Content Pool
+
+Three content streams are available to university admins:
+
+| Stream | Description |
+|---|---|
+| **Your Content** | Articles created by this university |
+| **Public Pool** | Articles shared by other universities and seeded by the Mind Measure team |
+| **Popular Content** | Trending articles from the community, ranked by engagement |
+
+Content from the Mind Measure Marketing CMS can be pushed to the public pool via the `targetSites` field on blog posts.
+
+### Nudge Manager
+
+Nudges are short, prescriptive notifications displayed to students on the mobile app. They link to university wellbeing pages and are prioritised by urgency.
+
+**Nudge fields:**
+- Headline
+- One-line description
+- Category (determines colour variant and priority)
+- Date/time (for events)
+- Link URL
+- Status (active / archived)
+
+**Categories and priority:**
+| Category | Colour | Priority | Example |
+|---|---|---|---|
+| Emergency | Bittersweet (red) | Highest | Crisis support changes |
+| Deadline | Buttercup (amber) | High | Exam registration deadline |
+| Workshop | Sinbad (teal) | Medium | Mindfulness session |
+| Social | Lilac (purple) | Lower | Coffee morning in JCR |
+| General | Pampas (cream) | Base | General wellbeing tip |
+
+Nudges are stored in the `universities.nudges` JSONB column and sorted automatically by category priority. A maximum of 5 active nudges are displayed as a swipeable carousel on the mobile app.
+
+### Student Insights
+
+Aggregated, anonymised data from student check-ins provides a "Top 10" of student worries and interests, drawn from `fusion_outputs` analysis. This data is available both locally (university-specific) and nationally, providing inspiration for content creation.
+
+## Technical Architecture
+
+### Database
+
+The Hub shares the Aurora PostgreSQL instance with the core platform:
+
+```sql
+-- Articles table
+CREATE TABLE university_articles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  university_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  subtitle TEXT,
+  slug TEXT NOT NULL,
+  content TEXT,
+  cover_image TEXT,
+  author TEXT,
+  status TEXT DEFAULT 'draft',
+  categories JSONB DEFAULT '[]',
+  tags JSONB DEFAULT '[]',
+  shared_to_pool BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Nudges stored on the universities table
+ALTER TABLE universities
+  ADD COLUMN IF NOT EXISTS nudges JSONB DEFAULT '[]';
+```
+
+### API Routes
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/auth/session` | GET | Token-based session creation |
+| `/api/auth/logout` | GET | Session teardown, redirect to CMS |
+| `/api/content` | GET, POST | List and create articles |
+| `/api/content/[id]` | GET, PUT | Read and update a specific article |
+| `/api/content/pool` | GET | Fetch shared pool articles from Marketing CMS |
+| `/api/nudges` | GET, POST, PUT, DELETE | CRUD for university nudges |
+| `/api/insights` | GET | Aggregated student worries and interests |
+| `/api/upload` | POST | Proxy image uploads to S3 via Marketing CMS |
+
+### Environment Variables
+
+```bash
+AWS_AURORA_HOST=         # Aurora cluster endpoint
+AWS_AURORA_PORT=5432
+AWS_AURORA_DATABASE=     # Database name
+AWS_AURORA_USERNAME=     # DB username
+AWS_AURORA_PASSWORD=     # DB password
+MARKETING_CMS_URL=       # Marketing CMS base URL (for pool API and uploads)
+NEXT_PUBLIC_MARKETING_CMS_URL=  # Client-side Marketing CMS URL
+```
+
+## Brand Palette
+
+The Hub uses the standard Mind Measure colour palette:
+
+| Name | Hex | Usage |
+|---|---|---|
+| Spectra | `#2D4C4C` | Primary (headers, buttons, sidebar) |
+| Sinbad | `#99CCCE` | Accent (highlights, links) |
+| Buttercup | `#F59E0B` | Warning, deadline nudges |
+| Pampas | `#FAF9F7` | Background |
+| Bittersweet | `#FF6B6B` | Urgent, emergency nudges |
+| Lilac | `#C4B5FD` | Social nudges, secondary accent |
+
+## DNS Configuration
+
+| Record | Name | Value |
+|---|---|---|
+| A | `hub` | `76.76.21.21` |
+
+Or use a CNAME:
+
+| Record | Name | Value |
+|---|---|---|
+| CNAME | `hub` | `cname.vercel-dns.com` |
+
+DNS is managed in Cloudflare. Proxy must be **off** (DNS only / grey cloud) for Vercel SSL certificate issuance.
+
+---
+
+*Last updated: February 2026*

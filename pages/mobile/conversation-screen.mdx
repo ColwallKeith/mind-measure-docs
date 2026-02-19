@@ -1,0 +1,101 @@
+# Conversation Screen
+
+## Overview
+
+The conversation screen is where students have their daily check-in with Jodie, the AI companion. It uses the ElevenLabs multimodal engine for real-time conversational AI, with voice, facial expression, and language analysis running simultaneously.
+
+**Critical:** The ElevenLabs backend must not be modified. The conversation screen handles only the visual presentation of the exchange — all AI processing happens server-side via the existing pipeline.
+
+## Typography
+
+The conversation screen uses a distinctive typographic treatment designed to feel calm and readable on mobile:
+
+### Jodie's Messages (AI)
+
+| Property | Value |
+|---|---|
+| Font | Lato |
+| Weight | 700 (bold) |
+| Size | 40px |
+| Colour | White (`#FFFFFF`) |
+| Alignment | Left |
+| Line height | 1.2 |
+
+### User's Messages
+
+| Property | Value |
+|---|---|
+| Font | Lato |
+| Weight | 300 (light) |
+| Size | 22px |
+| Colour | Sinbad (`#99CCCE`) at 0.8 opacity |
+| Alignment | Left |
+| Line height | 1.4 |
+
+### Emphasis Words
+
+Certain words in Jodie's messages are highlighted:
+
+- **User's name** — Always italicised in Sinbad colour
+- **Emotion words** (e.g. "manageable", "stressed") — Italicised in Sinbad
+- **References** (e.g. "Last time", "1-10") — Italicised in Sinbad
+- **"Finish button"** — Triggers the Finish button to go solid
+
+Emphasis is detected via:
+1. Asterisk-wrapped phrases from the AI transcript (`*word*`)
+2. Hard-coded patterns: user's name, "last time", numeric scales, emotion vocabulary
+
+### Speaker Label
+
+| Property | Value |
+|---|---|
+| Text | "JODIE" or "YOU" |
+| Font | Inter |
+| Size | 12px |
+| Weight | 600 |
+| Colour | Sinbad at 0.6 opacity |
+| Position | Top-left above message |
+
+## Message Timing
+
+### User Message Hold
+
+User responses take longer to transcribe than Jodie's pre-prepared text. To prevent user messages being knocked off screen before they're read:
+
+- When a user message appears, it holds for a minimum of **2.5 seconds**
+- Jodie's next message queues and displays after the hold period
+- Jodie's own messages transition immediately (they're the primary content)
+
+### Scroll Behaviour
+
+- Messages appear with the latest at the bottom, scrolling upward
+- Previous messages fade to ~20% opacity as they scroll up
+- Generous bottom padding ensures new text appears in the comfortable reading zone, not jammed against the screen bottom
+
+## Finish Button
+
+The Finish button has two states:
+
+| State | Appearance | Trigger |
+|---|---|---|
+| **Outline** | Hollow border, Spectra colour | Default from start |
+| **Solid** | Filled Spectra background, white text | When Jodie says "finish button" in her transcript |
+
+The solid state includes a haptic pulse to draw attention. The button requires a deliberate tap — accidental touches are prevented by a brief debounce.
+
+## Background
+
+The entire conversation screen uses a Spectra (`#2D4C4C`) background, creating an immersive, focused environment. The camera and microphone icons sit at the bottom-left. The Finish button sits at the bottom-right.
+
+## Assessment Flow
+
+After the student taps Finish:
+
+1. Conversation ends
+2. Transition to the [Processing Screen](/mobile/processing-screen)
+3. Assessment data is submitted to the analysis pipeline
+4. On completion, the student returns to the dashboard with updated scores
+
+---
+
+*Last updated: February 2026*

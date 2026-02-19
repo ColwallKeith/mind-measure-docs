@@ -1,292 +1,115 @@
-# Dashboard Improvements
-
-Recent enhancements to the mobile app dashboard provide students with richer insights into their wellbeing trends over time.
+# Dashboard & Modal System
 
 ## Overview
 
-The dashboard now features swipeable score cards showing current scores, 7-day trends, and 30-day trends, inspired by Apple Health's visualization approach.
+The mobile dashboard (V4, February 2026) uses a card-based layout where each card opens a detail modal on tap, inspired by Apple Health's summary-then-detail pattern. The dashboard displays the student's current state at a glance, with rich detail available one tap away.
 
-## Key Features
+## Dashboard Layout
 
-### Swipeable Score Cards
+### Score Hero
 
-**Current Score Card**
-- Displays latest Mind Measure score
-- Color-coded by wellbeing band (Green/Blue/Yellow/Red)
-- Shows mood score and check-in date
-- Baseline score displayed for comparison
+The top section shows the student's latest Mind Measure score with a colour-coded background:
 
-**7-Day View Card**
-- Bar chart showing scores for last 7 days
-- Baseline reference line
-- Dynamic day labels (relative to current day)
-- Check-in counter showing participation
-- Encouragement message if few check-ins
-- Bars grow from baseline to show improvement/decline
+| Score Range | Colour | Affirmation |
+|---|---|---|
+| 80–100 | Sinbad (teal) | "You're doing great today." |
+| 60–79 | Buttercup (amber) | "You're doing well today." |
+| 40–59 | Bittersweet (coral) | "Let's build momentum." |
+| 0–39 | Deep red | "We're here for you." |
 
-**30-Day View Card**
-- Bar chart showing scores for last 30 days
-- Average score display
-- Check-in counter for the month
-- Day numbers (1-31) based on actual dates
-- Minimum 5 check-ins required for meaningful average
+The hero also displays a time-appropriate greeting ("Good morning, Keith") and the affirmation text.
 
-### Visualization Design
+### Action Buttons
 
-**Apple Health Inspiration**
-- Prominent, solid bars
-- Clear baseline reference
-- Bars grow from bottom upwards
-- Strong contrast with white bars on colored backgrounds
-- Minimal, focused data display
+Two primary actions sit below the hero:
 
-**Color-Coded Backgrounds**
-- Green (80-100): Excellent wellbeing
-- Blue (60-79): Good wellbeing
-- Amber (40-59): Moderate concerns
-- Red (0-39): Concerning patterns
+- **+ Check in** — Starts a new conversational check-in
+- **Need Help?** — Opens the university help page with emergency contacts
 
-## User Interface Components
+### Dashboard Cards
 
-### SwipeableScoreCard Component
+Six tappable cards, each opening a modal:
 
-Main container handling swipe gestures and card transitions.
+| Card | Summary View | Modal Detail |
+|---|---|---|
+| **Mood** | Score out of 10, e.g. "4/10" | 7-day bar chart of mood scores, average, trend direction |
+| **Streak** | Consecutive check-in days, e.g. "3 days" | Calendar heatmap showing check-in history, longest streak, reward milestones |
+| **Insight** | One-line AI summary of latest check-in | Last 3 check-in summaries with dates, theme comparison |
+| **Enjoying** | Top positive themes from latest check-in | Comparison with previous check-in, recurring positives |
+| **Worry** | Top concerns from latest check-in | Comparison with previous check-in, trending concerns |
+| **Previous Check-in** | Date and score of last session | "Your Journey" view — score trend line chart, full check-in history with deltas |
 
-```typescript
-interface SwipeableScoreCardProps {
- latestScore: number | null;
- latestSession: SessionData | null;
- baselineScore: number | null;
- trendData: {
- last7CheckIns: Array<{score: number, date: string}>;
- last30Days: Array<{score: number, date: string}>;
- };
- userCreatedAt: string;
-}
-```
+### Streak Counting
 
-**Features:**
-- Framer Motion animations
-- Touch-friendly swipe gestures
-- Pagination dots for navigation
-- Conditional view display based on account age
+Streaks count **unique check-in days**, not individual check-ins. Three check-ins on the same day count as 1 streak day. A streak breaks if a calendar day is missed.
 
-### CurrentScoreCard Component
+## Modal System
 
-Displays the user's most recent wellbeing score.
+### Your Journey Modal (Previous Check-in)
 
-**Key Elements:**
-- Large score display (0-100)
-- Status badge (Excellent/Good/Moderate/Concerning)
-- Mood score indicator
-- Last check-in date
-- Baseline comparison indicator
+The richest modal, showing longitudinal data:
 
-### SevenDayViewCard Component
+- **Score Trend** — Line chart of all check-in scores with round data points
+- **Summary Stats** — Average, High, Low across the visible period
+- **Check-in History** — Scrollable list with date, score badge (colour-coded), and delta from previous
 
-Shows bar chart for the last 7 days of check-ins.
+### Mood Modal
 
-**Key Elements:**
-- "SEVEN DAY VIEW" title
-- Average score display top-left
-- Check-in counter
-- Baseline score label with horizontal line
-- 7 vertical bars (one per day)
-- Dynamic day labels (S M T W T F S)
-- Y-axis: 0, 50, 100
-- Encouragement message for low participation
+- **7-Day Bar Chart** — Apple Health style, solid bars
+- **Current vs. Average** — Side-by-side comparison
+- **Trend Indicator** — Up/down/stable with percentage
 
-**Data Handling:**
-- Only actual check-in scores shown
-- Days without check-ins show minimal 2px bar
-- Bar heights relative to score (0-100 scale)
-- Baseline line spans full width
+### Streak Modal
 
-### ThirtyDayViewCard Component
+- **Current Streak** — Large number with "days" label
+- **Best Streak** — Historical best
+- **Check-in Calendar** — Dot grid showing activity
 
-Shows bar chart for the last 30 days of check-ins.
+### Insight, Enjoying, Worry Modals
 
-**Key Elements:**
-- "THIRTY DAY VIEW" title
-- Average score display
-- Check-in counter
-- Baseline score label with horizontal line
-- 30 vertical bars (one per day)
-- Day numbers (1-31) based on dates
-- Y-axis: 0, 50, 100
+Each shows:
+- **Latest** — Full text from most recent check-in
+- **Previous** — Full text from the check-in before
+- **Patterns** — Recurring themes highlighted
 
-**Minimum Check-in Logic:**
-- If < 5 check-ins in 30 days: Show average with message
-- Message: "you have only checked in X times in the last 30 days, try checking in more often to measure and monitor your mood."
+## Nudge Carousel
 
-## Technical Implementation
+Below the dashboard cards, a horizontally swipeable carousel displays up to 5 active nudges from the university. Nudges are sorted by category priority (Emergency → Deadline → Workshop → Social → General).
 
-### Data Preparation
+Each nudge card shows:
+- Category colour band at top
+- Headline
+- One-line description
+- Date/time (if applicable)
+- Tapping opens the linked URL in an in-app browser
 
-**7-Day Data:**
-```typescript
-const prepare7DayData = (sessions: SessionData[], baselineScore: number) => {
- const last7Days = getLast7Days();
- return last7Days.map(date => {
- const session = sessions.find(s =>
- isSameDay(new Date(s.created_at), date)
- );
- return {
- date,
- score: session?.final_score || null,
- hasCheckIn: !!session
- };
- });
-};
-```
+**Note:** Nudges are managed by university admins via the [University Content Hub](/content-hub).
 
-**30-Day Data:**
-```typescript
-const prepare30DayData = (sessions: SessionData[], baselineScore: number) => {
- const last30Days = getLast30Days();
- return last30Days.map(date => {
- const session = sessions.find(s =>
- isSameDay(new Date(s.created_at), date)
- );
- return {
- date,
- score: session?.final_score || null,
- hasCheckIn: !!session
- };
- });
-};
-```
+## Data Sources
 
-### Dynamic Day Labels
+Dashboard data comes from the Vercel API layer in `mind-measure-core`:
 
-Day labels adjust based on the current day of the week:
-```typescript
-const getDayLabels = () => {
- const today = new Date();
- const dayIndex = today.getDay(); // 0 = Sunday, 6 = Saturday
- const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
- 
- // Rotate array so today is last
- return [
- ...days.slice(dayIndex + 1),
- ...days.slice(0, dayIndex + 1)
- ];
-};
-```
+| Data | Endpoint | Source Table |
+|---|---|---|
+| Scores & trends | `/api/dashboard/scores` | `fusion_outputs` |
+| Mood | `/api/dashboard/mood` | `assessment_sessions` |
+| Insights | `/api/dashboard/insights` | `fusion_outputs` (AI summary) |
+| Streak | Computed client-side | `assessment_sessions` (distinct dates) |
+| Nudges | `/api/university/nudges` | `universities.nudges` (JSONB) |
 
-### Color-Coded Backgrounds
+## Colour Palette
 
-Backgrounds change based on score ranges:
-```typescript
-const getBackgroundGradient = (score: number) => {
- if (score >= 80) return 'linear-gradient(135deg, #10B981, #059669)'; // Green
- if (score >= 60) return 'linear-gradient(135deg, #3B82F6, #2563EB)'; // Blue
- if (score >= 40) return 'linear-gradient(135deg, #F59E0B, #D97706)'; // Amber
- return 'linear-gradient(135deg, #EF4444, #DC2626)'; // Red
-};
-```
+All dashboard elements use the Mind Measure brand palette:
 
-## Data Flow
-
-### Dashboard Data Hook
-
-```typescript
-// useDashboardData.ts
-const fetchDashboardData = async () => {
- // Fetch user profile with baseline
- const profile = await fetchProfile(userId);
- 
- // Fetch all assessment sessions
- const sessions = await fetchSessions(userId);
- 
- // Calculate trend data
- const trendData = calculateTrendData(sessions);
- 
- return {
- profile: {
- ...profile,
- baselineScore: profile.baseline_score,
- createdAt: profile.created_at
- },
- latestScore: sessions[0]?.final_score || null,
- latestSession: sessions[0] || null,
- trendData
- };
-};
-```
-
-### Conditional View Display
-
-Views only shown when account age permits:
-```typescript
-const canShow7DayView = () => {
- const accountAge = Date.now() - new Date(userCreatedAt).getTime();
- return accountAge >= 7 * 24 * 60 * 60 * 1000; // 7 days in ms
-};
-
-const canShow30DayView = () => {
- const accountAge = Date.now() - new Date(userCreatedAt).getTime();
- return accountAge >= 30 * 24 * 60 * 60 * 1000; // 30 days in ms
-};
-```
-
-## User Experience
-
-### Swipe Gestures
-- Swipe left/right to navigate between cards
-- Smooth Framer Motion transitions
-- Pagination dots indicate current position
-- Dots are clickable for direct navigation
-
-### Visual Feedback
-- Active dot highlighted in purple
-- Inactive dots in white/transparent
-- Smooth animations between views
-- Loading states during data fetch
-
-### Encouragement Messages
-
-**7-Day View:**
-- If < 3 check-ins: "you have checked in X times in the last seven days, try checking in more regularly for better monitoring"
-
-**30-Day View:**
-- If < 5 check-ins: "you have only checked in X times in the last 30 days, try checking in more often to measure and monitor your mood."
-
-## Design Decisions
-
-### Why Apple Health Style?
-- Familiar pattern for users
-- Clear visual communication
-- Minimal, focused design
-- Proven effective for health data
-
-### Why Baseline Reference?
-- Shows progress over time
-- Contextualizes daily variations
-- Highlights improvements or concerns
-- Personalizes the experience
-
-### Why Dynamic Day Labels?
-- Always shows "today" as the last day
-- More intuitive than fixed calendar
-- Easier to understand recent patterns
-- Matches user's mental model
-
-### Why Minimum Check-in Thresholds?
-- Ensures data quality
-- Prevents misleading averages
-- Encourages regular participation
-- Provides actionable feedback
-
-## Related Documentation
-
-- [Mobile App Overview](/mobile/overview)
-- [Assessment Methodology](/assessment/methodology)
-- [Scoring Algorithm](/assessment/scoring-algorithm)
+| Name | Hex | Dashboard Usage |
+|---|---|---|
+| Spectra | `#2D4C4C` | Headers, primary text |
+| Sinbad | `#99CCCE` | Good scores, accent |
+| Buttercup | `#F59E0B` | Moderate scores, warnings |
+| Pampas | `#FAF9F7` | Card backgrounds |
+| Bittersweet | `#FF6B6B` | Low scores, urgent |
+| Lilac | `#C4B5FD` | Social nudges |
 
 ---
 
-**Status:** Complete and deployed
-**Last Updated:** January 5, 2026
-**Components:** SwipeableScoreCard, CurrentScoreCard, SevenDayViewCard, ThirtyDayViewCard
-
+*Last updated: February 2026*

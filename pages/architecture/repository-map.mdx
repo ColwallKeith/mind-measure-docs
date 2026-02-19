@@ -1,0 +1,196 @@
+# Repository Map
+
+## Overview
+
+Mind Measure is split across multiple repositories, each with a distinct responsibility. This separation prevents codebase contamination and allows independent deployment cycles.
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                        MIND MEASURE PLATFORM                        │
+│                                                                      │
+│  ┌─────────────────┐  ┌──────────────────┐  ┌────────────────────┐  │
+│  │  mind-measure-   │  │  mind-measure-    │  │  mind-measure-     │  │
+│  │  mobile-final    │  │  core             │  │  marketing-cms     │  │
+│  │                  │  │                   │  │                    │  │
+│  │  Student app     │  │  Institutional    │  │  Blog editor,      │  │
+│  │  (Capacitor)     │  │  Dashboard +      │  │  page management,  │  │
+│  │                  │  │  Superuser panel  │  │  content pool       │  │
+│  │                  │  │  + API layer      │  │                    │  │
+│  └─────────────────┘  └──────────────────┘  └────────────────────┘  │
+│                                                                      │
+│  ┌─────────────────┐  ┌──────────────────┐  ┌────────────────────┐  │
+│  │  mind-measure-   │  │  mindmeasureuni   │  │  mind-measure-     │  │
+│  │  university-hub  │  │                   │  │  docs              │  │
+│  │                  │  │  Marketing        │  │                    │  │
+│  │  University      │  │  website          │  │  Technical docs    │  │
+│  │  content &       │  │  (mindmeasure     │  │  (docs.mindmeasure │  │
+│  │  nudge manager   │  │   .co.uk)         │  │   .co.uk)          │  │
+│  └─────────────────┘  └──────────────────┘  └────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+## Repositories
+
+### mind-measure-core
+
+The central admin platform. Houses the Institutional Dashboard, superuser controls, and all Vercel serverless API functions.
+
+| | |
+|---|---|
+| **GitHub** | [Mind-Measure/mind-measure-core](https://github.com/Mind-Measure/mind-measure-core) |
+| **Domain** | [admin.mindmeasure.co.uk](https://admin.mindmeasure.co.uk) |
+| **Stack** | React + Vite + TypeScript |
+| **Deploy** | Vercel (auto-deploy from `main`) |
+
+**Contains:**
+- Superuser control panel
+- University-scoped CMS (dashboard, profile, support, content, reports, settings, users)
+- Vercel serverless API functions (`/api/*`)
+- Authentication (AWS Cognito integration)
+- University onboarding and configuration
+
+**Does NOT contain:**
+- Mobile app code (moved to `mind-measure-mobile-final`)
+- Content editing UI (moved to `mind-measure-university-hub`)
+- Marketing website code
+- Blog/article editing (in `mind-measure-marketing-cms`)
+
+### mind-measure-mobile-final
+
+The student-facing mobile application, deployed as a native iOS app via Capacitor.
+
+| | |
+|---|---|
+| **GitHub** | [Mind-Measure/mind-measure-mobile-final](https://github.com/Mind-Measure/mind-measure-mobile-final) |
+| **Domain** | [mindmeasure.app](https://mindmeasure.app) (web) + iOS App Store |
+| **Stack** | React + Vite + Capacitor + TypeScript |
+| **Deploy** | Vercel (web) + Xcode/TestFlight (iOS) |
+
+**Contains:**
+- Student dashboard with modal detail panels
+- Conversational check-in screen (ElevenLabs multimodal engine)
+- Baseline assessment flow
+- Processing screen with typographic animation
+- Returning user splash screen
+- Content page, help page, buddy system, profile
+- Bottom navigation
+
+**Critical:** The ElevenLabs multimodal engine (check-in backend) must not be modified without explicit agreement. It handles voice, facial expression, and language analysis.
+
+### mind-measure-university-hub
+
+Standalone content management for university administrators. Accessed exclusively via the Institutional Dashboard — no standalone login.
+
+| | |
+|---|---|
+| **GitHub** | [Mind-Measure/mind-measure-university-hub](https://github.com/Mind-Measure/mind-measure-university-hub) |
+| **Domain** | [hub.mindmeasure.co.uk](https://hub.mindmeasure.co.uk) |
+| **Stack** | Next.js 14 (App Router) + TypeScript |
+| **Deploy** | Vercel (auto-deploy from `main`) |
+
+**Contains:**
+- Article editor (Tiptap — same as Marketing CMS)
+- Nudge manager with category-based priority
+- Content pool browser
+- Student insights (aggregated worries and interests)
+- Auth passthrough from Institutional Dashboard
+
+See [University Content Hub documentation](/content-hub) for full details.
+
+### mind-measure-marketing-cms
+
+The internal content platform used by the Mind Measure team to manage blog posts, pages, and the shared content pool.
+
+| | |
+|---|---|
+| **GitHub** | [Mind-Measure/mind-measure-marketing-cms](https://github.com/Mind-Measure/mind-measure-marketing-cms) |
+| **Domain** | [marketing.mindmeasure.co.uk](https://marketing.mindmeasure.co.uk) |
+| **Stack** | Next.js + Prisma + PostgreSQL |
+| **Deploy** | Vercel |
+
+**Contains:**
+- Blog post editor (Tiptap)
+- Page management
+- Media library (S3 storage)
+- Content targeting (`targetSites`: university, student, pro)
+- Public API for marketing sites and content pool
+- University content deployment management
+
+### mindmeasureuni
+
+The public-facing marketing website for universities and investors.
+
+| | |
+|---|---|
+| **GitHub** | [ColwallKeith/mindmeasureuni](https://github.com/ColwallKeith/mindmeasureuni) |
+| **Domain** | [mindmeasure.co.uk](https://mindmeasure.co.uk) |
+| **Stack** | React (Figma Make output) |
+| **Deploy** | Vercel |
+
+**Contains:**
+- University marketing pages (home, about, how it works, the science, contact)
+- Investor page with login
+- Research Hub (blog, fed from Marketing CMS API)
+- Privacy policy, terms of service, cookie policy
+
+### mind-measure-docs
+
+This documentation site.
+
+| | |
+|---|---|
+| **GitHub** | [Mind-Measure/mind-measure-docs](https://github.com/Mind-Measure/mind-measure-docs) |
+| **Domain** | [docs.mindmeasure.co.uk](https://docs.mindmeasure.co.uk) |
+| **Stack** | Next.js 14 + Nextra 2.13 |
+| **Deploy** | Vercel (auto-deploy from `main`) |
+
+## Domain Map
+
+| Domain | Purpose | Repository |
+|---|---|---|
+| `admin.mindmeasure.co.uk` | Institutional Dashboard + Superuser | mind-measure-core |
+| `hub.mindmeasure.co.uk` | University Content Hub | mind-measure-university-hub |
+| `marketing.mindmeasure.co.uk` | Internal Marketing CMS | mind-measure-marketing-cms |
+| `mindmeasure.co.uk` | Public marketing website | mindmeasureuni |
+| `mindmeasure.app` | Student web app | mind-measure-mobile-final |
+| `docs.mindmeasure.co.uk` | Technical documentation | mind-measure-docs |
+
+## Data Flow
+
+```
+┌─────────────┐     ┌──────────────────┐     ┌───────────────────┐
+│  Marketing   │────▶│  Content Pool    │◀────│  University       │
+│  CMS         │     │  (shared         │     │  Content Hub      │
+│              │     │   articles)      │     │                   │
+└─────────────┘     └───────┬──────────┘     └───────────────────┘
+                            │                         │
+                            ▼                         ▼
+                    ┌───────────────┐         ┌───────────────┐
+                    │  Marketing    │         │  Nudges       │
+                    │  Website      │         │  (mobile app  │
+                    │  Research Hub │         │   carousel)   │
+                    └───────────────┘         └───────────────┘
+                                                      │
+                                                      ▼
+                                              ┌───────────────┐
+                                              │  Mobile App   │
+                                              │  Content &    │
+                                              │  Dashboard    │
+                                              └───────────────┘
+```
+
+## Deployment Pipeline
+
+All repositories follow the same pattern:
+
+1. Push to `main` on GitHub
+2. Vercel auto-detects the push
+3. Build runs (Next.js build or Vite build)
+4. If successful, deployed to production
+5. Custom domain serves the new version
+
+The mobile app has an additional step: after Vercel deploys the web version, a Capacitor build is required for native iOS updates distributed via TestFlight.
+
+---
+
+*Last updated: February 2026*

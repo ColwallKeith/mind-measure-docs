@@ -1,0 +1,62 @@
+# Processing Screen
+
+## Overview
+
+The processing screen plays after a student taps "Finish" on the conversation screen. It provides a 10–15 second typographic animation while the assessment pipeline analyses their check-in data. Regardless of how long the actual processing takes, the animation runs to completion before transitioning to the dashboard.
+
+## Animation Sequence
+
+The screen displays a series of phrases using rich typography — varied weights, sizes, and colours — that scroll upward like film credits. The effect conveys that meaningful analysis is happening.
+
+### Phrases
+
+The processing phrases rotate through reassuring, descriptive messages:
+
+```
+"Listening to your words..."
+"Reading between the lines..."
+"Understanding your mood..."
+"Analysing your expressions..."
+"Building your picture..."
+"Measuring your wellbeing..."
+"Preparing your insights..."
+"Almost there..."
+```
+
+### Typography Treatment
+
+Each phrase uses a different combination from the brand palette:
+
+| Element | Style |
+|---|---|
+| Key words | Large (36–48px), bold (700), white or Sinbad |
+| Supporting words | Medium (24–28px), light (300), Pampas at 0.7 opacity |
+| Emphasis words | Italicised, Buttercup or Sinbad |
+
+Phrases scroll upward with a slow, deliberate pace — approximately one phrase every 1.5 seconds. Previous phrases fade to transparency as they move up.
+
+### Closing Sequence
+
+After the phrase animation:
+
+1. All text fades out
+2. The Mind Measure logo fades in at centre screen (2-second hold)
+3. Logo dissolves to reveal the dashboard underneath
+
+The transition to the dashboard uses a cross-fade rather than a hard cut, creating a sense of arrival.
+
+## Technical Implementation
+
+The animation runs on a fixed timer (not tied to API response time):
+
+- If the assessment pipeline finishes before the animation, results are cached and applied when the dashboard renders
+- If the pipeline is still running when the animation ends, the dashboard loads with the previous data and updates when results arrive
+- The student always sees the full animation — it is never cut short
+
+## Background
+
+Full-screen Spectra (`#2D4C4C`) background, consistent with the conversation screen. The transition from conversation → processing is seamless (same background colour).
+
+---
+
+*Last updated: February 2026*
