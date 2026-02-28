@@ -350,13 +350,13 @@ API-level rate limiting middleware is not explicitly implemented. The platform r
 
 ### 10.3 Error Tracking
 
-No dedicated error tracking SDK (Sentry, Datadog) is currently integrated. Error visibility comes from:
-- Vercel deployment logs
-- AWS CloudWatch Logs
-- Ecosystem health audit (catches infrastructure-level issues)
-- Audit logging (catches security-relevant events)
+**Sentry** is integrated across all 4 active applications (both admin dashboards and both mobile apps):
+- **Client-side**: `@sentry/react` with browser tracing, session replay on error (text masked for HIPAA), and `ErrorBoundary` wrapping at the app root
+- **Server-side**: `@sentry/node` on both admin API backends, with 5xx errors automatically reported via the centralised error handler
+- **Environment tagging**: Events are tagged by platform (university/pro) and app type (admin-dashboard/mobile/api) for filtering
+- **Privacy**: Session replay masks all text and blocks all media. Sentry is disabled in localhost environments.
 
-**Mitigation**: Adding Sentry for client-side error tracking is a recommended enhancement for the next sprint.
+Additional error visibility comes from Vercel deployment logs, AWS CloudWatch/CloudTrail, the ecosystem health audit, and immutable audit logging.
 
 ### 10.4 Bus Factor
 
@@ -382,11 +382,11 @@ The platform has been built primarily by a single developer. This is mitigated b
 | Test Coverage | **Good** | 86+ unit tests, 8 Playwright specs, visual regression, pre-deploy checks. Real assertions, not stubs. |
 | CI/CD | **Good** | GitHub Actions on all projects, pre-commit hooks (Husky + lint-staged), build verification, post-deploy smoke tests. |
 | Code Quality | **Good** | TypeScript strict mode (maximum settings), ESLint, Prettier, consistent patterns. |
-| Monitoring | **Good** | Automated 4-hourly health audit with email alerts, service health tracking, CloudWatch/CloudTrail. |
+| Monitoring | **Strong** | Automated 4-hourly health audit with email alerts, service health tracking, CloudWatch/CloudTrail, Sentry error tracking across all apps. |
 | Documentation | **Good** | Comprehensive docs site, security documentation, architecture decisions, operational playbooks. |
 | Database Architecture | **Good** | 59 versioned migrations, proper connection management, fail-fast credential validation. |
 | Code Maintainability | **Fair** | 50% duplication across University/Pro repos. Monorepo migration planned. Well-structured within each repo. |
-| Error Tracking | **Fair** | Infrastructure monitoring exists. No client-side error tracking SDK. |
+| Error Tracking | **Strong** | Sentry integrated across all 4 apps (client + server). Browser tracing, session replay on error, ErrorBoundary, 5xx API reporting. |
 | Cookie Consent | **Good** | Implemented on marketing websites. Not required for mobile apps (App Store/Google Play handle privacy disclosure). |
 | Rate Limiting | **Fair** | Vercel DDoS + database-level limiting. No application-level middleware. |
 
@@ -396,7 +396,7 @@ The platform has been built primarily by a single developer. This is mitigated b
 
 | Priority | Enhancement | Effort |
 |----------|------------|--------|
-| High | Add Sentry for client-side error tracking | 1-2 days |
+| ~~High~~ | ~~Add Sentry for client-side error tracking~~ | Done — `@sentry/react` + `@sentry/node` across all 4 apps with browser tracing, session replay, and API error reporting |
 | High | Add application-level rate limiting middleware | 1-2 days |
 | Medium | Run test coverage report and establish coverage thresholds | 1 day |
 | Medium | Begin monorepo migration (shared-core package extraction) | 2-4 weeks |
