@@ -1,5 +1,7 @@
 {
   "title": "Operations",
   "playbooks": "Operational Playbooks",
-  "coding-standards": "Coding Standards"
+  "coding-standards": "Coding Standards",
+  "testing-panel-guide": "Testing Panel Guide",
+  "testing-qa": "Testing & QA"
 }

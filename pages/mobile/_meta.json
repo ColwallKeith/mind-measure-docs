@@ -1,5 +1,5 @@
 {
-  "overview": "Overview",
+  "index": "Overview",
   "design-system": "Design System",
   "screen-specifications": "Screen Specifications",
   "dashboard-improvements": "Dashboard & Modals",
@@ -8,6 +8,8 @@
   "processing-phrases": "Processing Phrases",
   "buddy-system": "Buddy System",
   "development-safeguards": "Development Safeguards",
+  "implementation-complete": "Implementation Complete",
   "testing-setup": "Testing Setup",
-  "rollback-checklist": "Rollback Procedures"
+  "rollback-checklist": "Rollback Procedures",
+  "postmortem-2025-12-08": "Postmortem (Dec 2025)"
 }
