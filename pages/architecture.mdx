@@ -168,9 +168,9 @@ Use `Client` (not `Pool`) in serverless functions. Always call `client.end()` in
 
 ## AI/ML Services
 
-### AWS Bedrock (Claude 3.5 Sonnet)
+### AWS Bedrock (Claude 3.7 Sonnet)
 
-- **Model**: `anthropic.claude-3-5-sonnet-20241022-v2:0`
+- **Model**: `anthropic.claude-3-7-sonnet-20250219-v1:0`
 - **Purpose**: Transcript analysis after each check-in
 - **Endpoint**: `/api/bedrock/analyze-text`
 - **Outputs**: Mood score, sentiment, conversation summary, positive/negative drivers, risk flags, custom question responses
@@ -314,7 +314,7 @@ Both superuser portals include a Costs tab with:
 | Documentation | Next.js 14, Nextra 2.13 |
 | Database | PostgreSQL on Aurora Serverless v2 |
 | Authentication | AWS Cognito + custom JWT (superuser) |
-| AI — Text | AWS Bedrock (Claude 3.5 Sonnet) |
+| AI — Text | AWS Bedrock (Claude 3.7 Sonnet) |
 | AI — Voice | ElevenLabs Conversational AI |
 | AI — Visual | AWS Rekognition |
 | Email | AWS SES |

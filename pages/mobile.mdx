@@ -28,7 +28,7 @@ Styling: Tailwind CSS + custom components
 Authentication: AWS Amplify + Cognito
 Database: Aurora Serverless v2 (via Vercel API)
 Voice Agent: ElevenLabs Conversational AI (Jodie)
-Text Analysis: AWS Bedrock (Claude 3.5 Sonnet)
+Text Analysis: AWS Bedrock (Claude 3.7 Sonnet)
 Visual Analysis: AWS Rekognition
 ```
 
@@ -141,7 +141,7 @@ When a check-in ends, three analyses run in parallel:
 ### 1. Text Analysis (AWS Bedrock)
 
 ```
-Transcript → /api/bedrock/analyze-text → Claude 3.5 Sonnet
+Transcript → /api/bedrock/analyze-text → Claude 3.7 Sonnet
 ```
 
 Outputs:
