@@ -1,0 +1,245 @@
+# Institutional Agents
+
+Each university or company gets its own Jodie agent, personalised with institutional knowledge and optional custom questions. The agent feels embedded in the institution rather than generic. Custom question capability becomes a premium revenue feature.
+
+---
+
+## Architecture Overview
+
+### Agent Hierarchy
+
+```
+Base Agent Template (Jodie v2 prompt)
+  ├── University Agent: Durham
+  │     ├── Knowledge Base: Durham resources, welfare, locations
+  │     └── Custom Questions: "How are you finding your placement?"
+  ├── University Agent: Leeds
+  │     ├── Knowledge Base: Leeds resources, counselling, SU info
+  │     └── Custom Questions: (none configured)
+  ├── Company Agent: Acme Corp
+  │     ├── Knowledge Base: EAP details, mental health first aiders
+  │     └── Custom Questions: "How manageable is your workload this quarter?"
+  └── Default Agent (fallback for unmatched institutions)
+```
+
+### Data Flow
+
+```
+CMS onboarding data → Knowledge Document Compiler → Hosted document (URL)
+                                                          ↓
+Institution record → agent_id lookup → ElevenLabs Agent → Knowledge Base (URL)
+                                                          ↓
+Mobile app → reads agent_id from profile → connects to correct agent
+```
+
+---
+
+## 1. Agent ID Lookup
+
+### Database Table: `institution_agents`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| institution_id | VARCHAR | FK to universities/companies table |
+| institution_type | ENUM | `university` or `company` |
+| elevenlabs_agent_id | VARCHAR | ElevenLabs agent ID |
+| knowledge_base_url | VARCHAR | URL to compiled knowledge document |
+| custom_questions_enabled | BOOLEAN | Whether custom questions are active |
+| created_at | TIMESTAMP | |
+| updated_at | TIMESTAMP | |
+
+### App Integration
+
+The mobile app currently uses a hardcoded agent ID:
+
+```typescript
+// Current (hardcoded)
+agentId: import.meta.env.VITE_ELEVENLABS_CHECKIN_AGENT_ID || 'agent_xxx'
+
+// Future (institution-aware)
+agentId: userProfile.institution_agent_id || DEFAULT_AGENT_ID
+```
+
+The agent ID is fetched as part of the user profile load — no additional API call needed.
+
+---
+
+## 2. Knowledge Base — Compiled from CMS
+
+### Data Sources (already in CMS)
+
+The CMS already collects this information during institution onboarding:
+
+- **Emergency resources**: Crisis lines, local A&E, Samaritans, institution-specific crisis contacts
+- **Wellbeing centres**: Names, locations, opening hours, booking links
+- **Support services**: Counselling, disability, financial hardship, chaplaincy
+- **Key contacts**: Welfare officers, mental health first aiders, HR wellbeing leads
+- **Departments/faculties**: For context-aware references
+- **EAP details** (companies): Provider name, phone number, access instructions
+
+### Knowledge Document Template
+
+A structured plain-text document compiled from CMS fields. ElevenLabs agents can ingest this via URL.
+
+```
+INSTITUTIONAL KNOWLEDGE BASE — [Institution Name]
+Generated: [date]
+
+EMERGENCY AND CRISIS SUPPORT
+- Institution crisis line: [phone] (available [hours])
+- Local A&E: [name], [address]
+- Samaritans: 116 123 (24/7)
+- [Custom crisis contacts from CMS]
+
+WELLBEING AND SUPPORT SERVICES
+- [Service name]: [location], [hours], [booking method]
+- ...
+
+KEY CONTACTS
+- [Role]: [Name], [contact method]
+- ...
+
+ADDITIONAL CONTEXT
+- [Any institution-specific notes]
+```
+
+### Compilation Process
+
+1. Admin completes CMS onboarding fields (already happening)
+2. On save, a serverless function compiles fields into the template
+3. Document is saved as a static file (e.g. `/api/knowledge/[institution_id].txt`)
+4. URL is registered with the ElevenLabs agent's knowledge base
+5. Document auto-regenerates when CMS data is updated
+
+### How Jodie Uses It
+
+When a student mentions needing help or asks about services, Jodie can reference the knowledge base naturally:
+
+- *"Your university has a counselling service in the Student Life Centre — you can self-refer online."*
+- *"Your company's EAP is through Health Assured — you can call them on 0800 028 0199, it's confidential."*
+
+This replaces generic crisis guidance with institution-specific information.
+
+---
+
+## 3. Custom Questions — Premium Feature
+
+### Concept
+
+Institutions can request specific questions to be woven into check-ins. These are **not** survey questions — they are natural conversation prompts that Jodie asks when appropriate, and the responses are captured in the analysis.
+
+### Examples
+
+| Institution | Custom Question | When Asked |
+|-------------|----------------|------------|
+| Durham Uni | "How are you finding your accommodation this term?" | First 4 weeks of term |
+| Leeds Uni | "Have you been able to access the library when you need to?" | During exam season |
+| Acme Corp | "How manageable has your workload felt this month?" | Monthly |
+| NHS Trust | "How are you finding the shift patterns?" | Every check-in |
+
+### Prompt Appendix
+
+Custom questions are added as a prompt appendix to the institution's agent:
+
+```
+CUSTOM QUESTIONS (ask ONE per check-in, only if it fits naturally)
+
+You have been asked to occasionally gather information on the following topics.
+Work these into the conversation naturally — do not read them out as survey
+questions. Ask at most ONE per check-in. If the conversation doesn't naturally
+lead there, skip it.
+
+1. "How are you finding your accommodation this term?"
+   - Active: September to November
+   - Ask naturally after the main topic if housing/living situation hasn't
+     already come up
+
+2. "Have you been able to access the support services if you've needed them?"
+   - Active: Always
+   - Ask only if the user mentions struggling or needing help
+```
+
+### Data Capture
+
+Custom question responses are tagged in the Bedrock analysis:
+
+```json
+{
+  "custom_question_responses": [
+    {
+      "question_id": "accommodation_q1",
+      "question_text": "How are you finding your accommodation?",
+      "response_summary": "Living in college, finds it noisy but social",
+      "sentiment": "mixed"
+    }
+  ]
+}
+```
+
+### Reporting
+
+Aggregated custom question responses are available to the institution via:
+
+- The superuser dashboard (aggregate view, anonymised)
+- A downloadable report (CSV/PDF)
+- Trends over time ("accommodation satisfaction dropped 15% in week 6")
+
+---
+
+## 4. Pricing Model
+
+| Tier | What's Included | Price Signal |
+|------|-----------------|--------------|
+| Standard | Default Jodie agent, generic resources | Base subscription |
+| Institutional | Custom agent, knowledge base from CMS, institution-specific resources | Included in subscription |
+| Insights | Custom questions (up to 5), aggregated response reports, trend analysis | Premium add-on |
+| Insights+ | Unlimited custom questions, real-time dashboard, API access to aggregated data | Enterprise add-on |
+
+Custom questions create a feedback loop that institutions cannot get elsewhere — anonymised, natural-language wellbeing data on topics they care about, gathered through conversation rather than surveys.
+
+---
+
+## 5. Implementation Phases
+
+### Phase 1: Agent Lookup (Low effort)
+- Create `institution_agents` table
+- Add agent_id to institution onboarding
+- Mobile app reads agent_id from profile/institution
+- Admin UI to map institution → agent
+- **Timeline: 1–2 days**
+
+### Phase 2: Knowledge Base Compilation (Medium effort)
+- Template engine for knowledge documents
+- Auto-compile from CMS data on save
+- Host as static endpoint
+- Register URL with ElevenLabs agent
+- **Timeline: 3–5 days**
+
+### Phase 3: Custom Questions (Medium effort)
+- Admin UI for managing custom questions per institution
+- Prompt appendix generation
+- Update Bedrock analysis prompt to extract custom question responses
+- Tag responses in fusion_outputs analysis JSON
+- **Timeline: 3–5 days**
+
+### Phase 4: Reporting (Medium effort)
+- Aggregate custom question responses per institution
+- Superuser dashboard view
+- CSV/PDF export
+- Trend visualisation
+- **Timeline: 5–7 days**
+
+---
+
+## 6. Technical Considerations
+
+- **Agent cloning**: ElevenLabs API supports cloning agents programmatically. New institution onboarding can auto-create an agent from the base template.
+- **Knowledge base updates**: When CMS data changes, the knowledge document URL serves the updated content. ElevenLabs re-indexes automatically.
+- **Privacy**: Custom question responses are aggregated and anonymised before being shown to the institution. Individual responses are never shared.
+- **Prompt length**: Adding custom questions and knowledge base references increases prompt length. Monitor token usage and latency.
+- **Fallback**: If an institution has no custom agent configured, the app falls back to the default agent. No user-facing failure.
+
+---
+
+*Last updated: February 28, 2026*
