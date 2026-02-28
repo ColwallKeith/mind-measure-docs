@@ -73,6 +73,15 @@ Environment variables are set in each project's Vercel dashboard under Settings 
 
 Server-side variables (used in `api/` functions) are available at runtime and do not require the `VITE_` prefix.
 
+### Monitoring Variables (core repos only)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `CRON_SECRET` | Yes | Shared secret for Vercel Cron authentication. Set the same value in Vercel project settings. |
+| `ALERT_EMAIL` | Yes | Email address for automated health check alerts. |
+
+These must be set in both `mind-measure-core` and `mind-measure-pro-core` Vercel projects for automated monitoring to work.
+
 ---
 
 ## Pre-Deployment Checklist
