@@ -1,0 +1,407 @@
+# Technical Due Diligence Report
+
+**Platform**: Mind Measure — AI-powered wellbeing monitoring for universities and corporate organisations  
+**Date**: 1 March 2026  
+**Scope**: Full technical audit across all production systems  
+
+---
+
+## Executive Summary
+
+Mind Measure is a production platform comprising 7 web applications, 6 AWS Lambda functions, and a shared AWS backend. The platform serves two product lines — **University** (student wellbeing) and **Pro** (corporate employee wellbeing) — sharing common infrastructure with separate branding and data isolation.
+
+The technical foundation is enterprise-grade: AWS managed services (Aurora PostgreSQL, Cognito, S3, Bedrock, Rekognition), HIPAA-aligned security architecture, GDPR-compliant data handling, and a consistent React/TypeScript/Vite stack across all applications. The platform includes automated testing (86+ unit tests, Playwright e2e), CI/CD pipelines (GitHub Actions), pre-commit quality gates, and automated health monitoring with alerting.
+
+The core intellectual property — a multimodal fusion engine combining text, audio, and visual analysis — is technically differentiated and non-trivial to replicate.
+
+---
+
+## 1. Architecture
+
+### 1.1 Production Applications
+
+| Application | Domain | Framework | Purpose |
+|------------|--------|-----------|---------|
+| University Admin | admin.mindmeasure.co.uk | React + Vite | University dashboard, analytics, reporting |
+| Pro Admin | admin.mindmeasurepro.com | React + Vite | Corporate dashboard, analytics, reporting |
+| Student Mobile | mobile.mindmeasure.app | React + Vite + Capacitor | Student check-ins, voice agent, assessments |
+| Employee Mobile | mobile.mindmeasurepro.app | React + Vite + Capacitor | Employee check-ins, voice agent, assessments |
+| University Hub | hub.mindmeasure.co.uk | React + Vite | University content delivery |
+| Corporate Hub | hub.mindmeasurepro.com | React + Vite | Corporate content delivery |
+| Marketing CMS | marketing.mindmeasure.co.uk | Next.js 16 + Prisma | Content management |
+
+### 1.2 AWS Backend Services
+
+| Service | Purpose | Region | Configuration |
+|---------|---------|--------|---------------|
+| Aurora Serverless v2 | Primary database (PostgreSQL) | eu-west-2 (London) | AES-256 encryption, KMS-managed keys, annual key rotation |
+| Cognito | User authentication | eu-west-2 | RS256 JWT, MFA support (TOTP + SMS) |
+| S3 | Encrypted file storage | eu-west-2 | Server-side encryption |
+| Bedrock | AI transcript analysis (Claude 3.7 Sonnet) | eu-west-2 | Risk detection, sentiment, PHQ-2/GAD-2 scoring |
+| Rekognition | Facial emotion detection | eu-west-2 | Real-time frame analysis during check-ins |
+| Lambda | Session processing pipeline | eu-west-2 | VPC-isolated, IAM least privilege |
+| SES | Transactional email | eu-west-2 | STARTTLS (TLS 1.2) |
+| SQS | Async session finalisation | eu-west-2 | Decoupled processing queue |
+| KMS | Key management | eu-west-2 | Encryption key lifecycle |
+| Secrets Manager | Lambda credentials | eu-west-2 | 5-minute credential caching |
+
+### 1.3 Hosting & Deployment
+
+| Provider | Purpose | Features Used |
+|----------|---------|---------------|
+| Vercel (Pro plan) | Application hosting | Auto-deploy from GitHub, edge network, TLS 1.3, cron jobs, serverless functions |
+| GitHub | Source control | Branch protection, Actions CI/CD |
+
+### 1.4 Technology Consistency
+
+All frontend applications use the same stack: **React 19 + TypeScript + Vite**. This is deliberate — it means any developer hired can work across any project immediately. There are no framework surprises, no legacy Angular components, no mixed rendering strategies.
+
+---
+
+## 2. Intellectual Property: Multimodal Fusion Engine
+
+The platform's core differentiator is a **3-modality wellbeing assessment engine** that analyses check-in conversations across:
+
+- **Text analysis (70% weight)**: AWS Bedrock (Claude 3.7 Sonnet) extracts mood scores, PHQ-2/GAD-2 clinical indicators, risk markers, sentiment, key themes, positives, and negatives from conversation transcripts.
+- **Audio analysis (15% weight)**: Client-side Web Audio API extracts speech patterns — energy levels, speaking rate, vocal stress indicators, silence ratios.
+- **Visual analysis (15% weight)**: AWS Rekognition analyses facial expressions during check-ins — emotion classification, engagement indicators.
+
+The fusion engine includes **dynamic fallback**: if one modality fails (e.g., camera permission denied), weights automatically redistribute across available modalities. The system degrades gracefully rather than failing.
+
+Session processing is **asynchronous**: completed check-ins are queued via SQS and processed by Lambda workers, preventing user-facing latency from downstream processing.
+
+This architecture is non-trivial to replicate. The combination of real-time voice AI, multimodal fusion with fallback, and clinical indicator extraction (PHQ-2, GAD-2) in a single check-in flow represents genuine technical IP.
+
+---
+
+## 3. Security Architecture
+
+### 3.1 Authentication
+
+**Primary authentication**: AWS Cognito with RS256 JWT tokens. All API routes verify JWT signatures against the Cognito JWKS endpoint — tokens are cryptographically verified, not merely decoded.
+
+**Superuser authentication**: Separate flow using time-limited 6-digit codes sent to verified @mindmeasure.co.uk email addresses. Codes are HMAC-hashed (not stored in plaintext). Challenge tokens expire after use.
+
+**MFA**: AWS Cognito MFA with TOTP (Google Authenticator) and SMS support. MFA setup, challenge, and verification endpoints exist at `/api/auth/mfa-setup`, `/api/auth/mfa-challenge`, `/api/auth/mfa-verify`.
+
+### 3.2 Encryption
+
+| Layer | Method | Standard |
+|-------|--------|----------|
+| Data at rest (database) | AES-256 | AWS KMS, annual key rotation |
+| Data at rest (Cognito) | AES-256 | AWS KMS |
+| Data in transit (browser → Vercel) | TLS 1.3 | HTTPS enforced |
+| Data in transit (Vercel → Aurora) | TLS 1.2+ | SSL required (`sslmode=require`) |
+| Data in transit (email) | TLS 1.2 | STARTTLS via SES |
+| Field-level PHI encryption | AES-256-GCM | Client-side, authenticated encryption with AAD |
+
+**PHI field-level encryption** (`PHIEncryption.ts`) encrypts sensitive fields individually: first name, last name, email, phone number, date of birth, medical record numbers, conversation transcripts, assessment results, medical notes, diagnostic data. This is defence-in-depth — even if the database is compromised, PHI fields remain encrypted.
+
+### 3.3 Access Control (RBAC)
+
+| Role | Scope | Capabilities |
+|------|-------|-------------|
+| Student / Employee | Own data only | Check-ins, view own history, export own data |
+| University Admin / Company Admin | Scoped to institution | View aggregated analytics, manage users, generate reports |
+| Superuser | Platform-wide | All admin functions, system configuration, ecosystem audit |
+
+RBAC is enforced via `requireRole()` middleware on API routes. Data scoping ensures institution admins can only access data within their organisation.
+
+### 3.4 Input Validation & Injection Prevention
+
+- **Parameterised SQL**: Every database query uses `$1, $2` parameterisation — zero SQL injection surface.
+- **Table allowlists**: Database endpoints only accept queries against pre-approved tables.
+- **Identifier validation**: Column and table names validated against `/^[a-zA-Z_][a-zA-Z0-9_]*$/`.
+- **Frame array caps**: Visual analysis endpoints cap input arrays to prevent abuse.
+- **Transcript length limits**: Text analysis endpoints enforce maximum input sizes.
+
+### 3.5 CORS Configuration
+
+CORS is **whitelist-based** (not wildcard). Each project's `api/_lib/cors-config.ts` defines an explicit origin allowlist:
+- Production domains (admin, mobile, hub for each platform)
+- Capacitor/Ionic localhost (for mobile apps)
+- Development localhost (only in dev mode)
+
+Preflight requests are handled correctly. Credentials are allowed only for whitelisted origins.
+
+### 3.6 Security Headers
+
+Content Security Policy, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and XSS protection headers are set via Next.js middleware:
+
+- `Content-Security-Policy`: Restricts script sources, prevents frame embedding (`frame-ancestors 'none'`)
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: no-referrer`
+
+### 3.7 Audit Logging
+
+Two-tier audit logging system:
+
+**API-level** (`api/_lib/audit-logger.ts`): Fire-and-forget async logging with IP extraction, risk classification, convenience functions for auth events, data access, and data modification. HIPAA §164.308 compliant.
+
+**Service-level** (`services/security/AuditLogger.ts`): Database-backed logging with compliance flagging (HIPAA_RELEVANT, GDPR_RELEVANT), risk level calculation, and action type classification (LOGIN_SUCCESS, PHI_VIEW, PHI_EXPORT, etc.).
+
+Audit logs are stored in an **immutable table** protected by database triggers — they cannot be modified or deleted. Retention period: 7 years.
+
+### 3.8 Security Database Infrastructure
+
+8 security tables and 5 security views are defined in migration `010_create_security_infrastructure.sql`:
+
+**Tables**: `audit_logs`, `security_incidents`, `encryption_status`, `compliance_checks`, `data_subject_requests`, `incident_response_team`, `security_policies`, `security_metrics`
+
+**Views**: `v_recent_phi_access` (24h PHI access log), `v_mfa_enrollment` (MFA by role), `v_open_incidents` (open incidents by severity), `v_compliance_summary`, `v_data_subject_requests` (GDPR requests with SLA tracking)
+
+### 3.9 Vulnerability Scanning
+
+`VulnerabilityService.ts` provides a framework for dependency scanning (npm audit integration), compliance scanning (HIPAA, GDPR, SOC2, ISO 27001, NIST), CVE/CVSS scoring, and remediation tracking.
+
+---
+
+## 4. Compliance
+
+### 4.1 GDPR
+
+| Right | Implementation | Location |
+|-------|---------------|----------|
+| Right to Erasure (Art. 17) | Full account deletion — all 12 user tables cleared, audit logs anonymised, Cognito account deleted | `api/user/delete-account.ts` |
+| Right of Access (Art. 15) | Comprehensive wellbeing report generation with email delivery and secure token access | `api/reports/generate.ts` |
+| Data Subject Requests | Tracked in `data_subject_requests` table with SLA monitoring | Migration 010 |
+| Data Minimisation | Only essential data collected, PHI encrypted at field level | Architectural principle |
+| UK Data Residency | All AWS services in eu-west-2 (London) | Infrastructure configuration |
+
+### 4.2 HIPAA Alignment
+
+| Safeguard | Implementation |
+|-----------|---------------|
+| §164.308 Administrative | RBAC, audit logging, incident tracking, security policies |
+| §164.312 Technical | AES-256 encryption, access controls, JWT verification, audit trails |
+| §164.314 Organisational | VPC isolation for Lambda, IAM least privilege, Secrets Manager |
+| §164.316 Policies | Security policies table, compliance checks, incident response team |
+
+### 4.3 Lambda VPC Isolation
+
+All Lambda functions run inside a HIPAA-compliant VPC with specific security groups and subnets. IAM policies follow least privilege — each function only has access to the specific AWS resources it needs (specific cluster ARNs, specific Secrets Manager secret ARNs, specific CloudWatch log groups).
+
+Database credentials for Lambda functions are retrieved from **AWS Secrets Manager** with 5-minute caching — never stored in code or environment variables.
+
+---
+
+## 5. Testing
+
+### 5.1 Unit Testing (Vitest)
+
+**86+ unit test files** across all four active projects:
+
+| Project | Test Files | Coverage Areas |
+|---------|-----------|----------------|
+| mind-measure-core | 28 | Auth middleware, DB queries, error handling, image processing, auth flows, report generation, storage, components, contexts, hooks, services, scoring, security |
+| mind-measure-pro-core | 28 | Same coverage as core (Pro-specific where applicable) |
+| mind-measure-mobile-final | 15 | Components, profile types, CMS data, hooks, AWSBrowserService, multimodal scoring, enrichment, audio features, fusion engine, security services, utilities |
+| mind-measure-pro-mobile | 15 | Same coverage as mobile (Pro-specific where applicable) |
+
+Tests use real assertions with mocked dependencies, cover edge cases, test async flows, and validate error scenarios. Test quality has been verified by reading representative samples.
+
+**Configuration**: Vitest with jsdom environment, `@testing-library/jest-dom` matchers, v8 coverage provider with text + lcov reporters.
+
+### 5.2 End-to-End Testing (Playwright)
+
+**8 Playwright spec files** covering:
+
+- **Smoke tests**: Auth routing, security headers, critical flow verification
+- **Navigation tests**: Production route accessibility (9 routes per project)
+- **E2E flows**: Critical user journeys, performance checks, build verification
+- **Visual regression**: Baseline assessment UI with screenshot comparison
+
+Mobile tests run against both Chromium and Mobile Safari (iPhone 13 Pro viewport).
+
+### 5.3 Pre-Deployment Testing
+
+Mobile projects include dedicated pre-deploy test scripts:
+- `test:multimodal` — Validates multimodal endpoint integration
+- `test:rekognition` — Validates Rekognition endpoint
+- `test:pre-deploy` — Runs both before deployment
+
+---
+
+## 6. CI/CD Pipeline
+
+### 6.1 GitHub Actions
+
+All four projects have GitHub Actions workflows:
+
+**Core projects** (`mind-measure-core`, `mind-measure-pro-core`):
+- `critical-path-verification.yml`: Runs on push/PR to main — unit tests, critical path checks, build verification, auto-deploy, post-deploy smoke tests (domain reachability, API health, database verification)
+- `e2e.yml`: Playwright E2E tests on pull requests
+- `docs-deploy.yml`: Deploys documentation when `docs/**` changes
+- `docs-gate.yml`: PR gate requiring documentation updates alongside code changes
+
+**Mobile projects** (`mind-measure-mobile-final`, `mind-measure-pro-mobile`):
+- `ci.yml`: Quality job (typecheck, lint, format check, unit tests), build job (artifact generation), E2E job (Playwright smoke tests)
+
+### 6.2 Pre-Commit Hooks
+
+All projects use **Husky v9 + lint-staged**:
+- Every commit runs Prettier formatting and ESLint fixes on staged TypeScript files
+- CSS, JSON, and Markdown files are auto-formatted
+
+### 6.3 Code Quality Enforcement
+
+| Tool | Configuration | Enforcement |
+|------|--------------|-------------|
+| TypeScript | `strict: true`, `strictNullChecks`, `noImplicitAny`, `noUnusedParameters`, `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess` | Build-time |
+| ESLint | Flat config, unused imports detection, `@typescript-eslint/no-explicit-any` warnings | Pre-commit + CI |
+| Prettier | Consistent formatting (120 char width, single quotes, trailing commas) | Pre-commit |
+
+TypeScript is configured at **maximum strictness** — including `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`, which most projects don't enable.
+
+---
+
+## 7. Monitoring & Observability
+
+### 7.1 Ecosystem Health Audit
+
+Automated health monitoring runs every 4 hours via Vercel Cron on both platforms. The audit checks:
+
+- **Database**: Connection health, latency, table accessibility
+- **API Endpoints**: Critical and important endpoint availability
+- **Security**: Admin account status, failed login activity
+- **Deployment**: Required and optional environment variable configuration
+- **Cost**: 30-day API spend tracking
+- **Voice Agent**: Check-in activity (fusion_outputs data)
+- **Mobile App**: Database connectivity, API responsiveness
+
+### 7.2 Alerting
+
+Audit results are evaluated automatically:
+- **Critical issues or >15-point score drop**: Urgent email alert sent immediately via AWS SES
+- **Warnings only**: Daily digest email (debounced to once per 24 hours)
+- Alerts include severity breakdown, specific findings, and a direct link to the admin dashboard
+
+### 7.3 Application Health Monitoring
+
+`ServiceContext.tsx` provides real-time service health monitoring with configurable intervals (default 30s). Service status is tracked and surfaced in the admin dashboard.
+
+### 7.4 AWS Infrastructure Monitoring
+
+- **CloudWatch Logs**: Application logging (1 year retention)
+- **CloudTrail**: Security audit logs for all API calls (7 year retention)
+- **Aurora PostgreSQL logs**: Database query and error logging
+
+---
+
+## 8. Database Architecture
+
+### 8.1 Schema Management
+
+**59 versioned SQL migration files** across projects, covering:
+- Core application tables (profiles, fusion_outputs, assessment_transcripts, etc.)
+- Security infrastructure (8 tables, 5 views)
+- Wellbeing reports, buddy system, national mental health resources
+- Cost tracking, content hub, marketing CMS
+
+### 8.2 Connection Management
+
+| Context | Pattern | Configuration |
+|---------|---------|---------------|
+| Vercel Serverless | Client per request with proper cleanup | 5s connect timeout, 10s query timeout, SSL required |
+| Lambda | Client per invocation, credentials from Secrets Manager | 5-minute credential caching |
+| Frontend services | Connection pool (max 20) | 30s idle timeout, 2s connect timeout |
+
+All patterns include proper connection cleanup in `finally` blocks. Database configuration fails fast if credentials are missing — no fallback passwords.
+
+---
+
+## 9. Code Organisation
+
+### 9.1 Current Structure
+
+7 production repositories with consistent internal structure:
+- `api/` — Vercel serverless functions
+- `api/_lib/` — Shared middleware (auth, CORS, DB, error handling, audit logging)
+- `src/` — React application code
+- `src/services/` — Business logic and external service integrations
+- `src/services/security/` — Security services (MFA, RBAC, PHI encryption, audit, vulnerability)
+- `database/migrations/` — Versioned SQL migrations
+- `tests/` or `e2e/` — Test suites
+- `.github/workflows/` — CI/CD pipelines
+
+### 9.2 Code Sharing
+
+The University and Pro platforms share approximately 50% of their code. Currently maintained as separate repositories with the same structure. A monorepo migration (Turborepo) is planned but not yet started — this would eliminate duplication and is documented on the product roadmap.
+
+---
+
+## 10. Assessed Risk Areas
+
+### 10.1 Vendor Dependency — ElevenLabs
+
+The voice check-in feature (core product differentiator) depends on ElevenLabs Conversational AI. ~35 files touch this integration. A voice provider abstraction layer is planned on the roadmap to mitigate lock-in risk, with NVIDIA PersonaPlex identified as a potential self-hosted alternative at scale.
+
+**Mitigation**: Provider abstraction is planned. The conversation data flow (transcripts, analysis) is platform-agnostic — only the real-time voice layer is ElevenLabs-specific.
+
+### 10.2 Application-Level Rate Limiting
+
+API-level rate limiting middleware is not explicitly implemented. The platform relies on:
+- Vercel's built-in DDoS protection
+- Database-level rate limiting for specific operations (e.g., buddy check-in requests)
+- Input validation caps on array sizes and transcript lengths
+
+**Mitigation**: Vercel Pro provides enterprise DDoS protection. Database-level rate limiting exists for sensitive operations. Application-level middleware is a recommended enhancement.
+
+### 10.3 Error Tracking
+
+No dedicated error tracking SDK (Sentry, Datadog) is currently integrated. Error visibility comes from:
+- Vercel deployment logs
+- AWS CloudWatch Logs
+- Ecosystem health audit (catches infrastructure-level issues)
+- Audit logging (catches security-relevant events)
+
+**Mitigation**: Adding Sentry for client-side error tracking is a recommended enhancement for the next sprint.
+
+### 10.4 Bus Factor
+
+The platform has been built primarily by a single developer. This is mitigated by:
+- Comprehensive documentation site (docs.mindmeasure.co.uk)
+- Consistent patterns across all projects (same stack, same structure)
+- 86+ automated tests with meaningful assertions
+- CI/CD pipelines that enforce quality standards
+- TypeScript at maximum strictness (self-documenting code)
+
+---
+
+## 11. Summary Assessment
+
+| Area | Rating | Evidence |
+|------|--------|----------|
+| Architecture & Tech Stack | **Strong** | Mainstream, scalable, hireable stack. AWS managed services. Consistent patterns. |
+| Core IP / Differentiation | **Strong** | Multimodal fusion engine with dynamic fallback. Clinical indicator extraction. Non-trivial to replicate. |
+| Security | **Strong** | HIPAA-aligned, GDPR-compliant, multi-layer encryption, immutable audit logging, RBAC, PHI field encryption, CORS whitelist, CSP headers, JWT verification. |
+| Authentication | **Strong** | Cognito RS256, MFA (TOTP + SMS), superuser HMAC codes, email domain validation. |
+| Encryption | **Strong** | AES-256 at rest (KMS), TLS 1.3 in transit, AES-256-GCM field-level PHI encryption. |
+| Compliance | **Strong** | GDPR Art. 15/17 implemented, HIPAA safeguards, UK data residency, 7-year audit retention, data subject request tracking. |
+| Test Coverage | **Good** | 86+ unit tests, 8 Playwright specs, visual regression, pre-deploy checks. Real assertions, not stubs. |
+| CI/CD | **Good** | GitHub Actions on all projects, pre-commit hooks (Husky + lint-staged), build verification, post-deploy smoke tests. |
+| Code Quality | **Good** | TypeScript strict mode (maximum settings), ESLint, Prettier, consistent patterns. |
+| Monitoring | **Good** | Automated 4-hourly health audit with email alerts, service health tracking, CloudWatch/CloudTrail. |
+| Documentation | **Good** | Comprehensive docs site, security documentation, architecture decisions, operational playbooks. |
+| Database Architecture | **Good** | 59 versioned migrations, proper connection management, fail-fast credential validation. |
+| Code Maintainability | **Fair** | 50% duplication across University/Pro repos. Monorepo migration planned. Well-structured within each repo. |
+| Error Tracking | **Fair** | Infrastructure monitoring exists. No client-side error tracking SDK. |
+| Rate Limiting | **Fair** | Vercel DDoS + database-level limiting. No application-level middleware. |
+
+---
+
+## 12. Recommended Enhancements (Next Sprint)
+
+| Priority | Enhancement | Effort |
+|----------|------------|--------|
+| High | Add Sentry for client-side error tracking | 1-2 days |
+| High | Add application-level rate limiting middleware | 1-2 days |
+| Medium | Run test coverage report and establish coverage thresholds | 1 day |
+| Medium | Begin monorepo migration (shared-core package extraction) | 2-4 weeks |
+| Low | Cookie consent implementation | 1 day |
+| Low | Voice provider abstraction layer | 2-3 weeks |
+
+---
+
+*This document reflects the actual state of the codebase as verified through direct inspection on 28 February 2026. All claims are evidence-based, referencing specific files, configurations, and implementations.*
