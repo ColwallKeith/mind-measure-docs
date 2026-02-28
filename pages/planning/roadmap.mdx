@@ -4,7 +4,7 @@ A living document capturing feature ideas, product concepts, and development pri
 
 For technical/engineering work in progress, see [Future Development](/future-development).
 
-**Last Updated**: 28 February 2026
+**Last Updated**: 28 February 2026 (added monorepo, auth standardisation, voice abstraction, load testing)
 
 ---
 
@@ -59,6 +59,68 @@ A social media assets library and student ambassador signup, logging, and manage
 - Phase 5: Admin management — approve ambassadors, set bonus tiers, process payouts
 
 **Revenue impact**: Organic user acquisition through peer networks. Ambassador programme reduces marketing spend while increasing authentic engagement.
+
+---
+
+### Monorepo Migration
+
+**Priority**: Medium  
+**Status**: Planning — architecture documented in platform audit
+
+The 7 production projects share ~50% of their code. Extracting shared packages into a Turborepo monorepo would eliminate duplication, reduce maintenance, and ensure consistency across University and Pro platforms.
+
+**Key milestones**:
+- Phase 1: Scaffold monorepo with Turborepo; extract `shared-core` (BackendServiceFactory, AWSService, ServiceManager, types) and `config` (entity-type mappings)
+- Phase 2: Extract `shared-api` (database routes, auth middleware, JWT verification)
+- Phase 3: Wire up app shells; verify build parity with existing standalone projects
+- Phase 4: Extract `shared-mobile` (fusion engine, enrichment, extractors)
+- Phase 5: Cut over Vercel deployments one app at a time; archive standalone repos
+
+**Estimated reduction**: ~40-50% less code to maintain.
+
+---
+
+### Auth Token Standardisation
+
+**Priority**: Medium  
+**Status**: Planning
+
+The University mobile app (`mind-measure-mobile-final`) and Pro mobile app (`mind-measure-pro-mobile`) use different token retrieval patterns — `setTokenProvider` vs `cognitoApiClient`. Aligning both on the same pattern improves reliability and enables shared API middleware.
+
+**Key milestones**:
+- Phase 1: Audit current auth patterns across both mobile apps
+- Phase 2: Align on `cognitoApiClient` pattern (proven in Pro)
+- Phase 3: Extract shared auth module (feeds into monorepo Phase 2)
+
+---
+
+### Voice Provider Abstraction & PersonaPlex
+
+**Priority**: Low (R&D)  
+**Status**: Research — platform audit documents alternatives
+
+Build a provider-agnostic voice interface so ElevenLabs can be swapped for alternatives (OpenAI Realtime, Cartesia Sonic-3, or self-hosted NVIDIA PersonaPlex). PersonaPlex offers 100x cost reduction at scale (~$0.001/min vs ~$0.10/min) with MIT-licensed weights.
+
+**Key milestones**:
+- Phase 1: Build interface-based voice provider abstraction layer
+- Phase 2: Prototype PersonaPlex on cloud A100 (AWS g5.2xlarge) with wellbeing check-in prompts
+- Phase 3: Benchmark quality, latency, and cost vs ElevenLabs
+- Phase 4: If viable, migrate to self-hosted; break-even at ~10,000 minutes/month
+
+---
+
+### Load Testing
+
+**Priority**: Medium  
+**Status**: Not started
+
+Load test the full check-in flow at 100+ concurrent users. The platform audit identified potential bottlenecks: Bedrock/Rekognition throttling under concurrent load, and Aurora connection pressure (now mitigated by connection pooling).
+
+**Key milestones**:
+- Phase 1: Build load test script simulating concurrent check-ins
+- Phase 2: Test at 50, 100, 200 concurrent users
+- Phase 3: Identify and fix bottlenecks (circuit breakers, request queuing)
+- Phase 4: Establish ongoing performance baseline
 
 ---
 
@@ -179,6 +241,14 @@ Features that were planned here and are now live. Each links to a detailed write
 |---------|-----------|---------------|
 | Cohort Comparison Analytics | Feb 2026 | [View details](/planning/completed/cohort-comparison-analytics) |
 | Downloadable Wellbeing Reports (V1) | Feb 2026 | [View details](/planning/completed/downloadable-wellbeing-reports) |
+| Automated Platform Monitoring | Feb 2026 | Ecosystem audit + cron + SES email alerts every 4 hours |
+| Voice Agent Prompt Refinement (Jodie v2) | Feb 2026 | Enriched dynamic variables, improved pacing, number formatting |
+| JWT Signature Verification | Feb 2026 | All API routes now verify Cognito JWT signatures |
+| Database Connection Pooling | Feb 2026 | Module-level Pool singleton in all Vercel serverless functions |
+| Input Validation Hardening | Feb 2026 | Frame array caps, transcript length limits, CORS allowlisting |
+| API Retry Logic | Feb 2026 | Exponential backoff on Bedrock and Rekognition calls |
+| Documentation Cleanup | Feb 2026 | Removed 26 duplicate files, organized into folder structure |
+| Bedrock Model Upgrade | Feb 2026 | Upgraded from Claude 3 Haiku to Claude 3.7 Sonnet |
 
 ---
 
