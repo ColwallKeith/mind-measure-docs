@@ -1,0 +1,36 @@
+# Cohort Comparison Analytics
+
+**Status**: Complete  
+**Completed**: February 2026  
+**Platforms**: University admin (`admin.mindmeasure.co.uk`), Pro admin (`admin.mindmeasurepro.com`)
+
+---
+
+## What We Built
+
+A detailed "build your own" analytics dashboard available to institutional administrators on both University and Pro superuser portals. Institutions can compare wellbeing metrics across different cohorts to identify trends and target support.
+
+## Capabilities
+
+- **Year group comparison** — freshers vs. final year, or any combination of seniority levels
+- **Department / faculty breakdown** — wellbeing scores by academic department or business division
+- **Accommodation type** — on-campus vs. off-campus vs. at-home comparisons
+- **Time period analysis** — term-time vs. holidays, week-by-week trends
+- **Custom cohort builder** — institutions can define their own comparison groups from available demographic fields
+- **Visual dashboards** — charts, trend lines, and summary statistics
+
+## Technical Implementation
+
+- Data sourced from `fusion_outputs` table joined with `profiles` demographic fields
+- Demographic fields: `department`, `seniority`, `work_mode`, `living_situation`, `office_location`, `domicile`, `gender`, `age_range`
+- Aggregation queries run server-side via Vercel serverless functions
+- Frontend built with Recharts for visualisation
+- Available on both University and Pro admin dashboards
+
+## Impact
+
+Gives institutions actionable data to direct wellbeing resources where they are most needed. Enables evidence-based decision making about support services.
+
+---
+
+*Completed: February 2026*

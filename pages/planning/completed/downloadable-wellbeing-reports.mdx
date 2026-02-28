@@ -1,0 +1,45 @@
+# Downloadable Wellbeing Reports
+
+**Status**: V1 Complete  
+**Completed**: February 2026  
+**Platforms**: University mobile (`mobile.mindmeasure.app`), Pro mobile (`mobile.mindmeasurepro.app`)
+
+---
+
+## What We Built
+
+Detailed downloadable wellbeing reports covering 14, 30, and 90-day periods. Users can generate and download a comprehensive summary of their check-in history.
+
+## V1 Capabilities
+
+- **Executive summary** — high-level overview of the user's wellbeing trajectory
+- **Mood score trends** — charted over the selected period with rolling averages
+- **Key themes** — recurring positive and negative themes identified across check-ins
+- **Transcript snippets** — notable quotes from conversations, contextualising the data
+- **Driver analysis** — what's contributing positively and negatively to wellbeing
+- **Visual charts** — mood trends, theme frequency, score distribution
+- **PDF generation** — downloadable report formatted for sharing or personal records
+
+## Technical Implementation
+
+- Report generation via `/api/generate-report` endpoint
+- Analysis powered by AWS Bedrock (Claude 3.7 Sonnet)
+- Data aggregated from `fusion_outputs` and `assessment_sessions` tables
+- PDF rendering via server-side generation
+- Available from the user's profile/wellness tab in both mobile apps
+
+## What's Next (V2 — Blocked)
+
+Further enhancements require professional input from therapists:
+
+- Therapist-reviewed content guidance and language
+- Actionable wellbeing suggestions (curated by clinicians, not AI-generated)
+- Comparison to personal baseline with clinical context
+- Institution-branded report templates
+- Exportable data for clinical handoffs
+
+V2 is tracked in the [Roadmap](/planning/roadmap) under Feature Ideas.
+
+---
+
+*V1 Completed: February 2026*
