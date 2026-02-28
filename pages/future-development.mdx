@@ -1,124 +1,89 @@
 # Future Development
 
-A living document tracking planned features, deferred work, and development priorities across the Mind Measure platform. Items are grouped by product area and roughly ordered by priority within each section.
+Technical work that is planned or deferred. For feature ideas and product roadmap, see [Planning → Roadmap](/planning/roadmap).
 
-**Last Updated**: 24 January 2026
+**Last Updated**: 28 February 2026
 
 ---
 
-## Mobile App
+## Completed (Since January 2026)
 
-### Settings Page (Phase 2)
+The following items were previously tracked here and are now done:
+
+| Item | Status | Notes |
+|------|--------|-------|
+| University Invite Flow | **Complete** | End-to-end tested and live. University admins can invite users via email. |
+| Ecosystem Health Audit | **Complete** | `/api/system/ecosystem-audit` on both University and Pro dashboards. Covers database, APIs, security, deployment, voice agent, mobile app. |
+| Superuser Login Branding | **Complete** | Branded login with campus background, passwordless 6-digit code flow. Both portals. |
+| ElevenLabs Jodie Agent | **Complete** | Voice agent live on both University and Pro mobile apps. Prompts refined for pacing and number formatting. |
+| AWS Bedrock Model Upgrade | **Complete** | Analysis upgraded from Claude 3 Haiku to Claude 3.5 Sonnet for better summary quality and risk detection. |
+| Pro Platform Launch | **Complete** | Full Pro admin portal (`admin.mindmeasurepro.com`), Pro mobile app, Pro content hub (`hub.mindmeasurepro.com`). |
+| Docs Site Auth Protection | **Complete** | Middleware blocks direct URL access. Token passthrough from superuser portals. |
+| Marketing CMS Auth Protection | **Complete** | Same middleware pattern as docs site. |
+
+---
+
+## In Progress
+
+### Mobile App Settings Page (Phase 2)
 
 **Status**: Deferred — minimal version deployed  
-**Repository**: `mind-measure-mobile-final`  
-**Current State**: Settings page stripped back to essentials (Privacy Policy, Terms of Service, Your Privacy overlay, Sign Out) as of January 2026. The original implementation was off-brand, non-functional, and crashed on interaction due to a stub `useUserPreferences` hook.
+**Applies to**: `mind-measure-mobile-final`, `mind-measure-pro-mobile`
 
-**Planned Work**:
+Current settings page has essentials only (Privacy Policy, Terms of Service, Your Privacy, Sign Out). Full implementation deferred until push notification infrastructure is ready.
 
-1. **On-brand design** — Settings page must match the mobile app's visual language. No generic icons or emojis. Consistent typeface and colour palette.
-2. **Notification preferences** (persisted to database):
-   - Check-in reminders — opt in/out of daily wellness check-in prompts
-   - Buddy notifications — control whether buddies can check in on you
-   - Wellbeing alerts — toggle important wellbeing updates
-3. **Privacy preferences** (persisted to database):
-   - Data sharing — consent for anonymised research data sharing
-4. **Backend requirements**:
-   - `user_preferences` table in Aurora (or extend `profiles` table)
-   - `useUserPreferences` hook rewritten to read/write via `backendService.database`
-   - Preferences synced on login, cached locally for offline access
-5. **Appearance settings** (lower priority):
-   - Dark mode — requires full theme system across the mobile app
-   - Reduced motion — requires animation wrapper/context
-   - Only implement when the rest of the app supports these features
-6. **Assessment preferences** (lower priority):
-   - Voice vs text input preference for check-ins
-   - Only relevant once the assessment engine supports both modalities
-
-**Design Notes**: The Figma designs for the mobile app should be consulted when this work begins. The settings page should feel native to iOS/Android, not like a web form.
-
----
-
-### Buddy System Enhancements
-
-**Status**: V1 deployed (email-only)  
-**Repository**: `mind-measure-mobile-final`
-
-**Planned Work**:
-
-- In-app notifications when a buddy accepts an invitation
-- Buddy status visibility on the dashboard
-- Push notification integration for nudge reminders
-- Potential V2: in-app messaging between student and buddy
-
----
-
-## Admin Dashboard (Core)
-
-### Investor Dashboard
-
-**Status**: Planned — Figma designs exist  
-**Repository**: `mind-measure-core`
-
-**Planned Work**:
-
-- Dedicated investor-facing view with key platform metrics
-- User growth, engagement trends, university adoption
-- Revenue and cost data (if appropriate)
-- Figma designs available in the project files — consult before implementation
-
----
-
-### University Invite Flow
-
-**Status**: Implemented — needs end-to-end testing  
-**Repository**: `mind-measure-core`
-
-**Planned Work**:
-
-- Full end-to-end test of the university admin invite flow
-- Verify email delivery, code entry, and successful access
-- Confirm university admins can then invite their own users
-- Document the flow once validated
-
----
-
-## Platform-Wide
-
-### Type Safety Enhancement
-
-**Status**: Planned (previously Phase 5)  
-**Applies to**: Both `mind-measure-core` and `mind-measure-mobile-final`
-
-**Planned Work**:
-
-- Strict TypeScript configuration
-- Centralised type definitions for database schemas and API responses
-- Runtime validation with Zod
-- Type-safe service interfaces
-- See archived `PHASE_5_PLAN.md` for full details
+**Remaining work**:
+- Notification preferences (check-in reminders, buddy notifications, wellbeing alerts)
+- Privacy preferences (anonymised data sharing consent)
+- `user_preferences` table in Aurora
+- Dark mode and reduced motion (lower priority, requires full theme system)
 
 ---
 
 ### Push Notification Infrastructure
 
 **Status**: Not started  
-**Applies to**: `mind-measure-mobile-final` (Capacitor), backend (AWS)
+**Applies to**: Both mobile apps, AWS backend
 
-**Planned Work**:
-
+**Planned work**:
 - FCM/APNs token registration via Capacitor
-- Backend service for sending targeted push notifications
+- Backend service for targeted push notifications
 - Notification types: check-in reminders, buddy nudges, wellbeing alerts, crisis escalation
-- User preference integration (once settings page Phase 2 is complete)
 - Scheduling engine for timed reminders
+- Depends on: Settings page Phase 2 for user preferences
+
+---
+
+### Buddy System Enhancements
+
+**Status**: V1 deployed (email-only)  
+**Applies to**: `mind-measure-mobile-final`
+
+**Planned work**:
+- In-app notifications when a buddy accepts an invitation
+- Buddy status visibility on dashboard
+- Push notification integration for nudge reminders
+- Potential V2: in-app messaging
+
+---
+
+### Type Safety Enhancement
+
+**Status**: Planned  
+**Applies to**: All repos
+
+**Planned work**:
+- Strict TypeScript configuration
+- Centralised type definitions for database schemas and API responses
+- Runtime validation with Zod
+- Type-safe service interfaces
 
 ---
 
 ## How to Use This Document
 
-- Add new items as they are identified and deferred
+- This page tracks **technical/engineering work** only
+- For **product ideas and feature concepts**, see [Planning → Roadmap](/planning/roadmap)
 - Update status as work progresses
-- Move completed items to the relevant product documentation
+- Move completed items to the "Completed" table with date
 - Keep the "Last Updated" date current
-- This is not a sprint backlog — it captures medium-to-long-term planned work

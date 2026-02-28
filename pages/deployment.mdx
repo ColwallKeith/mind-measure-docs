@@ -1,85 +1,98 @@
 # Deployment Guide
 
-Complete deployment instructions for the Mind Measure platform across different environments.
+All Mind Measure projects deploy automatically via Vercel's GitHub integration. Pushing to `main` triggers a build and deploy.
 
-## Production Deployment
+**Never use `npx vercel --prod` or the Vercel CLI.** All deployments must go through git.
 
-### Main Application
-- **URL**: [admin.mindmeasure.co.uk](https://admin.mindmeasure.co.uk)
-- **Platform**: Vercel
-- **Framework**: Vite (React/TypeScript)
-- **Build Command**: `npm run build`
-- **Output Directory**: `dist`
-
-### Documentation Site
-- **URL**: [docs.mindmeasure.co.uk](https://docs.mindmeasure.co.uk)
-- **Platform**: Vercel
-- **Framework**: Next.js + Nextra
-- **Build Command**: `npm run build`
-- **Output Directory**: `out`
-
-## Infrastructure
-
-### Backend Services
-- **Database**: AWS Aurora Serverless v2 (PostgreSQL)
-- **Authentication**: AWS Cognito with MFA
-- **File Storage**: AWS S3 with encryption
-- **Region**: EU-West-2 (London) for GDPR compliance
-
-### Security Configuration
-- **Encryption**: At-rest and in-transit encryption
-- **Backup**: Automated daily backups
-- **Monitoring**: Real-time security monitoring
-- **Compliance**: HIPAA, GDPR, SOC2 compliant
-
-## Deployment Checklist
-
-### Pre-Deployment
-- [ ] Security tests passing
-- [ ] Build tests successful
-- [ ] Environment variables configured
-- [ ] Database migrations applied
-- [ ] Backup verification complete
-
-### Post-Deployment
-- [ ] Application health check
-- [ ] Security scan results
-- [ ] Performance metrics validation
-- [ ] User acceptance testing
-- [ ] Monitoring alerts configured
-
-## Environment Configuration
-
-### Production Environment Variables
-```bash
-# Backend Configuration
-VITE_BACKEND_PROVIDER=aurora-serverless
-VITE_DB_HOST=mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com
-VITE_AWS_REGION=eu-west-2
-
-# Authentication
-VITE_AWS_COGNITO_USER_POOL_ID=your_user_pool_id
-VITE_AWS_COGNITO_CLIENT_ID=your_client_id
-
-# Security
-VITE_ENCRYPTION_ENABLED=true
-VITE_AUDIT_LOGGING_ENABLED=true
-```
-
-## Monitoring & Alerts
-
-### Application Monitoring
-- **Uptime**: 99.9% target availability
-- **Response Time**: Less than 200ms average response time
-- **Error Rate**: Less than 0.1% error rate target
-- **Security**: Real-time threat monitoring
-
-### Database Monitoring
-- **Performance**: Query performance monitoring
-- **Capacity**: Auto-scaling monitoring
-- **Backup**: Backup success verification
-- **Security**: Access pattern monitoring
+**Last Updated**: 28 February 2026
 
 ---
 
-For detailed deployment procedures, see the [Development Guide](/development).
+## Deployment Method
+
+```
+Local changes → git add -A → git commit → git push → Vercel auto-deploy
+```
+
+Every project has a GitHub repo connected to a Vercel project. Pushing to `main` triggers:
+1. Vercel pulls the latest code from GitHub
+2. Runs `npm run build`
+3. Deploys to production
+
+**Build times**: ~2–4 minutes for admin dashboards, ~1 minute for docs/hubs.
+
+---
+
+## Platform Map
+
+### University Platform
+
+| Project | Domain | Repository | Framework |
+|---------|--------|------------|-----------|
+| Admin Dashboard | [admin.mindmeasure.co.uk](https://admin.mindmeasure.co.uk) | Mind-Measure/mind-measure-core | React + Vite |
+| Mobile App | [mobile.mindmeasure.app](https://mobile.mindmeasure.app) | mind-measure-mobile-final | React + Vite + Capacitor |
+| Content Hub | [hub.mindmeasure.co.uk](https://hub.mindmeasure.co.uk) | mind-measure-university-hub | React + Vite |
+
+### Pro (Corporate) Platform
+
+| Project | Domain | Repository | Framework |
+|---------|--------|------------|-----------|
+| Admin Dashboard | [admin.mindmeasurepro.com](https://admin.mindmeasurepro.com) | ColwallKeith/mind-measure-pro-core | React + Vite |
+| Mobile App | mind-measure-pro-mobile | React + Vite + Capacitor |
+| Content Hub | [hub.mindmeasurepro.com](https://hub.mindmeasurepro.com) | mind-measure-pro-hub | React + Vite |
+
+### Shared Services
+
+| Project | Domain | Repository | Framework |
+|---------|--------|------------|-----------|
+| Documentation | [docs.mindmeasure.co.uk](https://docs.mindmeasure.co.uk) | Mind-Measure/mind-measure-docs | Next.js 14 + Nextra |
+| Marketing CMS | [marketing.mindmeasure.co.uk](https://marketing.mindmeasure.co.uk) | Mind-Measure/mind-measure-marketing-cms | Next.js 16 |
+| Marketing Website | [mindmeasure.co.uk](https://mindmeasure.co.uk) | mindmeasureuni/Mind Measure website | React + Vite |
+
+---
+
+## Infrastructure
+
+| Service | Provider | Region | Purpose |
+|---------|----------|--------|---------|
+| Database | AWS Aurora Serverless v2 (PostgreSQL) | eu-west-2 (London) | Primary data store |
+| Authentication | AWS Cognito | eu-west-2 | Student and university user auth |
+| AI Analysis | AWS Bedrock (Claude 3.5 Sonnet) | eu-west-2 | Transcript analysis, risk detection |
+| Voice Agent | ElevenLabs Conversational AI | — | Jodie check-in agent |
+| File Storage | AWS S3 | eu-west-2 | Encrypted file storage |
+| Email | AWS SES | eu-west-2 | Transactional email from noreply@mindmeasure.co.uk |
+| Frontend Hosting | Vercel | — | All web applications |
+
+---
+
+## Environment Variables
+
+Environment variables are set in each project's Vercel dashboard under Settings → Environment Variables.
+
+**Important**: Variables prefixed with `VITE_` are baked into the client bundle at build time. Never use `VITE_` for secrets that should remain server-side. Adding or changing a `VITE_` variable requires a redeploy to take effect.
+
+Server-side variables (used in `api/` functions) are available at runtime and do not require the `VITE_` prefix.
+
+---
+
+## Pre-Deployment Checklist
+
+- [ ] All changes committed (no unstaged files in `git status`)
+- [ ] Commit includes ALL modified files (partial commits cause reverts)
+- [ ] Environment variables configured in Vercel if new ones were added
+- [ ] `VITE_` env vars: trigger a redeploy after adding (build-time only)
+
+## Post-Deployment Verification
+
+- [ ] Application loads without errors
+- [ ] Ecosystem health audit passes (`/api/system/ecosystem-audit`)
+- [ ] Auth flows working (superuser login, Cognito)
+- [ ] Voice agent connects (if mobile app changes)
+
+---
+
+## Auth-Protected Sites
+
+The documentation site and marketing CMS are protected by Next.js middleware. Direct URL access is blocked. Access is granted via token passthrough from the superuser portals.
+
+The token is set as `VITE_MM_INTERNAL_TOKEN` (client-side, in admin dashboards) and `MM_INTERNAL_TOKEN` (server-side, in docs and marketing CMS). All four must have the same value.

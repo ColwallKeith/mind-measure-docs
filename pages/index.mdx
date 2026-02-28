@@ -1,106 +1,74 @@
 # Mind Measure Documentation
 
-Welcome to the comprehensive documentation for the Mind Measure platform - a cutting-edge mental health monitoring and support system designed for educational institutions.
+Internal technical documentation for the Mind Measure platform — a mental health monitoring and support system for universities and companies.
 
-## Quick Start
+**Last Updated**: 28 February 2026
 
-### For Administrators
-- **[Superuser Dashboard](https://admin.mindmeasure.co.uk/superuser)** - Complete system administration
-- **[University Dashboards](https://admin.mindmeasure.co.uk/university/worcester)** - Institution-specific management
-- **[Security Testing](https://admin.mindmeasure.co.uk/test-security)** - Comprehensive security validation
+## Quick Access
+
+### Superuser Portals
+- **[University Admin](https://admin.mindmeasure.co.uk/superuser)** — University dashboard, onboarding, analytics
+- **[Pro Admin](https://admin.mindmeasurepro.com/superuser)** — Company dashboard, onboarding, analytics
 
 ### For Developers
-- **[Architecture](/architecture)** - System design and technical overview
-- **[API Documentation](/api-documentation)** - Complete API reference
-- **[Development Guide](/development)** - Setup and development workflow
+- **[Architecture](/architecture)** — System design and technical overview
+- **[Repository Map](/architecture/repository-map)** — All repos, domains, and responsibilities
+- **[Deployment Guide](/deployment)** — Git push protocol and deployment checklist
+- **[API Documentation](/api-documentation)** — API reference
 
-## System Architecture
+## Platform Overview
 
-Mind Measure is built on a modern, scalable architecture:
+Mind Measure has two product lines — **University** and **Pro (Corporate)** — sharing common infrastructure.
 
-- **Frontend**: React/Vite application with TypeScript
-- **Backend**: AWS Aurora Serverless v2 with PostgreSQL
-- **Authentication**: AWS Cognito with MFA
-- **Security**: Medical-grade encryption and audit logging
-- **Deployment**: Vercel for frontend, AWS for backend services
+### University Platform
+| Service | Domain |
+|---------|--------|
+| Admin Dashboard | [admin.mindmeasure.co.uk](https://admin.mindmeasure.co.uk) |
+| Student Mobile App | [mobile.mindmeasure.app](https://mobile.mindmeasure.app) |
+| Content Hub | [hub.mindmeasure.co.uk](https://hub.mindmeasure.co.uk) |
 
-## Security & Compliance
+### Pro (Corporate) Platform
+| Service | Domain |
+|---------|--------|
+| Admin Dashboard | [admin.mindmeasurepro.com](https://admin.mindmeasurepro.com) |
+| Content Hub | [hub.mindmeasurepro.com](https://hub.mindmeasurepro.com) |
 
-The platform implements enterprise-grade security:
+### Shared Services
+| Service | Domain |
+|---------|--------|
+| Marketing Website | [mindmeasure.co.uk](https://mindmeasure.co.uk) |
+| Marketing CMS | [marketing.mindmeasure.co.uk](https://marketing.mindmeasure.co.uk) |
+| Documentation | [docs.mindmeasure.co.uk](https://docs.mindmeasure.co.uk) |
 
-- **Medical-Grade Security** - HIPAA, GDPR, SOC2 compliant
-- **Multi-Factor Authentication** - Required for all admin access
-- **Field-Level Encryption** - PHI data protection
-- **Comprehensive Audit Logging** - Full activity tracking
-- **Automated Security Testing** - Continuous vulnerability assessment
+## Tech Stack
 
-## University Integration
-
-### Supported Institutions
-- **University of Worcester** - Full deployment with demo data
-- **University of Birmingham** - Ready for setup
-- **University of Manchester** - Ready for setup
-
-### Features
-- **Institutional Dashboards** - Real-time student wellbeing analytics
-- **Resource Management** - Mental health resources and contacts
-- **CMS Integration** - Content management for each institution
-- **Aggregated Analytics** - Privacy-preserving data insights
-
-## Key Features
-
-### For Students
-- **Daily Check-ins** - Quick wellbeing assessments
-- **AI-Powered Insights** - Personalized mental health tracking
-- **Resource Access** - Instant access to support services
-- **Privacy Protection** - Complete data anonymization
-
-### For Institutions
-- **Real-time Analytics** - Population-level wellbeing trends
-- **Early Intervention** - Automated risk detection
-- **Resource Optimization** - Data-driven support allocation
-- **Compliance Reporting** - Automated privacy and security reports
-
-## Platform Access
-
-### Production Environment
-- **Admin Dashboard**: [admin.mindmeasure.co.uk](https://admin.mindmeasure.co.uk)
-- **University Content Hub**: [hub.mindmeasure.co.uk](https://hub.mindmeasure.co.uk)
-- **Marketing CMS**: [marketing.mindmeasure.co.uk](https://marketing.mindmeasure.co.uk)
-- **Marketing Website**: [mindmeasure.co.uk](https://mindmeasure.co.uk)
-- **Student App**: [mindmeasure.app](https://mindmeasure.app)
-- **Documentation**: [docs.mindmeasure.co.uk](https://docs.mindmeasure.co.uk)
-
-### Repository Map
-See [Architecture → Repository Map](/architecture/repository-map) for a complete guide to all repositories, domains, and their responsibilities.
+- **Frontend**: React + Vite + TypeScript (admin dashboards, mobile apps)
+- **Documentation**: Next.js 14 + Nextra (this site)
+- **Database**: AWS Aurora Serverless v2 (PostgreSQL)
+- **Authentication**: AWS Cognito (students/users), custom JWT (superuser 6-digit code)
+- **AI Analysis**: AWS Bedrock (Claude 3.5 Sonnet) — transcript analysis, risk detection
+- **Voice Agent**: ElevenLabs Conversational AI — Jodie check-in agent
+- **Email**: AWS SES from noreply@mindmeasure.co.uk
+- **Deployment**: Vercel (auto-deploy from GitHub on push to `main`)
 
 ## Documentation Sections
 
-### Technical Documentation
-- **[Architecture](/architecture)** - System design and components
-- **[Backend](/backend)** - Server architecture and APIs
-- **[Database](/database)** - Aurora Serverless v2 setup
-- **[Security](/medical-grade-security)** - Comprehensive security implementation
+### Technical
+- **[Architecture](/architecture)** — System design and components
+- **[Repository Map](/architecture/repository-map)** — All repos and domains
+- **[Deployment](/deployment)** — Git push protocol
+- **[Database](/database)** — Aurora Serverless v2
 
-### User Guides
-- **[Admin UI](/admin-ui)** - Administrative interface guide
-- **[CMS](/cms)** - Content management system
-- **[Mobile App](/mobile)** - Mobile application features
+### Product
+- **[University Handbook](/handbook)** — University admin guide
+- **[Mobile App](/mobile)** — Mobile application features
+- **[Assessment System](/assessment)** — Check-in and analysis pipeline
+
+### Planning
+- **[Roadmap](/planning/roadmap)** — Feature ideas and product priorities
+- **[Institutional Agents](/planning/institutional-agents)** — Per-institution agent spec
 
 ### Operations
-- **[Deployment](/deployment)** - Production deployment guide
-- **[Development](/development)** - Local development setup
-- **[Playbooks](/playbooks)** - Operational procedures
-
-## Support & Contact
-
-For technical support or questions:
-- **Platform Issues**: Use the admin dashboard support features
-- **Documentation**: [How to Add Documentation](/how-to-add-documentation)
-- **Security Concerns**: Contact through secure admin channels
-
----
-
-**Mind Measure** - Empowering educational institutions with data-driven mental health support.
-
-*Last updated: February 19, 2026*
+- **[Security](/medical-grade-security)** — Security implementation
+- **[Future Development](/future-development)** — Technical work tracker
+- **[Playbooks](/playbooks)** — Operational procedures

@@ -1,0 +1,159 @@
+# Product Roadmap
+
+A living document capturing feature ideas, product concepts, and development priorities. This is the single source of truth for "what's next" across the Mind Measure platform.
+
+For technical/engineering work in progress, see [Future Development](/future-development).
+
+**Last Updated**: 28 February 2026
+
+---
+
+## Active Planning
+
+### Institutional Agents
+
+**Priority**: High  
+**Status**: Spec complete — [view full spec](/planning/institutional-agents)
+
+Each university/company gets its own ElevenLabs Jodie agent with a personalised knowledge base compiled from CMS onboarding data. Custom questions become a premium revenue feature.
+
+**Key milestones**:
+- Phase 1: Agent ID lookup table and mobile app integration
+- Phase 2: Knowledge base auto-compilation from CMS
+- Phase 3: Custom questions with natural conversation weaving
+- Phase 4: Aggregated reporting dashboard for institutions
+
+**Revenue impact**: Custom questions create a unique data feedback loop — anonymised, natural-language wellbeing data on topics institutions care about, gathered through conversation rather than surveys.
+
+---
+
+## Feature Ideas
+
+### Investor Dashboard
+
+**Priority**: Medium  
+**Origin**: Figma designs exist
+
+Dedicated investor-facing view within the superuser portal:
+- User growth and engagement trends
+- University/company adoption metrics
+- Revenue and cost overview
+- Platform health summary
+
+---
+
+### Downloadable Wellbeing Reports (Enhanced)
+
+**Priority**: Medium  
+**Origin**: Currently uses Claude 3.5 Sonnet for analysis
+
+Enhance the existing PDF reports with:
+- Longitudinal trend analysis (not just single check-in)
+- Comparison to personal baseline
+- Actionable wellbeing suggestions (curated, not AI-generated)
+- Institution-branded report templates
+- Exportable data for clinical handoffs
+
+---
+
+### Real-Time Risk Escalation
+
+**Priority**: High  
+**Origin**: Bedrock analysis already scores risk
+
+Build on the existing risk detection in Bedrock analysis:
+- Real-time alerts to designated welfare contacts when high-risk indicators are detected
+- Configurable thresholds per institution
+- Escalation workflow (alert → acknowledge → follow-up → resolve)
+- Audit trail for safeguarding compliance
+- Integration with institutional safeguarding systems
+
+---
+
+### Text-Based Check-In Alternative
+
+**Priority**: Medium  
+**Origin**: Not all users want voice check-ins
+
+Offer a text-based chat alternative to voice:
+- Same Jodie persona and conversation flow
+- Uses ElevenLabs text-based agent or direct LLM integration
+- Lower data usage, works in quiet environments
+- User preference stored in settings (once Settings Phase 2 is built)
+
+---
+
+### Cohort Comparison Analytics
+
+**Priority**: Medium  
+**Origin**: University dashboards
+
+Allow institutions to compare wellbeing metrics across:
+- Year groups (freshers vs. final year)
+- Departments/faculties
+- Accommodation types (on-campus vs. off-campus)
+- Time periods (term-time vs. holidays)
+- Custom cohorts defined by the institution
+
+---
+
+### Multi-Language Support
+
+**Priority**: Low (future)  
+**Origin**: International student populations
+
+- Jodie agent speaks in the user's preferred language
+- ElevenLabs supports multiple languages for voice
+- Bedrock analysis handles non-English transcripts
+- UI localisation for mobile app
+- Knowledge base documents in multiple languages
+
+---
+
+### Peer Support Network
+
+**Priority**: Low (future)  
+**Origin**: Extension of buddy system
+
+Evolve the buddy system into a broader peer support network:
+- Trained peer supporters matched to students
+- Guided conversation prompts for supporters
+- Feedback loop to institution on peer support usage
+- Integration with institutional peer mentoring schemes
+
+---
+
+### API for Institutional Systems
+
+**Priority**: Low (future)  
+**Origin**: Enterprise integration requests
+
+Expose anonymised, aggregated data via API:
+- Wellbeing trend data for institutional dashboards
+- Integration with student records systems
+- SSO integration for institutional login
+- Webhook notifications for risk escalation
+
+---
+
+## Parked Ideas
+
+Ideas captured but not actively planned. Revisit as the platform matures.
+
+| Idea | Notes |
+|------|-------|
+| Wearable integration | Heart rate, sleep data from Apple Health / Google Fit. Privacy implications need careful consideration. |
+| Gamification | Streaks, badges for consistent check-ins. Risk of trivialising wellbeing — needs careful UX research. |
+| Family/guardian portal | For under-18 users. Significant consent and safeguarding implications. |
+| AI therapist mode | Beyond Jodie's scope. Would require clinical oversight and regulatory approval. |
+
+---
+
+## How to Use This Document
+
+- **Add ideas freely** — capture everything, filter later
+- **Move to "Active Planning"** when a spec is being written
+- **Link to full specs** in the Planning section when they exist
+- **Park ideas** that aren't ready but shouldn't be forgotten
+- **Never delete** — move to Parked with a note instead
+- Keep the "Last Updated" date current
