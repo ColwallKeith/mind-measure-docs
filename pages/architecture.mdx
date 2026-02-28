@@ -1,503 +1,323 @@
-# Architecture
+# System Architecture
 
-# Mind Measure System Architecture
+Mind Measure is a cloud-native mental health monitoring platform serving two product lines — **University** (student wellbeing) and **Pro** (corporate employee wellbeing) — sharing common AWS infrastructure.
 
-## Overview
+**Last Updated**: 28 February 2026
 
-Mind Measure is built on a modern, cloud-native architecture using AWS services to provide a scalable, secure, and compliant mental health monitoring platform for educational institutions.
+---
 
-## System Architecture
-
-### High-Level Architecture
+## High-Level Architecture
 
 ```
- 
- Mobile App Admin Portal Documentation
- (Capacitor/iOS) (React/Vercel) (Static Site)
- 
- 
- 
- 
- 
- CloudFront CDN
- (Global Distribution)
- 
- 
- 
- API Gateway
- (Request Routing)
- 
- 
- 
- AWS Cognito
- (Authentication)
- 
- 
- 
- Lambda Functions
- (Business Logic)
- 
- 
- 
- 
- 
- Aurora Serverless S3 Storage AWS Rekognition
- (Database) (File Storage) (Visual Analysis)
- 
+ University Mobile    Pro Mobile       University Admin      Pro Admin
+ (Capacitor/iOS)      (Capacitor/iOS)  (React/Vercel)        (React/Vercel)
+       │                    │                 │                    │
+       └────────────────────┴─────────────────┴────────────────────┘
+                                      │
+                              Vercel Serverless
+                              Functions (/api/*)
+                                      │
+                    ┌─────────────────┼─────────────────┐
+                    │                 │                  │
+               AWS Cognito     AWS Aurora          AWS Bedrock
+               (Auth)         Serverless v2       (Claude 3.5
+                              (PostgreSQL)         Sonnet)
+                                                       │
+                    ┌─────────────────┼────────────┐    │
+                    │                 │             │    │
+               AWS S3          AWS Rekognition  ElevenLabs
+               (Storage)       (Visual          Conversational
+                               Analysis)        AI (Jodie)
 ```
 
-### Core Components
+---
 
-#### **Frontend Applications**
+## Frontend Applications
 
-**Mobile Application**
-- **Technology**: React + Capacitor + TypeScript
-- **Deployment**: iOS App Store, Android Play Store
-- **Domain**: mobile.mindmeasure.app
-- **Features**: Student assessments, dashboard, buddy system
+### Admin Portals
 
-**Admin Portal**
-- **Technology**: React + Vite + TypeScript
-- **Deployment**: Vercel
-- **Domain**: admin.mindmeasure.co.uk
-- **Features**: University management, analytics, CMS
+| | University | Pro (Corporate) |
+|---|---|---|
+| **Domain** | [admin.mindmeasure.co.uk](https://admin.mindmeasure.co.uk) | [admin.mindmeasurepro.com](https://admin.mindmeasurepro.com) |
+| **Repo** | mind-measure-core | mind-measure-pro-core |
+| **Stack** | React + Vite + TypeScript | React + Vite + TypeScript |
+| **Deploy** | Vercel (git push to main) | Vercel (git push to main) |
 
-**Documentation Site**
-- **Technology**: Static site generator
-- **Deployment**: Vercel
-- **Domain**: docs.mindmeasure.co.uk
-- **Features**: Technical documentation, API reference
+### Mobile Apps
 
-#### **Authentication & Authorization**
+| | University | Pro (Corporate) |
+|---|---|---|
+| **Domain** | [mobile.mindmeasure.app](https://mobile.mindmeasure.app) | — |
+| **Repo** | mind-measure-mobile-final | mind-measure-pro-mobile |
+| **Stack** | React + Vite + Capacitor | React + Vite + Capacitor |
+| **Deploy** | Vercel (web) + TestFlight (iOS) | Vercel (web) + TestFlight (iOS) |
 
-**AWS Cognito User Pools**
-- **User Pool ID**: `eu-west-2_ClAG4fQXR`
-- **Client ID**: `7vu03ppv6alkpphs1ksopll8us`
+### Content Hubs
+
+| | University | Pro (Corporate) |
+|---|---|---|
+| **Domain** | [hub.mindmeasure.co.uk](https://hub.mindmeasure.co.uk) | [hub.mindmeasurepro.com](https://hub.mindmeasurepro.com) |
+| **Repo** | mind-measure-university-hub | mind-measure-pro-hub |
+| **Stack** | React + Vite + TypeScript | React + Vite + TypeScript |
+
+### Shared Services
+
+| Service | Domain | Repo | Stack |
+|---|---|---|---|
+| Marketing Website | [mindmeasure.co.uk](https://mindmeasure.co.uk) | mindmeasureuni | React + Vite |
+| Marketing CMS | [marketing.mindmeasure.co.uk](https://marketing.mindmeasure.co.uk) | mind-measure-marketing-cms | Next.js 16 + Prisma |
+| Documentation | [docs.mindmeasure.co.uk](https://docs.mindmeasure.co.uk) | mind-measure-docs | Next.js 14 + Nextra |
+
+See [Repository Map](/architecture/repository-map) for full details.
+
+---
+
+## Authentication
+
+### AWS Cognito (Students and University/Company Users)
+
 - **Region**: `eu-west-2` (London)
-- **Features**:
- - Multi-factor authentication
- - Password policies
- - Email verification
- - JWT token generation
+- **User Pool**: Separate pools for University and Pro
+- **Features**: Email verification, password policies, JWT tokens
 
-**Authentication Flow**
 ```typescript
-// Mobile App Authentication
 const { signIn } = useAuth();
 const result = await signIn(email, password);
 
-// JWT Token for API calls
 const session = await fetchAuthSession();
 const token = session.tokens?.accessToken?.toString();
 ```
 
-#### **API Layer**
+### Superuser Authentication (Custom)
 
-**AWS API Gateway**
-- **Base URL**: `https://4xg1jsjh7k.execute-api.eu-west-2.amazonaws.com/dev`
-- **Authentication**: JWT Bearer tokens
-- **Rate Limiting**: 100 requests/minute per user
-- **CORS**: Configured for all domains
+Passwordless 6-digit code flow for Mind Measure staff:
 
-**Lambda Functions**
+1. User enters `@mindmeasure.co.uk` email
+2. Server generates 6-digit code, sends via AWS SES
+3. User enters code, receives JWT token
+4. Token stored in session, validated on each request
+
+---
+
+## API Layer
+
+All API functions run as **Vercel serverless functions** in the `/api/` directory of each admin portal repo. There is no separate API Gateway or Lambda deployment.
+
+### Core Endpoints
+
 ```yaml
-analyze-audio:
- Runtime: Node.js 18.x
- Memory: 1024 MB
- Timeout: 30 seconds
- Purpose: Voice pattern analysis
+Database:
+  - POST /api/database/select
+  - POST /api/database/insert
+  - POST /api/database/update
 
-analyze-visual:
- Runtime: Node.js 18.x
- Memory: 2048 MB
- Timeout: 60 seconds
- Purpose: Facial emotion recognition
+AI Analysis:
+  - POST /api/bedrock/analyze-text
+  - POST /api/rekognition/analyze-frame
 
-analyze-text:
- Runtime: Node.js 18.x
- Memory: 512 MB
- Timeout: 15 seconds
- Purpose: Natural language processing
+System:
+  - GET /api/system/ecosystem-audit
+  - GET /api/system/platform-releases
 
-calculate-mind-measure:
- Runtime: Node.js 18.x
- Memory: 1024 MB
- Timeout: 45 seconds
- Purpose: Multi-modal fusion scoring
+Auth:
+  - POST /api/auth/send-superuser-code
+  - POST /api/auth/verify-superuser-code
 ```
 
-**Vercel API Functions**
-```yaml
-Database Operations:
- - POST /api/database/select
- - POST /api/database/insert
- - POST /api/database/update
- - POST /api/database/delete
+---
 
-Storage Operations:
- - POST /api/storage/upload
- - GET /api/storage/download
- - DELETE /api/storage/delete
+## Data Layer
 
-Authentication:
- - POST /api/auth/signin
- - POST /api/auth/signup
- - POST /api/auth/refresh
-```
+### Amazon Aurora Serverless v2
 
-#### **Data Layer**
-
-**Amazon Aurora Serverless v{2}**
-- **Engine**: PostgreSQL 15.4
-- **Cluster**: `mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com`
+- **Engine**: PostgreSQL
 - **Region**: `eu-west-2` (London)
-- **Scaling**: 0.5 - 16 ACUs (Auto-scaling)
-- **Features**:
- - Automatic scaling
- - Point-in-time recovery
- - Encrypted at rest
- - Multi-AZ deployment
+- **Scaling**: 0.5–16 ACUs (automatic)
+- **Encryption**: AES-256 at rest, TLS in transit
 
-**Connection Architecture**
+**Connection pattern** (serverless functions):
+
 ```typescript
-// Server-side connection
-const pool = new Pool({
- host: 'mindmeasure-aurora.cluster-cz8c8wq4k3ak.eu-west-2.rds.amazonaws.com',
- port: 5432,
- database: 'mindmeasure',
- user: 'mindmeasure_admin',
- password: process.env.RDS_PASSWORD,
- ssl: { rejectUnauthorized: false },
- max: 20,
- idleTimeoutMillis: 30000
-});
+import { Client } from 'pg';
 
-// Browser-side API calls
-const response = await fetch('/api/database/select', {
- method: 'POST',
- headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({ table: 'profiles', filters: { user_id } })
-});
+const client = new Client(getSecureDbConfig());
+try {
+  await client.connect();
+  const result = await client.query(sql, params);
+  return result.rows;
+} finally {
+  await client.end();
+}
 ```
 
-#### **Storage Layer**
+Use `Client` (not `Pool`) in serverless functions. Always call `client.end()` in a `finally` block. Never hardcode credentials — use `getSecureDbConfig()` from `api/_lib/db-config.ts`.
 
-**Amazon S3**
-- **Bucket Structure**: `mindmeasure-{university-id}-assets`
-- **Regions**: `eu-west-2` (London)
+### Key Tables
+
+| Table | Purpose |
+|---|---|
+| `core_users` | Mind Measure staff with `user_permission[]` enum |
+| `university_authorized_users` | University admin accounts with invite flow |
+| `profiles` | Student/employee profiles (linked to Cognito) |
+| `universities` | University config, branding, settings |
+| `companies` | Company config, branding, org structure |
+| `assessment_sessions` | Check-in session metadata |
+| `fusion_outputs` | Multi-modal analysis results |
+
+---
+
+## AI/ML Services
+
+### AWS Bedrock (Claude 3.5 Sonnet)
+
+- **Model**: `anthropic.claude-3-5-sonnet-20241022-v2:0`
+- **Purpose**: Transcript analysis after each check-in
+- **Endpoint**: `/api/bedrock/analyze-text`
+- **Outputs**: Mood score, sentiment, conversation summary, positive/negative drivers, risk flags, custom question responses
+
+### ElevenLabs Conversational AI (Jodie)
+
+The **Jodie** voice agent conducts check-in conversations with users.
+
+- **SDK**: `@elevenlabs/react` (`useConversation` hook)
+- **Separate agents**: University and Pro each have their own ElevenLabs agent
+- **Prompts**: Managed locally as `jodie_prompt_v2_uni.md` and `jodie_prompt_v2_pro.md`
+- **Features**: Real-time voice conversation, transcript generation, dynamic variables (user name, last summary, check-in count)
+- **Overrides**: First message, voice stability, voice similarity (must be enabled in ElevenLabs agent settings)
+
+### AWS Rekognition
+
+- **Purpose**: Facial emotion analysis during check-ins
+- **Integration**: Video frames captured client-side, sent to `/api/rekognition/analyze-frame`
+- **Features**: Emotion detection, face analysis
+
+### Multi-Modal Analysis Pipeline
+
+```
+Student Check-in → ElevenLabs Jodie → Conversation + Transcript
+                                            ↓
+                                    Session Complete
+                                            ↓
+                    ┌───────────────────────┼───────────────────────┐
+                    │                       │                       │
+              Audio Analysis         Visual Analysis         Text Analysis
+              (Client-side           (Rekognition)           (Bedrock
+               Web Audio API)                                Claude 3.5)
+                    │                       │                       │
+                    └───────────────────────┼───────────────────────┘
+                                            ↓
+                                     V2 Fusion Engine
+                                   70% text / 15% audio / 15% visual
+                                            ↓
+                                    Aurora Database
+                                    (fusion_outputs)
+```
+
+---
+
+## Storage
+
+### Amazon S3
+
+- **Bucket Structure**: `mindmeasure-{institution-id}-assets`
+- **Region**: `eu-west-2` (London)
 - **Encryption**: AES-256 (SSE-S3)
 - **Access**: Private with signed URLs
 
-**File Upload Flow**
-```typescript
-// Client-side upload
-const formData = new FormData();
-formData.append('file', file);
-formData.append('university_id', universityId);
-
-const response = await fetch('/api/storage/upload', {
- method: 'POST',
- body: formData
-});
-```
-
-#### **AI/ML Services**
-
-**AWS Rekognition**
-- **Purpose**: Facial emotion analysis
-- **Features**: Emotion detection, face analysis, pose estimation
-- **Integration**: Vercel API route `/api/rekognition/batch-analyze`
-
-**AWS Bedrock (Claude 3 Haiku)**
-- **Purpose**: Text analysis and conversation understanding
-- **Model**: `anthropic.claude-3-haiku-20240307-v1:0`
-- **Features**: Sentiment analysis, theme extraction, risk detection
-- **Integration**: Vercel API route `/api/bedrock/analyze-text`
-
-**ElevenLabs Integration**
-- **Purpose**: Conversational AI for assessments
-- **SDK**: `@elevenlabs/react` (useConversation hook)
-- **Agent IDs**:
- - **Baseline Assessment**: `agent_9301k22s8e94f7qs5e704ez02npe`
- - **Daily Check-in**: `agent_7501k3hpgd5gf8ssm3c3530jx8qx`
-- **Features**: Real-time conversation, voice synthesis, transcript generation
-
-**Multimodal Analysis Pipeline**
-```typescript
-// Parallel feature extraction
-const [audioFeatures, visualFeatures, textAnalysis] = await Promise.all([
- extractAudioFeatures(audioBlob), // Client-side Web Audio API
- analyzeVisualFeatures(videoFrames), // AWS Rekognition
- analyzeTextWithBedrock(transcript) // AWS Bedrock (Claude)
-]);
-
-// V2 Fusion: 70% text + 15% audio + 15% visual
-const finalScore = fuseScores(textAnalysis, audioFeatures, visualFeatures);
-```
-
-## Data Flow Architecture
-
-### Assessment Data Pipeline
-
-```
-Student Assessment → ElevenLabs SDK → Conversation + Transcript
- ↓
- MediaCapture (Audio + Video Frames)
- ↓
- Session Complete
- ↓
- 
- 
- 
- Audio Analysis Visual Text Analysis
- (Client-side Analysis (Bedrock/
- Web Audio API) (Rekognition Claude)
- 
- 
- 
- 
- 
- V2 Fusion
- 70/15/15 weights
- 
- 
- 
- Aurora Database
- (fusion_outputs)
- 
-```
-
-**Key Changes from V1**:
-- ElevenLabs **SDK** (not widget) for conversations
-- Audio features extracted **client-side** (not Lambda)
-- Text analysis via **AWS Bedrock** (not GPT-4o-mini)
-- **V2 scoring**: 70% text, 15% audio, 15% visual
-
-### University Data Flow
-
-```
-University Admin → CMS Interface → API Gateway → Lambda Functions
- ↓
- Aurora Database
- ↓
- Student Dashboard
-```
+---
 
 ## Security Architecture
 
 ### Network Security
 
-**VPC Configuration**
-- **Private Subnets**: Lambda functions, RDS
-- **Public Subnets**: NAT Gateway, Load Balancer
-- **Security Groups**: Restrictive rules
-- **NACLs**: Network-level access control
-
-**WAF (Web Application Firewall)**
-- **OWASP Top 10 Protection**
-- **Rate Limiting**
-- **Geographic Restrictions**
-- **SQL Injection Prevention**
+- **TLS 1.3**: All communications
+- **CORS**: Configured per domain, including `capacitor://localhost` for mobile
+- **WAF**: Rate limiting, SQL injection prevention
 
 ### Data Security
 
-**Encryption at Rest**
-- **Database**: AES-256 encryption
-- **S3 Storage**: SSE-S3 encryption
-- **Lambda Environment**: KMS encryption
-
-**Encryption in Transit**
-- **TLS 1.3**: All communications
-- **Certificate Pinning**: Mobile apps
-- **HTTPS Everywhere**: All endpoints
+- **Encryption at rest**: AES-256 (Aurora, S3)
+- **Encryption in transit**: TLS for all endpoints
+- **Field-level encryption**: PHI data protection
+- **Audit logging**: All admin actions logged
 
 ### Identity Security
 
-**Multi-Factor Authentication**
-- **Available for**: Admin users
-- **Methods**: SMS, TOTP, Email
-- **Enforcement**: Configurable per user pool
+- **Multi-factor authentication**: Available for admin users
+- **JWT tokens**: 1-hour access tokens, 30-day refresh tokens
+- **Superuser auth**: Passwordless 6-digit code (no stored passwords)
+- **Auth middleware**: docs and marketing CMS protected by token-based cookie middleware
 
-**JWT Token Security**
-- **Expiration**: 1 hour access tokens
-- **Refresh**: 30-day refresh tokens
-- **Validation**: Every API request
-- **Revocation**: Immediate logout capability
+### Compliance
 
-## Scalability & Performance
-
-### Auto-Scaling Components
-
-**Aurora Serverless v{2}**
-- **Scaling Range**: 0.5 - 16 ACUs
-- **Scale Up**: Seconds
-- **Scale Down**: Minutes
-- **Cost**: Pay per use
-
-**Lambda Functions**
-- **Concurrent Executions**: 1000 (configurable)
-- **Cold Start**: &lt;2 seconds
-- **Auto-scaling**: Automatic
-- **Cost**: Pay per invocation
-
-### Performance Optimization
-
-**Database Optimization**
-- **Connection Pooling**: PgBouncer
-- **Read Replicas**: Available
-- **Indexing**: Optimized queries
-- **Caching**: Application-level
-
-**CDN & Caching**
-- **CloudFront**: Global distribution
-- **Edge Caching**: Static assets
-- **API Caching**: Configurable
-- **Browser Caching**: Optimized headers
-
-## Monitoring & Observability
-
-### CloudWatch Integration
-
-**Metrics Collected**
-- **Database**: CPU, connections, queries
-- **Lambda**: Invocations, duration, errors
-- **API Gateway**: Requests, latency, errors
-- **Application**: Custom business metrics
-
-**Alerting**
-- **Database**: High CPU, connection limits
-- **Lambda**: Error rates, timeouts
-- **API**: High latency, error rates
-- **Security**: Failed authentication attempts
-
-### Logging Strategy
-
-**Log Aggregation**
-- **Application Logs**: CloudWatch Logs
-- **Database Logs**: Aurora logs
-- **Security Logs**: CloudTrail
-- **Performance Logs**: X-Ray tracing
-
-**Log Retention**
-- **Operational**: 30 days
-- **Security**: 1 year
-- **Compliance**: 7 years
-- **Debug**: 7 days
-
-## Disaster Recovery
-
-### Backup Strategy
-
-**Database Backups**
-- **Automated**: Daily backups
-- **Retention**: 35 days
-- **Point-in-time**: 5-minute granularity
-- **Cross-region**: Enabled
-
-**Application Backups**
-- **Code**: Git repositories
-- **Infrastructure**: CloudFormation templates
-- **Configuration**: Environment variables
-- **Data**: S3 cross-region replication
-
-### Recovery Procedures
-
-**RTO (Recovery Time Objective)**
-- **Database**: &lt; 4 hours
-- **Application**: &lt; 2 hours
-- **Full Service**: &lt; 6 hours
-
-**RPO (Recovery Point Objective)**
-- **Database**: &lt; 15 minutes
-- **Files**: &lt; 1 hour
-- **Configuration**: &lt; 5 minutes
-
-## Deployment Architecture
-
-### CI/CD Pipeline
-
-**Frontend Deployment**
-```yaml
-GitHub → Vercel Build → Production Deployment
- ↓
- Automatic Testing → Preview Deployments
-```
-
-**Backend Deployment**
-```yaml
-GitHub → AWS CodeBuild → Lambda Deployment
- ↓
- Unit Tests → Integration Tests → Production
-```
-
-### Environment Management
-
-**Environments**
-- **Development**: Local development
-- **Staging**: Pre-production testing
-- **Production**: Live system
-
-**Configuration Management**
-- **Environment Variables**: Vercel/AWS
-- **Secrets**: AWS Secrets Manager
-- **Feature Flags**: Application-level
-- **Database Migrations**: Automated
-
-## Cost Optimization
-
-### Resource Optimization
-
-**Aurora Serverless v{2}**
-- **Auto-pause**: 5 minutes inactivity
-- **Scaling**: Based on demand
-- **Reserved Capacity**: For predictable workloads
-
-**Lambda Functions**
-- **Memory Optimization**: Right-sized
-- **Timeout Optimization**: Minimal values
-- **Provisioned Concurrency**: Critical functions only
-
-### Cost Monitoring
-
-**Billing Alerts**
-- **Monthly Budgets**: Per service
-- **Anomaly Detection**: Unusual spending
-- **Cost Allocation**: Per university
-- **Optimization Reports**: Monthly reviews
-
-## Technology Stack Summary
-
-### Frontend
-- **React 18**: UI framework
-- **TypeScript**: Type safety
-- **Vite**: Build tool
-- **Capacitor**: Mobile deployment
-- **Tailwind CSS**: Styling
-
-### Backend
-- **Node.js 18**: Runtime
-- **PostgreSQL 15**: Database
-- **AWS Lambda**: Serverless functions
-- **API Gateway**: API management
-- **Cognito**: Authentication
-
-### Infrastructure
-- **AWS**: Cloud provider
-- **Vercel**: Frontend hosting
-- **CloudFormation**: Infrastructure as code
-- **GitHub Actions**: CI/CD
-- **CloudWatch**: Monitoring
-
-### Security & Compliance
-- **HIPAA**: Healthcare compliance
-- **GDPR**: Privacy compliance
-- **SOC 2**: Security standards
-- **AWS BAA**: Business associate agreement
+- HIPAA compliant
+- GDPR compliant
+- SOC 2 aligned
+- AWS BAA in place
 
 ---
 
-This architecture provides a robust, scalable, and compliant foundation for the Mind Measure platform, supporting multiple universities while maintaining strict security and privacy standards.
+## Ecosystem Health Monitoring
 
-**Last Updated**: October 28, 2025
-**Version**: 2.0 (AWS Migration)
-**Next Review**: November 28, 2025
+The platform includes a built-in health audit at `/api/system/ecosystem-audit` that checks:
+
+| Category | Weight | Checks |
+|---|---|---|
+| Database | 20% | Connection, query latency, table existence |
+| API Endpoints | 15% | Core endpoint availability |
+| Security | 15% | Auth, encryption, headers |
+| Deployment | 10% | Build status, domain health |
+| Cost Efficiency | 5% | AI service spend |
+| Voice Agent | 10% | ElevenLabs connectivity |
+| Mobile App | 25% | Mobile API endpoint health |
+
+Results are displayed in the Ecosystem Health Dashboard on both superuser portals.
+
+---
+
+## Deployment
+
+All projects deploy via **git push to `main`** on GitHub, triggering Vercel auto-deploy. See [Deployment Guide](/deployment) for the full protocol.
+
+**Never use `npx vercel --prod` or the Vercel CLI.**
+
+---
+
+## Scalability
+
+### Aurora Serverless v2
+- Scales from 0.5 to 16 ACUs automatically
+- Pay per use, scales down during quiet periods
+
+### Vercel Serverless Functions
+- Auto-scale per request
+- Cold start &lt; 2 seconds
+- No provisioning required
+
+---
+
+## Cost Monitoring
+
+Both superuser portals include a Costs tab with:
+- Real-time AI service cost tracking (Bedrock, Rekognition, ElevenLabs)
+- Budget alerts and anomaly detection
+- Per-institution cost allocation
+
+---
+
+## Technology Stack Summary
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS |
+| Mobile | Capacitor 6.x (iOS via TestFlight) |
+| Documentation | Next.js 14, Nextra 2.13 |
+| Database | PostgreSQL on Aurora Serverless v2 |
+| Authentication | AWS Cognito + custom JWT (superuser) |
+| AI — Text | AWS Bedrock (Claude 3.5 Sonnet) |
+| AI — Voice | ElevenLabs Conversational AI |
+| AI — Visual | AWS Rekognition |
+| Email | AWS SES |
+| Storage | AWS S3 |
+| Hosting | Vercel |
+| Region | eu-west-2 (London) |
