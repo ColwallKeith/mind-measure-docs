@@ -14,7 +14,7 @@ export function middleware(req: NextRequest) {
     res.cookies.set(COOKIE_NAME, TOKEN, {
       httpOnly: true,
       secure: true,
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: COOKIE_MAX_AGE,
       path: '/',
     });
@@ -57,8 +57,11 @@ export function middleware(req: NextRequest) {
   <div class="card">
     <div class="icon">🔒</div>
     <h1>Access Restricted</h1>
-    <p>This site is only accessible via the Mind Measure Superuser Portal.</p>
-    <a href="https://admin.mindmeasure.co.uk/superuser">Go to Superuser Portal</a>
+    <p>This site is only accessible via a Mind Measure Superuser Portal.</p>
+    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+      <a href="https://admin.mindmeasure.co.uk/superuser">University Portal</a>
+      <a href="https://admin.mindmeasurepro.com/superuser">Pro Portal</a>
+    </div>
   </div>
 </body>
 </html>`,
