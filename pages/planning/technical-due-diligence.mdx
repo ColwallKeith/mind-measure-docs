@@ -387,6 +387,7 @@ The platform has been built primarily by a single developer. This is mitigated b
 | Database Architecture | **Good** | 59 versioned migrations, proper connection management, fail-fast credential validation. |
 | Code Maintainability | **Fair** | 50% duplication across University/Pro repos. Monorepo migration planned. Well-structured within each repo. |
 | Error Tracking | **Fair** | Infrastructure monitoring exists. No client-side error tracking SDK. |
+| Cookie Consent | **Good** | Implemented on marketing websites. Not required for mobile apps (App Store/Google Play handle privacy disclosure). |
 | Rate Limiting | **Fair** | Vercel DDoS + database-level limiting. No application-level middleware. |
 
 ---
@@ -399,7 +400,7 @@ The platform has been built primarily by a single developer. This is mitigated b
 | High | Add application-level rate limiting middleware | 1-2 days |
 | Medium | Run test coverage report and establish coverage thresholds | 1 day |
 | Medium | Begin monorepo migration (shared-core package extraction) | 2-4 weeks |
-| Low | Cookie consent implementation | 1 day |
+| ~~Low~~ | ~~Cookie consent implementation~~ | Done — implemented on websites; not required for mobile apps (App Store/Google Play) |
 | Low | Voice provider abstraction layer | 2-3 weeks |
 
 ---
