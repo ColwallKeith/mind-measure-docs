@@ -420,15 +420,23 @@ The platform has been built primarily by a single developer. This is mitigated b
 
 ---
 
-## 12. Recommended Enhancements (Next Sprint)
+## 12. Completed Enhancements
+
+| Enhancement | Status |
+|------------|--------|
+| Sentry error tracking | Done — `@sentry/react` + `@sentry/node` across all 4 apps with browser tracing, session replay, and API error reporting |
+| Application-level rate limiting | Done — 4-tier sliding-window middleware across 29 endpoints per project. Auth, AI, upload, and API tiers with IETF-standard headers |
+| Cookie consent | Done — implemented on websites; not required for mobile apps (App Store/Google Play) |
+| Shared package extraction | Done — 4 private NPM packages (`api-lib`, `shared-services`, `shared-types`, `shared-ui`) consolidating ~15,800 lines of duplication. Subpath exports, all repos wired up and deploying |
+
+---
+
+## 13. Next Sprint: Institutional Agents
 
 | Priority | Enhancement | Effort |
 |----------|------------|--------|
-| ~~High~~ | ~~Add Sentry for client-side error tracking~~ | Done — `@sentry/react` + `@sentry/node` across all 4 apps with browser tracing, session replay, and API error reporting |
-| ~~High~~ | ~~Add application-level rate limiting middleware~~ | Done — 4-tier sliding-window middleware across 29 endpoints per project. Auth, AI, upload, and API tiers with IETF-standard headers. |
+| High | Institutional AI agents — university/company-scoped autonomous agents for proactive wellbeing insights, automated reporting, and early intervention recommendations | TBD |
 | Medium | Run test coverage report and establish coverage thresholds | 1 day |
-| ~~Medium~~ | ~~Begin monorepo migration (shared-core package extraction)~~ | Done — 4 shared NPM packages (`api-lib`, `shared-services`, `shared-types`, `shared-ui`) extracting ~15,800 lines. Private GitHub packages with subpath exports. All repos wired up and deploying. |
-| ~~Low~~ | ~~Cookie consent implementation~~ | Done — implemented on websites; not required for mobile apps (App Store/Google Play) |
 | Low | Voice provider abstraction layer | 2-3 weeks |
 
 ---
