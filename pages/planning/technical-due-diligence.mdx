@@ -10,7 +10,7 @@
 
 Mind Measure is a production platform comprising 7 web applications, 6 AWS Lambda functions, and a shared AWS backend. The platform serves two product lines — **University** (student wellbeing) and **Pro** (corporate employee wellbeing) — sharing common infrastructure with separate branding and data isolation.
 
-The technical foundation is enterprise-grade: AWS managed services (Aurora PostgreSQL, Cognito, S3, Bedrock, Rekognition), HIPAA-aligned security architecture, GDPR-compliant data handling, and a consistent React/TypeScript/Vite stack across all applications. The platform includes automated testing (88+ unit tests, Playwright e2e), CI/CD pipelines (GitHub Actions), pre-commit quality gates, automated health monitoring with alerting, and Sentry error tracking across all applications.
+The technical foundation is enterprise-grade: AWS managed services (Aurora PostgreSQL, Cognito, S3, Bedrock, Rekognition), HIPAA-aligned security architecture, GDPR-compliant data handling, and a consistent React/TypeScript/Vite stack across all applications. The platform includes automated testing (750+ unit tests with enforced coverage thresholds, Playwright e2e), CI/CD pipelines (GitHub Actions), pre-commit quality gates, automated health monitoring with alerting, and Sentry error tracking across all applications.
 
 Code duplication across University and Pro platforms has been eliminated through 4 private shared NPM packages (`@mindmeasure/api-lib`, `shared-services`, `shared-types`, `shared-ui`), consolidating ~15,800 lines into single sources of truth while maintaining repository independence for M&A flexibility.
 
@@ -203,7 +203,9 @@ Database credentials for Lambda functions are retrieved from **AWS Secrets Manag
 
 Tests use real assertions with mocked dependencies, cover edge cases, test async flows, and validate error scenarios. Test quality has been verified by reading representative samples.
 
-**Configuration**: Vitest with jsdom environment, `@testing-library/jest-dom` matchers, v8 coverage provider with text + lcov reporters.
+**Coverage enforcement**: CI pipelines run `vitest --coverage` with enforced thresholds (statements ≥5%, branches ≥3%, functions ≥3%, lines ≥5%). Any PR that reduces coverage below these thresholds is automatically blocked. Coverage is measured across all source files; testing is concentrated on business logic, API middleware, and security services, which achieve 70-100% coverage individually. UI components are covered by Playwright e2e tests rather than unit tests.
+
+**Configuration**: Vitest with jsdom environment, `@testing-library/jest-dom` matchers, `@vitest/coverage-v8` provider with text, json-summary, and lcov reporters.
 
 ### 5.2 End-to-End Testing (Playwright)
 
@@ -232,7 +234,7 @@ Mobile projects include dedicated pre-deploy test scripts:
 All four projects have GitHub Actions workflows:
 
 **Core projects** (`mind-measure-core`, `mind-measure-pro-core`):
-- `critical-path-verification.yml`: Runs on push/PR to main — unit tests, critical path checks, build verification, auto-deploy, post-deploy smoke tests (domain reachability, API health, database verification)
+- `critical-path-verification.yml`: Runs on push/PR to main — unit tests with coverage threshold enforcement, critical path checks, build verification, auto-deploy, post-deploy smoke tests (domain reachability, API health, database verification)
 - `e2e.yml`: Playwright E2E tests on pull requests
 - `docs-deploy.yml`: Deploys documentation when `docs/**` changes
 - `docs-gate.yml`: PR gate requiring documentation updates alongside code changes
@@ -407,7 +409,7 @@ The platform has been built primarily by a single developer. This is mitigated b
 | Authentication | **Strong** | Cognito RS256, MFA (TOTP + SMS), superuser HMAC codes, email domain validation. |
 | Encryption | **Strong** | AES-256 at rest (KMS), TLS 1.3 in transit, AES-256-GCM field-level PHI encryption. |
 | Compliance | **Strong** | GDPR Art. 15/17 implemented, HIPAA safeguards, UK data residency, 7-year audit retention, data subject request tracking. |
-| Test Coverage | **Good** | 88+ unit tests, 8 Playwright specs, visual regression, pre-deploy checks. Real assertions, not stubs. |
+| Test Coverage | **Strong** | 750+ unit tests with enforced coverage thresholds, 8 Playwright specs, visual regression, pre-deploy checks. CI blocks PRs that reduce coverage. |
 | CI/CD | **Good** | GitHub Actions on all projects, pre-commit hooks (Husky + lint-staged), build verification, post-deploy smoke tests. |
 | Code Quality | **Good** | TypeScript strict mode (maximum settings), ESLint, Prettier, consistent patterns. |
 | Monitoring | **Strong** | Automated 4-hourly health audit with email alerts, service health tracking, CloudWatch/CloudTrail, Sentry error tracking across all apps. |
@@ -428,6 +430,7 @@ The platform has been built primarily by a single developer. This is mitigated b
 | Application-level rate limiting | Done — 4-tier sliding-window middleware across 29 endpoints per project. Auth, AI, upload, and API tiers with IETF-standard headers |
 | Cookie consent | Done — implemented on websites; not required for mobile apps (App Store/Google Play) |
 | Shared package extraction | Done — 4 private NPM packages (`api-lib`, `shared-services`, `shared-types`, `shared-ui`) consolidating ~15,800 lines of duplication. Subpath exports, all repos wired up and deploying |
+| Test coverage thresholds | Done — `@vitest/coverage-v8` with enforced thresholds across core repos. CI blocks PRs that reduce coverage below baseline. 750+ tests across all projects |
 
 ---
 
@@ -436,7 +439,6 @@ The platform has been built primarily by a single developer. This is mitigated b
 | Priority | Enhancement | Effort |
 |----------|------------|--------|
 | High | Institutional AI agents — university/company-scoped autonomous agents for proactive wellbeing insights, automated reporting, and early intervention recommendations | TBD |
-| Medium | Run test coverage report and establish coverage thresholds | 1 day |
 | Low | Voice provider abstraction layer | 2-3 weeks |
 
 ---
