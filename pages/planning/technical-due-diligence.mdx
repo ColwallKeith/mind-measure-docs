@@ -190,12 +190,12 @@ Database credentials for Lambda functions are retrieved from **AWS Secrets Manag
 
 ### 5.1 Unit Testing (Vitest)
 
-**86+ unit test files** across all four active projects:
+**88+ unit test files** across all four active projects:
 
 | Project | Test Files | Coverage Areas |
 |---------|-----------|----------------|
-| mind-measure-core | 28 | Auth middleware, DB queries, error handling, image processing, auth flows, report generation, storage, components, contexts, hooks, services, scoring, security |
-| mind-measure-pro-core | 28 | Same coverage as core (Pro-specific where applicable) |
+| mind-measure-core | 29 | Auth middleware, DB queries, error handling, image processing, rate limiting, auth flows, report generation, storage, components, contexts, hooks, services, scoring, security |
+| mind-measure-pro-core | 29 | Same coverage as core (Pro-specific where applicable) |
 | mind-measure-mobile-final | 15 | Components, profile types, CMS data, hooks, AWSBrowserService, multimodal scoring, enrichment, audio features, fusion engine, security services, utilities |
 | mind-measure-pro-mobile | 15 | Same coverage as mobile (Pro-specific where applicable) |
 
@@ -339,14 +339,20 @@ The voice check-in feature (core product differentiator) depends on ElevenLabs C
 
 **Mitigation**: Provider abstraction is planned. The conversation data flow (transcripts, analysis) is platform-agnostic — only the real-time voice layer is ElevenLabs-specific.
 
-### 10.2 Application-Level Rate Limiting
+### 10.2 Rate Limiting
 
-API-level rate limiting middleware is not explicitly implemented. The platform relies on:
-- Vercel's built-in DDoS protection
-- Database-level rate limiting for specific operations (e.g., buddy check-in requests)
-- Input validation caps on array sizes and transcript lengths
+Application-level rate limiting is implemented via sliding-window middleware (`api/_lib/rate-limiter.ts`) with four configurable tiers:
 
-**Mitigation**: Vercel Pro provides enterprise DDoS protection. Database-level rate limiting exists for sensitive operations. Application-level middleware is a recommended enhancement.
+| Tier | Limit | Applied To |
+|------|-------|-----------|
+| `auth` | 8 req / 60s | All login, signup, MFA, and superuser code endpoints |
+| `api` | 60 req / 60s | Database CRUD, reports, account deletion, session processing |
+| `ai` | 12 req / 60s | Bedrock AI insights, Rekognition, SEO generation |
+| `upload` | 10 req / 60s | S3 file uploads, media uploads |
+
+Rate-limited responses return standard headers (`RateLimit-Limit`, `RateLimit-Remaining`, `Retry-After`) per IETF draft-ietf-httpapi-ratelimit-headers, with HTTP 429 and a `RATE_LIMIT_EXCEEDED` error code.
+
+This sits on top of Vercel's built-in DDoS protection and database-level rate limiting for specific operations.
 
 ### 10.3 Error Tracking
 
@@ -379,7 +385,7 @@ The platform has been built primarily by a single developer. This is mitigated b
 | Authentication | **Strong** | Cognito RS256, MFA (TOTP + SMS), superuser HMAC codes, email domain validation. |
 | Encryption | **Strong** | AES-256 at rest (KMS), TLS 1.3 in transit, AES-256-GCM field-level PHI encryption. |
 | Compliance | **Strong** | GDPR Art. 15/17 implemented, HIPAA safeguards, UK data residency, 7-year audit retention, data subject request tracking. |
-| Test Coverage | **Good** | 86+ unit tests, 8 Playwright specs, visual regression, pre-deploy checks. Real assertions, not stubs. |
+| Test Coverage | **Good** | 88+ unit tests, 8 Playwright specs, visual regression, pre-deploy checks. Real assertions, not stubs. |
 | CI/CD | **Good** | GitHub Actions on all projects, pre-commit hooks (Husky + lint-staged), build verification, post-deploy smoke tests. |
 | Code Quality | **Good** | TypeScript strict mode (maximum settings), ESLint, Prettier, consistent patterns. |
 | Monitoring | **Strong** | Automated 4-hourly health audit with email alerts, service health tracking, CloudWatch/CloudTrail, Sentry error tracking across all apps. |
@@ -388,7 +394,7 @@ The platform has been built primarily by a single developer. This is mitigated b
 | Code Maintainability | **Fair** | 50% duplication across University/Pro repos. Monorepo migration planned. Well-structured within each repo. |
 | Error Tracking | **Strong** | Sentry integrated across all 4 apps (client + server). Browser tracing, session replay on error, ErrorBoundary, 5xx API reporting. |
 | Cookie Consent | **Good** | Implemented on marketing websites. Not required for mobile apps (App Store/Google Play handle privacy disclosure). |
-| Rate Limiting | **Fair** | Vercel DDoS + database-level limiting. No application-level middleware. |
+| Rate Limiting | **Strong** | 4-tier sliding-window middleware (auth 8/min, api 60/min, ai 12/min, upload 10/min) + Vercel DDoS + database-level limiting. Standard IETF rate-limit headers. |
 
 ---
 
@@ -397,7 +403,7 @@ The platform has been built primarily by a single developer. This is mitigated b
 | Priority | Enhancement | Effort |
 |----------|------------|--------|
 | ~~High~~ | ~~Add Sentry for client-side error tracking~~ | Done — `@sentry/react` + `@sentry/node` across all 4 apps with browser tracing, session replay, and API error reporting |
-| High | Add application-level rate limiting middleware | 1-2 days |
+| ~~High~~ | ~~Add application-level rate limiting middleware~~ | Done — 4-tier sliding-window middleware across 29 endpoints per project. Auth, AI, upload, and API tiers with IETF-standard headers. |
 | Medium | Run test coverage report and establish coverage thresholds | 1 day |
 | Medium | Begin monorepo migration (shared-core package extraction) | 2-4 weeks |
 | ~~Low~~ | ~~Cookie consent implementation~~ | Done — implemented on websites; not required for mobile apps (App Store/Google Play) |
