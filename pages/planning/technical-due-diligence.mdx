@@ -10,7 +10,9 @@
 
 Mind Measure is a production platform comprising 7 web applications, 6 AWS Lambda functions, and a shared AWS backend. The platform serves two product lines — **University** (student wellbeing) and **Pro** (corporate employee wellbeing) — sharing common infrastructure with separate branding and data isolation.
 
-The technical foundation is enterprise-grade: AWS managed services (Aurora PostgreSQL, Cognito, S3, Bedrock, Rekognition), HIPAA-aligned security architecture, GDPR-compliant data handling, and a consistent React/TypeScript/Vite stack across all applications. The platform includes automated testing (86+ unit tests, Playwright e2e), CI/CD pipelines (GitHub Actions), pre-commit quality gates, and automated health monitoring with alerting.
+The technical foundation is enterprise-grade: AWS managed services (Aurora PostgreSQL, Cognito, S3, Bedrock, Rekognition), HIPAA-aligned security architecture, GDPR-compliant data handling, and a consistent React/TypeScript/Vite stack across all applications. The platform includes automated testing (88+ unit tests, Playwright e2e), CI/CD pipelines (GitHub Actions), pre-commit quality gates, automated health monitoring with alerting, and Sentry error tracking across all applications.
+
+Code duplication across University and Pro platforms has been eliminated through 4 private shared NPM packages (`@mindmeasure/api-lib`, `shared-services`, `shared-types`, `shared-ui`), consolidating ~15,800 lines into single sources of truth while maintaining repository independence for M&A flexibility.
 
 The core intellectual property — a multimodal fusion engine combining text, audio, and visual analysis — is technically differentiated and non-trivial to replicate.
 
@@ -315,7 +317,7 @@ All patterns include proper connection cleanup in `finally` blocks. Database con
 
 ### 9.1 Current Structure
 
-7 production repositories with consistent internal structure:
+7 production repositories plus 4 shared package repositories, all with consistent internal structure:
 - `api/` — Vercel serverless functions
 - `api/_lib/` — Shared middleware (auth, CORS, DB, error handling, audit logging)
 - `src/` — React application code
@@ -325,9 +327,29 @@ All patterns include proper connection cleanup in `finally` blocks. Database con
 - `tests/` or `e2e/` — Test suites
 - `.github/workflows/` — CI/CD pipelines
 
-### 9.2 Code Sharing
+### 9.2 Code Sharing & Shared Package Architecture
 
-The University and Pro platforms share approximately 50% of their code. Currently maintained as separate repositories with the same structure. A monorepo migration (Turborepo) is planned but not yet started — this would eliminate duplication and is documented on the product roadmap.
+The University and Pro platforms share approximately 50% of their code. Rather than a monorepo migration, the architecture uses **private NPM packages** hosted on GitHub to eliminate duplication while keeping repositories independent — a deliberate choice for M&A readiness (any repo can be transferred or sold independently).
+
+Four shared packages are published and consumed by all production repositories:
+
+| Package | Purpose | Consumers | Lines Consolidated |
+|---------|---------|-----------|-------------------|
+| `@mindmeasure/api-lib` | API middleware (auth, CORS, DB, audit, rate limiting, error handling) | core, pro-core | ~2,500 |
+| `@mindmeasure/shared-services` | Security services (AuditLogger, MFA, VulnerabilityService, BackupRecovery), scoring engine, utilities | All 4 repos | ~5,300 |
+| `@mindmeasure/shared-types` | TypeScript interfaces (security dashboard, multimodal pipeline, assessment, registration) | All 4 repos | ~920 |
+| `@mindmeasure/shared-ui` | 48 shadcn/Radix UI components (button, card, dialog, table, sidebar, chart, toast, etc.) | core, pro-core | ~7,100 |
+
+**Total: ~15,800 lines of duplicated code consolidated into shared packages.**
+
+Each package uses **subpath exports** (e.g., `@mindmeasure/shared-ui/button`) so consumers only load the types and code they need, keeping build times fast. All packages are built with tsup (CJS + ESM + DTS).
+
+Consuming repositories retain thin re-export wrappers (e.g., `export { Button } from '@mindmeasure/shared-ui/button'`) so all internal imports continue to work unchanged. This means:
+- Zero disruption to developer workflow — imports like `@/components/ui/button` still work
+- A single source of truth for shared code — fix a bug once, all repos get it on next `npm update`
+- Each repo can still override or extend any component locally if needed
+
+CI/CD pipelines (GitHub Actions) and Vercel deployments are configured with `GH_PAT` authentication to access these private packages during build.
 
 ---
 
@@ -391,7 +413,7 @@ The platform has been built primarily by a single developer. This is mitigated b
 | Monitoring | **Strong** | Automated 4-hourly health audit with email alerts, service health tracking, CloudWatch/CloudTrail, Sentry error tracking across all apps. |
 | Documentation | **Good** | Comprehensive docs site, security documentation, architecture decisions, operational playbooks. |
 | Database Architecture | **Good** | 59 versioned migrations, proper connection management, fail-fast credential validation. |
-| Code Maintainability | **Fair** | 50% duplication across University/Pro repos. Monorepo migration planned. Well-structured within each repo. |
+| Code Maintainability | **Strong** | ~15,800 lines of duplication eliminated via 4 shared NPM packages. Thin re-export wrappers maintain internal import compatibility. Single source of truth for API middleware, security services, UI components, and type definitions. |
 | Error Tracking | **Strong** | Sentry integrated across all 4 apps (client + server). Browser tracing, session replay on error, ErrorBoundary, 5xx API reporting. |
 | Cookie Consent | **Good** | Implemented on marketing websites. Not required for mobile apps (App Store/Google Play handle privacy disclosure). |
 | Rate Limiting | **Strong** | 4-tier sliding-window middleware (auth 8/min, api 60/min, ai 12/min, upload 10/min) + Vercel DDoS + database-level limiting. Standard IETF rate-limit headers. |
@@ -405,10 +427,10 @@ The platform has been built primarily by a single developer. This is mitigated b
 | ~~High~~ | ~~Add Sentry for client-side error tracking~~ | Done — `@sentry/react` + `@sentry/node` across all 4 apps with browser tracing, session replay, and API error reporting |
 | ~~High~~ | ~~Add application-level rate limiting middleware~~ | Done — 4-tier sliding-window middleware across 29 endpoints per project. Auth, AI, upload, and API tiers with IETF-standard headers. |
 | Medium | Run test coverage report and establish coverage thresholds | 1 day |
-| Medium | Begin monorepo migration (shared-core package extraction) | 2-4 weeks |
+| ~~Medium~~ | ~~Begin monorepo migration (shared-core package extraction)~~ | Done — 4 shared NPM packages (`api-lib`, `shared-services`, `shared-types`, `shared-ui`) extracting ~15,800 lines. Private GitHub packages with subpath exports. All repos wired up and deploying. |
 | ~~Low~~ | ~~Cookie consent implementation~~ | Done — implemented on websites; not required for mobile apps (App Store/Google Play) |
 | Low | Voice provider abstraction layer | 2-3 weeks |
 
 ---
 
-*This document reflects the actual state of the codebase as verified through direct inspection on 28 February 2026. All claims are evidence-based, referencing specific files, configurations, and implementations.*
+*This document reflects the actual state of the codebase as verified through direct inspection on 1 March 2026. All claims are evidence-based, referencing specific files, configurations, and implementations.*
