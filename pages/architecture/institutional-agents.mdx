@@ -161,11 +161,11 @@ Located in `src/services/` in both core projects. Encapsulates all ElevenLabs AP
 
 | Method | ElevenLabs Endpoint | Purpose |
 |--------|-------------------|---------|
-| `cloneAgent(templateAgentId, name)` | `POST /v1/convai/agents/{id}/duplicate` | Clone a template agent |
-| `deleteAgent(agentId)` | `DELETE /v1/convai/agents/{id}` | Delete an agent |
-| `updateAgentPrompt(agentId, prompt)` | `PATCH /v1/convai/agents/{id}` | Update the agent's system prompt |
+| `cloneAgent(templateAgentId, name)` | `POST /v1/convai/agents/:id/duplicate` | Clone a template agent |
+| `deleteAgent(agentId)` | `DELETE /v1/convai/agents/:id` | Delete an agent |
+| `updateAgentPrompt(agentId, prompt)` | `PATCH /v1/convai/agents/:id` | Update the agent's system prompt |
 | `addKnowledgeBaseUrl(agentId, url, name)` | `POST /v1/convai/knowledge-base` + `PATCH` | Create KB document from URL and attach to agent |
-| `removeKnowledgeBaseDoc(docId)` | `DELETE /v1/convai/knowledge-base/{id}` | Remove a KB document |
+| `removeKnowledgeBaseDoc(docId)` | `DELETE /v1/convai/knowledge-base/:id` | Remove a KB document |
 
 All calls use the `ELEVENLABS_API_KEY` environment variable.
 
@@ -183,7 +183,7 @@ function buildAgentPrompt(
 Constructs the full agent prompt by:
 
 1. Starting with the product-specific base prompt (`base_prompt_university` or `base_prompt_company`)
-2. Appending institutional context: *"You are speaking with students/employees from {name}..."*
+2. Appending institutional context: *"You are speaking with students/employees from [name]..."*
 3. Adding **required** questions as *"You must find a natural moment to ask..."*
 4. Adding **optional** questions as *"Try to also explore..."*
 
@@ -214,8 +214,8 @@ This allows the base Jodie prompt to be updated across all institutional agents 
 
 When a user starts a check-in, the mobile app resolves the correct agent:
 
-1. **University app** (`CheckinAssessmentSDK.tsx`): If `user.university_id` exists, calls `/api/agents/resolve?university_id={id}`
-2. **Corporate app** (`CheckinAssessmentSDK.tsx`): If `user.company_id` exists, calls `/api/agents/resolve?university_id={id}`
+1. **University app** (`CheckinAssessmentSDK.tsx`): If `user.university_id` exists, calls `/api/agents/resolve?university_id=:id`
+2. **Corporate app** (`CheckinAssessmentSDK.tsx`): If `user.company_id` exists, calls `/api/agents/resolve?university_id=:id`
 3. If the resolve endpoint returns a valid `agentId` (not fallback), that agent is used
 4. Otherwise, falls back to the default template agent ID
 
