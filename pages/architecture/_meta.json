@@ -6,5 +6,6 @@
   "database": "Database",
   "backend": "Backend Services",
   "mobile": "Mobile App",
-  "aurora-serverless-v2": "Aurora Serverless v2"
+  "aurora-serverless-v2": "Aurora Serverless v2",
+  "institutional-agents": "Institutional Agents"
 }

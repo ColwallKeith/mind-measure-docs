@@ -1,0 +1,293 @@
+# Institutional Agents
+
+Each university or company on the Mind Measure platform has its own ElevenLabs Jodie agent, personalised with institutional knowledge and optional custom questions. The agent feels embedded in the institution rather than generic.
+
+**Status**: Live (Phases 1–3 complete)  
+**Repositories**: `mind-measure-core`, `mind-measure-pro-core`, `mind-measure-mobile-final`, `mind-measure-pro-mobile`
+
+---
+
+## Architecture Overview
+
+### Agent Hierarchy
+
+```
+Base Prompt (managed per product line)
+  ├── University Agent: Worcester
+  │     ├── Knowledge Base: compiled from CMS data
+  │     └── Custom Questions: (none configured)
+  ├── University Agent: LSE
+  │     ├── Knowledge Base: compiled from CMS data
+  │     └── Custom Questions: (none configured)
+  ├── Company Agent: Simmonds Grabbit & Runne
+  │     ├── Knowledge Base: compiled from CMS data
+  │     └── Custom Questions: (none configured)
+  └── Default Agent (fallback for unmatched institutions)
+```
+
+### Data Flow
+
+```
+CMS onboarding data → /api/agents/context → Plain-text knowledge document (URL)
+                                                      ↓
+Institution signup → /api/agents/create → ElevenLabs Clone API → New agent
+                                                      ↓
+                                            Knowledge Base URL registered
+                                                      ↓
+Mobile app → /api/agents/resolve → Returns elevenlabs_agent_id → Agent session
+```
+
+### Template Agents
+
+Each product line clones from a different ElevenLabs template:
+
+| Product | Template Agent | Template ID |
+|---------|---------------|-------------|
+| University (core) | Jodie Check-in | `agent_7501k3hpgd5gf8ssm3c3530jx8qx` |
+| Corporate (pro-core) | Jodie Check-in MMPro | `agent_3401kj56bx02e6e9kbthd3racfz3` |
+
+---
+
+## Database Schema
+
+Three tables, created in migration `012_create_institutional_agents.sql` (shared across both products via the same Aurora database):
+
+### `institutional_agents`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| institution_id | TEXT | FK to universities or companies table |
+| institution_type | TEXT | `university` or `company` |
+| elevenlabs_agent_id | TEXT | ElevenLabs agent ID returned from clone |
+| elevenlabs_kb_doc_id | TEXT | ElevenLabs knowledge base document ID |
+| agent_name | TEXT | Display name for the agent |
+| status | TEXT | `draft`, `active`, or `paused` |
+| template_agent_id | TEXT | Which template this agent was cloned from |
+| created_by | TEXT | Superuser who created the agent |
+| created_at | TIMESTAMPTZ | |
+| updated_at | TIMESTAMPTZ | Auto-updated via trigger |
+
+Unique constraint on `institution_id` — one agent per institution.
+
+### `institutional_questions`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| institutional_agent_id | UUID | FK to `institutional_agents` (cascade delete) |
+| question_text | TEXT | The question Jodie should weave into conversation |
+| question_context | TEXT | Guidance on when/how to ask |
+| category | TEXT | `localized_knowledge` or `strategic_insight` |
+| status | TEXT | `draft`, `active`, or `archived` |
+| priority | TEXT | `required` (must ask) or `optional` (ask if natural) |
+| created_by | TEXT | |
+| approved_by | TEXT | |
+| active_from | TIMESTAMPTZ | Optional time window |
+| active_until | TIMESTAMPTZ | Optional time window |
+| created_at | TIMESTAMPTZ | |
+| updated_at | TIMESTAMPTZ | Auto-updated via trigger |
+
+### `agent_config`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| key | TEXT | Primary key (e.g. `base_prompt_university`) |
+| value | TEXT | The configuration value (prompt text) |
+| updated_by | TEXT | |
+| updated_at | TIMESTAMPTZ | |
+
+Key rows:
+
+| Key | Purpose |
+|-----|---------|
+| `base_prompt_university` | Base system prompt for all university agents |
+| `base_prompt_company` | Base system prompt for all corporate agents |
+
+---
+
+## API Endpoints
+
+All endpoints live under `api/agents/` in both `mind-measure-core` and `mind-measure-pro-core`. Superuser authentication is required unless noted.
+
+### Agent CRUD
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/agents/create` | POST | Clone a template agent via ElevenLabs, register knowledge base URL, insert database record |
+| `/api/agents/list` | GET | List all institutional agents with institution details and question counts |
+| `/api/agents/update` | PATCH | Update agent name or status |
+| `/api/agents/delete` | POST | Delete ElevenLabs agent and KB document, remove database record |
+
+### Questions
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/agents/questions` | GET | List questions for an agent (`?agentId=...`) |
+| `/api/agents/questions` | POST | Create a new custom question |
+| `/api/agents/questions` | PATCH | Update an existing question |
+
+### Prompt Sync
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/agents/sync` | POST | Rebuild and push prompt + knowledge base for a single agent |
+| `/api/agents/sync-all` | POST | Rebuild and push prompts for all active/draft agents |
+
+### Configuration
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/agents/config` | GET | Retrieve all `agent_config` key/value pairs |
+| `/api/agents/config` | PATCH | Update a config value (e.g. base prompt text) |
+| `/api/agents/seed-prompt` | POST | Seed initial base prompt into `agent_config` |
+
+### Public / Mobile
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/agents/resolve` | GET | Resolve `elevenlabs_agent_id` by institution ID. Returns `{ agentId, agentName, institutionType, fallback }`. No auth required. |
+| `/api/agents/context` | GET | Generate plain-text knowledge document from CMS data for a given institution. No auth required (consumed by ElevenLabs). |
+
+---
+
+## Service Layer
+
+### `InstitutionalAgentService.ts`
+
+Located in `src/services/` in both core projects. Encapsulates all ElevenLabs API interactions.
+
+#### ElevenLabs API Methods
+
+| Method | ElevenLabs Endpoint | Purpose |
+|--------|-------------------|---------|
+| `cloneAgent(templateAgentId, name)` | `POST /v1/convai/agents/{id}/duplicate` | Clone a template agent |
+| `deleteAgent(agentId)` | `DELETE /v1/convai/agents/{id}` | Delete an agent |
+| `updateAgentPrompt(agentId, prompt)` | `PATCH /v1/convai/agents/{id}` | Update the agent's system prompt |
+| `addKnowledgeBaseUrl(agentId, url, name)` | `POST /v1/convai/knowledge-base` + `PATCH` | Create KB document from URL and attach to agent |
+| `removeKnowledgeBaseDoc(docId)` | `DELETE /v1/convai/knowledge-base/{id}` | Remove a KB document |
+
+All calls use the `ELEVENLABS_API_KEY` environment variable.
+
+#### `buildAgentPrompt()`
+
+```typescript
+function buildAgentPrompt(
+  basePrompt: string,
+  institutionName: string,
+  institutionType: 'university' | 'company',
+  questions: InstitutionalQuestion[]
+): string
+```
+
+Constructs the full agent prompt by:
+
+1. Starting with the product-specific base prompt (`base_prompt_university` or `base_prompt_company`)
+2. Appending institutional context: *"You are speaking with students/employees from {name}..."*
+3. Adding **required** questions as *"You must find a natural moment to ask..."*
+4. Adding **optional** questions as *"Try to also explore..."*
+
+---
+
+## Base Prompt Management
+
+The base operational prompt for Jodie is managed separately for each product line because the university and corporate products have different conversational requirements.
+
+### How It Works
+
+1. **Superuser UI**: The "Agents" tab in the Superuser Control Panel includes a collapsible "Base Agent Prompt" editor. In `mind-measure-core` it edits `base_prompt_university`; in `mind-measure-pro-core` it edits `base_prompt_company`.
+2. **Storage**: Prompts are stored in the `agent_config` table as key/value pairs.
+3. **Sync**: When a superuser clicks "Sync All Agents", the system:
+   - Loads the appropriate base prompt for each agent's `institution_type`
+   - Fetches active questions for each agent
+   - Calls `buildAgentPrompt()` to construct the full prompt
+   - Pushes the prompt to ElevenLabs via `updateAgentPrompt()`
+   - Refreshes the knowledge base URL via `addKnowledgeBaseUrl()`
+
+This allows the base Jodie prompt to be updated across all institutional agents from a single editor.
+
+---
+
+## Mobile App Integration
+
+### Agent Resolution Flow
+
+When a user starts a check-in, the mobile app resolves the correct agent:
+
+1. **University app** (`CheckinAssessmentSDK.tsx`): If `user.university_id` exists, calls `/api/agents/resolve?university_id={id}`
+2. **Corporate app** (`CheckinAssessmentSDK.tsx`): If `user.company_id` exists, calls `/api/agents/resolve?university_id={id}`
+3. If the resolve endpoint returns a valid `agentId` (not fallback), that agent is used
+4. Otherwise, falls back to the default template agent ID
+
+The resolve endpoint queries `institutional_agents` for an active agent matching the institution ID:
+
+```sql
+SELECT elevenlabs_agent_id, agent_name, institution_type
+FROM institutional_agents
+WHERE institution_id = $1 AND status = 'active'
+```
+
+### Automatic Agent Creation
+
+When a new university is created via the CMS (`createUniversity` in `src/features/cms/data.ts`), the system automatically calls `/api/agents/create` to clone an ElevenLabs agent and register the knowledge base URL.
+
+---
+
+## Knowledge Base
+
+### Dynamic Context Document
+
+The `/api/agents/context` endpoint generates a plain-text knowledge document from CMS data for a given institution. This document is hosted as a URL that ElevenLabs can index.
+
+**Data sources** (already collected during CMS onboarding):
+- Emergency and crisis resources
+- Wellbeing centres and support services
+- Key contacts (welfare officers, mental health first aiders)
+- Departments and faculties
+- EAP details (for companies)
+
+When CMS data is updated, the context URL serves the latest content. ElevenLabs re-indexes automatically.
+
+### How Jodie Uses It
+
+When a user mentions needing help or asks about services, Jodie references the knowledge base:
+- *"Your university has a counselling service in the Student Life Centre — you can self-refer online."*
+- *"Your company's EAP is through Health Assured — you can call them on 0800 028 0199, it's confidential."*
+
+---
+
+## Custom Questions
+
+Institutions can request specific questions to be woven into check-ins. These are natural conversation prompts — not survey questions — that Jodie asks when appropriate.
+
+### Question Properties
+
+- **Category**: `localized_knowledge` (about the institution) or `strategic_insight` (about wellbeing topics)
+- **Priority**: `required` (Jodie must ask) or `optional` (ask if the conversation flows naturally)
+- **Status**: `draft` → `active` → `archived`
+- **Time windows**: Optional `active_from` / `active_until` for seasonal questions
+
+### Example
+
+| Institution | Question | Priority |
+|-------------|----------|----------|
+| Durham Uni | "How are you finding your accommodation this term?" | Optional |
+| Acme Corp | "How manageable has your workload felt this month?" | Required |
+
+Questions are managed by superusers via the Agents tab and synced to ElevenLabs as part of the prompt.
+
+---
+
+## Future Work
+
+### Phase 4: Custom Question Reporting
+
+Not yet implemented. Planned features:
+- Aggregate custom question responses per institution (from Bedrock analysis output)
+- Superuser dashboard view for response trends
+- CSV/PDF export of aggregated data
+- Trend visualisation over time
+
+---
+
+*Last updated: 22 February 2026*
