@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
 
 const TOKEN = process.env.MM_INTERNAL_TOKEN || '';
 const LEGACY_COOKIE = 'mm_auth';
@@ -9,11 +8,35 @@ const COOKIE_MAX_AGE = 60 * 60 * 24; // 24 hours
 const SECRET = process.env.SUPERUSER_JWT_SECRET || process.env.JWT_SECRET || '';
 const REQUIRED_PERMISSION = 'docs_platform_access';
 
+function base64UrlDecode(str: string): Uint8Array {
+  const padded = str.replace(/-/g, '+').replace(/_/g, '/');
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 async function verifyJwt(token: string): Promise<{ permissions?: string[] } | null> {
   if (!SECRET) return null;
   try {
-    const key = new TextEncoder().encode(SECRET);
-    const { payload } = await jwtVerify(token, key);
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(SECRET),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify'],
+    );
+
+    const data = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
+    const signature = base64UrlDecode(parts[2]);
+    const valid = await crypto.subtle.verify('HMAC', key, signature.buffer as ArrayBuffer, data.buffer as ArrayBuffer);
+    if (!valid) return null;
+
+    const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[1])));
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
     return payload as { permissions?: string[] };
   } catch {
     return null;
