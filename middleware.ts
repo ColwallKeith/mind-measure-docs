@@ -1,17 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
 
 const TOKEN = process.env.MM_INTERNAL_TOKEN || '';
-const COOKIE_NAME = 'mm_auth';
+const LEGACY_COOKIE = 'mm_auth';
+const SESSION_COOKIE = 'mm_session';
 const COOKIE_MAX_AGE = 60 * 60 * 24; // 24 hours
 
-export function middleware(req: NextRequest) {
-  const url = req.nextUrl.clone();
-  const tokenParam = url.searchParams.get('mm_token');
+const SECRET = process.env.SUPERUSER_JWT_SECRET || process.env.JWT_SECRET || '';
+const REQUIRED_PERMISSION = 'docs_platform_access';
 
+async function verifyJwt(token: string): Promise<{ permissions?: string[] } | null> {
+  if (!SECRET) return null;
+  try {
+    const key = new TextEncoder().encode(SECRET);
+    const { payload } = await jwtVerify(token, key);
+    return payload as { permissions?: string[] };
+  } catch {
+    return null;
+  }
+}
+
+function hasAccess(permissions: string[] | undefined): boolean {
+  if (!permissions) return false;
+  return permissions.includes('super_admin') || permissions.includes(REQUIRED_PERMISSION);
+}
+
+export async function middleware(req: NextRequest) {
+  const url = req.nextUrl.clone();
+
+  // 1. Legacy mm_token flow (superuser panel link)
+  const tokenParam = url.searchParams.get('mm_token');
   if (tokenParam && TOKEN && tokenParam === TOKEN) {
     url.searchParams.delete('mm_token');
     const res = NextResponse.redirect(url);
-    res.cookies.set(COOKIE_NAME, TOKEN, {
+    res.cookies.set(LEGACY_COOKIE, TOKEN, {
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
@@ -21,54 +43,28 @@ export function middleware(req: NextRequest) {
     return res;
   }
 
-  const cookie = req.cookies.get(COOKIE_NAME);
-  if (cookie && TOKEN && cookie.value === TOKEN) {
+  // 2. Legacy cookie (from superuser panel)
+  const legacyCookie = req.cookies.get(LEGACY_COOKIE);
+  if (legacyCookie && TOKEN && legacyCookie.value === TOKEN) {
     return NextResponse.next();
   }
 
-  return new NextResponse(
-    `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Access Restricted</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; color: #334155;
+  // 3. JWT session cookie (from login page)
+  const sessionCookie = req.cookies.get(SESSION_COOKIE);
+  if (sessionCookie) {
+    const payload = await verifyJwt(sessionCookie.value);
+    if (payload && hasAccess(payload.permissions)) {
+      return NextResponse.next();
     }
-    .card {
-      text-align: center; max-width: 420px; padding: 3rem 2.5rem;
-      background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.06);
-    }
-    .icon { font-size: 2.5rem; margin-bottom: 1rem; }
-    h1 { font-size: 1.5rem; font-weight: 700; color: #204C4C; margin-bottom: 0.5rem; }
-    p { font-size: 0.95rem; line-height: 1.6; color: #64748b; margin-bottom: 1.5rem; }
-    a {
-      display: inline-block; padding: 10px 24px; background: #204C4C; color: white;
-      text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 0.9rem;
-    }
-    a:hover { background: #1a3d3d; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="icon">🔒</div>
-    <h1>Access Restricted</h1>
-    <p>This site is only accessible via a Mind Measure Superuser Portal.</p>
-    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-      <a href="https://admin.mindmeasure.co.uk/superuser">University Portal</a>
-      <a href="https://admin.mindmeasurepro.com/superuser">Pro Portal</a>
-    </div>
-  </div>
-</body>
-</html>`,
-    { status: 403, headers: { 'Content-Type': 'text/html' } }
-  );
+  }
+
+  // 4. Not authenticated — redirect to login
+  const loginUrl = req.nextUrl.clone();
+  loginUrl.pathname = '/login';
+  loginUrl.searchParams.set('from', req.nextUrl.pathname);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!login|api/auth|_next/static|_next/image|favicon.ico|images).*)'],
 };

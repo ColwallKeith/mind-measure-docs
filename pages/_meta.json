@@ -1,4 +1,5 @@
 {
+  "login": { "display": "hidden" },
   "index": "Overview",
   "handbook": "University Handbook",
   "quick-start": "Quick Start",

@@ -1,10 +1,14 @@
 import React from 'react';
 import { DownloadPDF } from './components/DownloadPDF';
+import { LogoutButton } from './components/LogoutButton';
 
 export default {
   logo: <span style={{ fontWeight: 'bold' }}>Mind Measure Documentation</span>,
   project: { 
     link: 'https://github.com/mindmeasure/mind-measure-core' 
+  },
+  navbar: {
+    extraContent: <LogoutButton />,
   },
   docsRepositoryBase: 'https://github.com/mindmeasure/mind-measure-docs/blob/main',
   footer: { 
