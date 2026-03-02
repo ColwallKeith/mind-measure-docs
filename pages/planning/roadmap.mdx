@@ -4,11 +4,40 @@ A living document capturing feature ideas, product concepts, and development pri
 
 For technical/engineering work in progress, see [Future Development](/future-development).
 
-**Last Updated**: 28 February 2026 (added monorepo, auth standardisation, voice abstraction, load testing)
+**Last Updated**: 2 March 2026 (added Cohort Template Library)
 
 ---
 
 ## Active Planning
+
+### Cohort Template Library
+
+**Priority**: High  
+**Status**: Active planning — sprint candidate
+
+Evolve the existing Cohort Analysis from a build-it-yourself tool into a shared library of reusable, live-data cohort views. Users build cohort configurations once, and they become discoverable templates that anyone at the institution can use, always populated with current data.
+
+**Current state**: Cohort comparisons are saved to browser `localStorage` with auto-generated titles, no user ownership, no sharing, and placeholder data generation instead of live queries.
+
+**Target state**:
+- Saved cohort configurations stored in the database, scoped to institution and user
+- Custom titles and author attribution on every saved view
+- "Publish to library" toggle makes a user's view available to all colleagues at the same institution
+- Browsable library of published templates, searchable by title, author, and cohort type
+- Templates populated with live data on load (not static snapshots)
+- Historical data overlay: show the same cohort definition over a previous period for comparison (e.g. same term last year)
+- Mind Measure can seed institutions with recommended starter templates based on their structure
+
+**Key milestones**:
+- Phase 1: Custom chart titles (editable before save) and migration from `localStorage` to database (`saved_cohort_templates` table with `university_id`, `created_by`, `title`, `is_published`)
+- Phase 2: Live data population — cohort charts query real data via `UniversityDataService` instead of placeholder generators
+- Phase 3: Library UI — browse, search, and load published templates; author attribution
+- Phase 4: Historical overlay — query archived data for the same cohort definition across different time periods
+- Phase 5: Institutional starter packs — Mind Measure curates recommended templates per institution type
+
+**Why this matters**: A single wellbeing researcher's insight (e.g. comparing halls of residence across campuses) becomes institutional knowledge. The library effect means the value of the platform compounds as more people use it, and researchers spend time interpreting data rather than constructing views.
+
+---
 
 ### Streak Rewards
 
