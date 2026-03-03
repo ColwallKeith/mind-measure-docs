@@ -4,7 +4,7 @@ A living document capturing feature ideas, product concepts, and development pri
 
 For technical/engineering work in progress, see [Future Development](/future-development).
 
-**Last Updated**: 2 March 2026 (added Cohort Template Library)
+**Last Updated**: 3 March 2026 (moved Monorepo Migration → Completed as Shared Package Extraction)
 
 ---
 
@@ -71,24 +71,6 @@ A social media assets library and student ambassador signup, logging, and manage
 - Phase 5: Admin management — approve ambassadors, set bonus tiers, process payouts
 
 **Revenue impact**: Organic user acquisition through peer networks. Ambassador programme reduces marketing spend while increasing authentic engagement.
-
----
-
-### Monorepo Migration
-
-**Priority**: Medium  
-**Status**: Planning — architecture documented in platform audit
-
-The 7 production projects share ~50% of their code. Extracting shared packages into a Turborepo monorepo would eliminate duplication, reduce maintenance, and ensure consistency across University and Pro platforms.
-
-**Key milestones**:
-- Phase 1: Scaffold monorepo with Turborepo; extract `shared-core` (BackendServiceFactory, AWSService, ServiceManager, types) and `config` (entity-type mappings)
-- Phase 2: Extract `shared-api` (database routes, auth middleware, JWT verification)
-- Phase 3: Wire up app shells; verify build parity with existing standalone projects
-- Phase 4: Extract `shared-mobile` (fusion engine, enrichment, extractors)
-- Phase 5: Cut over Vercel deployments one app at a time; archive standalone repos
-
-**Estimated reduction**: ~40-50% less code to maintain.
 
 ---
 
@@ -262,6 +244,7 @@ Features that were planned here and are now live. Each links to a detailed write
 | API Retry Logic | Feb 2026 | Exponential backoff on Bedrock and Rekognition calls |
 | Documentation Cleanup | Feb 2026 | Removed 26 duplicate files, organized into folder structure |
 | Bedrock Model Upgrade | Feb 2026 | Upgraded from Claude 3 Haiku to Claude 3.7 Sonnet |
+| Shared Package Extraction | Mar 2026 | 4 private NPM packages (`@mindmeasure/api-lib`, `shared-services`, `shared-types`, `shared-ui`) consolidating ~15,800 lines. Replaced monorepo plan — repos stay independent for M&A flexibility. See [Technical Due Diligence](/planning/technical-due-diligence) §9.2. |
 
 ---
 
