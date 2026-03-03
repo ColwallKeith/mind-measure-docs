@@ -2,6 +2,7 @@
   "login": { "display": "hidden" },
   "index": "Overview",
   "handbook": "University Handbook",
+  "handbook-pro": "Pro Handbook",
   "quick-start": "Quick Start",
   "architecture": "Architecture",
   "development": "Development",
