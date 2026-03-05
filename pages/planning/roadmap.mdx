@@ -118,6 +118,29 @@ Load test the full check-in flow at 100+ concurrent users. The platform audit id
 
 ---
 
+### Score Reveal Interaction
+
+**Priority**: Medium  
+**Status**: Spec written — not started
+
+Strengthen the perceived significance of the Mind Measure score by introducing a short transition between processing completion and score display. A score represents an evaluation of the user's state — presenting it instantly can make the result feel trivial or arbitrary. A brief transition creates a natural pause, signalling that the system has completed analysis and is preparing the result.
+
+**Proposed interaction sequence**:
+1. User completes check-in
+2. Processing animation runs (existing behaviour)
+3. Short transition screen appears: "Your check-in is complete. Preparing your results."
+4. Score reveal screen loads — gauge appears first, score animates into place over ~1 second, scoring band highlights
+5. One-line interpretation appears under the score
+6. Full dashboard view becomes available
+
+**Design principles**:
+- Keep the transition short (1–2 seconds)
+- Avoid technical language or process descriptions
+- Emphasise completion and preparation rather than analysis
+- Ensure animation timing feels intentional rather than delaying the user
+
+---
+
 ## Feature Ideas
 
 ### Investor Dashboard
