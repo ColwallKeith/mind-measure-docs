@@ -81,6 +81,16 @@ Employees can also see:
 #### Nudges
 Companies can send short, text-based nudges to employees through the app. These are brief notifications directing employees to available support — an EAP workshop on managing workload, a wellbeing drop-in session, a financial advice clinic, or a resilience seminar. Nudges are prioritised by urgency and displayed as a swipeable carousel on the employee dashboard.
 
+#### Cohort-Targeted Content
+Both nudges and articles can be targeted to specific employee cohorts. When creating content, administrators choose between "Whole Company" and "Specific Cohort". In cohort mode, cascading dropdowns allow selection by department, role/team, seniority, office location, and work mode. The system displays a live count of matching employees, so the administrator can see exactly how many people will receive the content.
+
+This feature connects directly to the cohort analytics dashboards. If an administrator identifies a wellbeing trend in a particular group — for example, elevated stress in the Sales team during quarter-end — they can immediately create targeted support content that only reaches that specific group, without generating noise for the rest of the organisation.
+
+Content without targeting continues to be visible to all employees.
+
+#### Pinning Content
+Any nudge or article can be pinned to the top of the employee feed until a specified date. This is useful for time-sensitive content such as benefits enrollment deadlines, wellbeing week events, or urgent policy communications. When the pin date passes, the content automatically returns to its normal position in the feed — no manual intervention required.
+
 ### The Organisational Experience
 
 #### Company Dashboard
@@ -99,6 +109,8 @@ The Company Content Hub is a companion platform where administrators can:
 
 - **Create and publish wellbeing articles** — Using a rich text editor to produce blog-style content
 - **Manage nudges** — Create, schedule, and prioritise short notifications for employees
+- **Target content to specific cohorts** — Direct articles and nudges to particular employee groups by department, role, seniority, office, or work mode
+- **Pin content to the top of the feed** — Ensure time-sensitive material is seen first, with automatic expiry
 - **Browse the content pool** — Access articles shared by other organisations and by Mind Measure
 - **View employee insights** — See aggregated "Top 10" employee concerns and interests to inform content strategy
 
@@ -260,7 +272,7 @@ The architecture is designed to scale from a single company pilot to enterprise-
 | **Mood Tracking** | 7-day mood trend chart with daily comparison |
 | **Streak Tracking** | Consecutive check-in day counter to encourage regular use |
 | **Insight Summaries** | AI-generated summaries of what employees discussed |
-| **Nudges** | Company-curated notifications about available support |
+| **Nudges** | Company-curated notifications about available support, optionally targeted to specific cohorts |
 | **Help Resources** | Quick access to emergency services, EAP, and wellbeing resources |
 | **Wellbeing Report** | Downloadable PDF report covering assessment history and AI-generated insights |
 
@@ -272,8 +284,10 @@ The architecture is designed to scale from a single company pilot to enterprise-
 | **Cohort Analysis** | Filter and compare wellbeing data by department, team, location, or custom grouping |
 | **Trend Charts** | Visualise how cohort wellbeing changes over time |
 | **Engagement Metrics** | Track active users, check-in frequency, and adoption rates |
-| **Content Hub** | Create and publish wellbeing articles and resources |
-| **Nudge Manager** | Create, schedule, and prioritise notifications for employees |
+| **Content Hub** | Create and publish wellbeing articles and resources, with optional cohort targeting |
+| **Nudge Manager** | Create, schedule, and prioritise notifications for employees, with cohort targeting and pin-to-top |
+| **Cohort Targeting** | Direct content to specific employee groups using cascading demographic filters with live audience count |
+| **Pin to Top** | Pin content to the top of the employee feed until a specified date, with automatic expiry |
 | **Content Pool** | Share and access content across the company network |
 | **Employee Insights** | Aggregated "Top 10" employee concerns and interests |
 | **Report Generation** | Downloadable reports for individual employees (with consent) |

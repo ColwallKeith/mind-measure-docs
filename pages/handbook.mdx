@@ -1,6 +1,6 @@
 # Mind Measure — University Professional Handbook
 
-*Version 1.0 — February 2026*
+*Version 1.1 — March 2026*
 
 ---
 
@@ -80,6 +80,16 @@ Students can also see:
 #### Nudges
 Universities can send short, text-based nudges to students through the app. These are brief notifications directing students to available support — a workshop on exam stress, a wellbeing drop-in session, a finance advice clinic. Nudges are prioritised by urgency and displayed as a swipeable carousel on the student dashboard.
 
+#### Cohort-Targeted Content
+Both nudges and articles can be targeted to specific student cohorts. When creating content, administrators choose between "Whole University" and "Specific Cohort". In cohort mode, cascading dropdowns allow selection by school, department, year group, accommodation type, hall of residence, and study mode. The system displays a live count of matching students, so the administrator can see exactly how many people will receive the content.
+
+This feature connects directly to the cohort analytics dashboards. If an administrator identifies a wellbeing trend in a particular group — for example, elevated stress in Nursing students during clinical placements — they can immediately create targeted support content that only reaches that specific group, without generating noise for the rest of the university.
+
+Content without targeting continues to be visible to all students.
+
+#### Pinning Content
+Any nudge or article can be pinned to the top of the student feed until a specified date. This is useful for time-sensitive content such as exam support resources, event promotions, or deadline reminders. When the pin date passes, the content automatically returns to its normal position in the feed — no manual intervention required.
+
 ### The Institutional Experience
 
 #### University Dashboard
@@ -98,6 +108,8 @@ The University Content Hub is a companion platform where administrators can:
 
 - **Create and publish wellbeing articles** — Using a rich text editor to produce blog-style content
 - **Manage nudges** — Create, schedule, and prioritise short notifications for students
+- **Target content to specific cohorts** — Direct articles and nudges to particular student groups by school, department, year, accommodation, or study mode
+- **Pin content to the top of the feed** — Ensure time-sensitive material is seen first, with automatic expiry
 - **Browse the content pool** — Access articles shared by other universities and by Mind Measure
 - **View student insights** — See aggregated "Top 10" student worries and interests to inform content strategy
 
@@ -255,7 +267,7 @@ The architecture is designed to scale from a single university pilot to nationwi
 | **Mood Tracking** | 7-day mood trend chart with daily comparison |
 | **Streak Tracking** | Consecutive check-in day counter to encourage regular use |
 | **Insight Summaries** | AI-generated summaries of what students discussed |
-| **Nudges** | University-curated notifications about available support |
+| **Nudges** | University-curated notifications about available support, optionally targeted to specific cohorts |
 | **Help Resources** | Quick access to emergency services, university support, and wellbeing resources |
 | **Buddy System** | Peer accountability feature for mutual wellbeing support |
 | **Wellbeing Report** | Downloadable PDF report covering assessment history and AI-generated insights |
@@ -268,8 +280,10 @@ The architecture is designed to scale from a single university pilot to nationwi
 | **Cohort Analysis** | Filter and compare wellbeing data by department, year, or custom grouping |
 | **Trend Charts** | Visualise how cohort wellbeing changes over time |
 | **Engagement Metrics** | Track active users, check-in frequency, and adoption rates |
-| **Content Hub** | Create and publish wellbeing articles and resources |
-| **Nudge Manager** | Create, schedule, and prioritise notifications for students |
+| **Content Hub** | Create and publish wellbeing articles and resources, with optional cohort targeting |
+| **Nudge Manager** | Create, schedule, and prioritise notifications for students, with cohort targeting and pin-to-top |
+| **Cohort Targeting** | Direct content to specific student groups using cascading demographic filters with live audience count |
+| **Pin to Top** | Pin content to the top of the student feed until a specified date, with automatic expiry |
 | **Content Pool** | Share and access content across the university network |
 | **Student Insights** | Aggregated "Top 10" student worries and interests |
 | **Report Generation** | Downloadable reports for individual students (with consent) |

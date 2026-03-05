@@ -1,0 +1,110 @@
+# Cohort-Targeted Content Delivery
+
+**Status**: Complete  
+**Completed**: March 2026  
+**Platforms**: University hub (`hub.mindmeasure.co.uk`), Pro hub (`hub.mindmeasurepro.com`), Mobile apps
+
+---
+
+## What We Built
+
+A cohort targeting system for the Content Hub that allows university and company administrators to direct specific nudges and articles to particular student or employee cohorts. Content can be targeted using the same demographic dimensions available in the cohort analytics dashboards, and pinned to the top of the feed until a specified date.
+
+This makes cohort analytics actionable — when an institution identifies a wellbeing issue in a particular group (e.g. stress levels rising in Nursing students during clinical placements), they can immediately send targeted support content to exactly that cohort.
+
+## Capabilities
+
+### Audience Targeting
+
+- **Whole institution or specific cohort** — toggle between broadcasting to everyone or narrowing to a defined group
+- **Cascading dropdowns** — selecting a School/Faculty reveals only its Departments; selecting a Department in Pro reveals only its Roles/Teams
+- **Multiple dimensions** — combine School, Department, Year, Accommodation Type, Hall of Residence, and Study Mode (university) or Department, Role/Team, Seniority, Office, and Work Mode (corporate)
+- **AND logic** — all specified criteria must match for content to appear in a student's feed
+- **Live audience count** — real-time count of matching profiles updates as selections change
+- **Recap bar** — readable summary of selected criteria displayed below the dropdowns
+- **Untargeted content always visible** — content without targeting continues to appear for all users
+
+### Pin to Top
+
+- **Pin until date** — any nudge or article can be pinned to appear first in the student/employee feed
+- **Automatic expiry** — pinned content reverts to normal sort order when the pin date passes
+- **No cleanup required** — expired pins are ignored by the sort algorithm, no manual unpinning needed
+- **Defaults to 7 days** — toggling the pin on pre-fills a date one week from today
+
+### University Dimensions
+
+| Dimension | Profile Field | Cascades From |
+|-----------|--------------|---------------|
+| School / Faculty | `school` | — |
+| Department | `course` | School / Faculty |
+| Year | `year_of_study` | — |
+| Accommodation | `living_situation` | — |
+| Hall of Residence | `hall_of_residence` | Accommodation (On Campus) |
+| Study Mode | `study_mode` | — |
+
+### Corporate Dimensions
+
+| Dimension | Profile Field | Cascades From |
+|-----------|--------------|---------------|
+| Department / Division | `department` | — |
+| Role / Team | `role` | Department / Division |
+| Seniority | `seniority` | — |
+| Office | `office_location` | — |
+| Work Mode | `work_mode` | — |
+
+## Technical Implementation
+
+### Data Model
+
+Targeting criteria are stored as JSONB on both nudges and articles:
+
+```typescript
+interface CohortTargeting {
+  schools?: string[];
+  departments?: string[];
+  courses?: string[];
+  yearOfStudy?: string[];
+  accommodationType?: string[];
+  halls?: string[];
+  studyMode?: string[];
+}
+```
+
+- **Nudges** — stored in the `universities.nudges` / `companies.nudges` JSONB column alongside each nudge object
+- **Articles** — stored in the `targeting` JSONB column on `university_articles` / `company_articles`
+- **Pin date** — `pinnedUntil` on nudges (JSONB), `pinned_until` TIMESTAMPTZ column on articles
+
+### API Endpoints
+
+| Endpoint | Hub | Purpose |
+|----------|-----|---------|
+| `/api/university-structure` | University | Returns schools, schoolDepartments, departmentCourses, halls |
+| `/api/company-structure` | Pro | Returns departments, deptRoles, offices |
+| `/api/audience-count` | Both | Live count of profiles matching targeting criteria |
+
+### Mobile Filtering
+
+Server-side filtering on the mobile API proxies (`api/nudges/active.ts`, `api/content/pool.ts`) ensures students only receive content relevant to them:
+
+1. Fetch the user's profile from the `profiles` table
+2. For each piece of content with targeting, check all specified criteria against the profile
+3. If any criterion does not match, exclude the content
+4. Content without targeting is always included
+5. Pinned items (where `pinnedUntil` is in the future) sort to the top
+
+### Component Architecture
+
+- **`AudienceSelector`** — reusable React component used in both NudgeManager and ArticleEditor
+- **`ColumnDropdown`** — helper component rendering individual multi-select dropdown columns
+- Placed at the top of content editing forms to ensure administrators consider the audience first
+
+## Impact
+
+- Enables institutions to respond directly to cohort-level wellbeing insights with targeted support content
+- Reduces noise for students — they only see content relevant to their situation
+- Pin feature ensures time-sensitive content (exam support, deadline reminders, event promotions) reaches students when it matters
+- Cascading dropdowns prevent administrators from being overwhelmed by long lists of departments and courses
+
+---
+
+*Completed: March 2026*

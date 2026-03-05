@@ -64,6 +64,8 @@ Articles support:
 - Categories and tags (stored as JSONB)
 - Draft / Published / Archived status
 - "Share to Content Pool" toggle for cross-university visibility
+- **Cohort targeting** — direct articles to specific student groups
+- **Pin to top** — pin articles to the top of the student feed until a specified date
 
 ### Content Pool
 
@@ -100,6 +102,51 @@ Nudges are short, prescriptive notifications displayed to students on the mobile
 
 Nudges are stored in the `universities.nudges` JSONB column and sorted automatically by category priority. A maximum of 5 active nudges are displayed as a swipeable carousel on the mobile app.
 
+### Cohort Targeting
+
+Both articles and nudges can be targeted to specific student cohorts. The Audience Selector is placed at the top of content editing forms to encourage administrators to consider their audience before creating content.
+
+**How it works:**
+
+1. Toggle between "Whole University" (default) and "Specific Cohort"
+2. When targeting is active, a row of cascading multi-select dropdowns appears
+3. Select one or more schools — the Department dropdown then shows only departments within those schools
+4. Add further filters: year group, accommodation type, hall of residence, study mode
+5. A recap bar displays the selected criteria alongside a live count of matching students
+
+**Targeting dimensions:**
+
+| Dimension | Profile Field | Notes |
+|-----------|--------------|-------|
+| School / Faculty | `school` | Top-level academic grouping |
+| Department | `course` | Cascades from school selection |
+| Year | `year_of_study` | Year 1 through Postgraduate |
+| Accommodation | `living_situation` | On Campus, Off Campus, At Home |
+| Hall of Residence | `hall_of_residence` | Only shown when "On Campus" is selected |
+| Study Mode | `study_mode` | Full-time, Part-time |
+
+Targeting uses AND logic — a student must match all specified criteria to see the content. Untargeted content is always visible to all students.
+
+**Data storage:**
+- Nudges: `targeting` field within the JSONB nudge object in `universities.nudges`
+- Articles: `targeting` JSONB column on the `university_articles` table
+
+**Mobile filtering:**
+The mobile API proxies (`api/nudges/active.ts`, `api/content/pool.ts`) perform server-side filtering. Each content item's targeting criteria are checked against the requesting user's profile. Only matching content is returned.
+
+### Pin to Top
+
+Any nudge or article can be pinned to the top of the student feed until a specified date. This ensures time-sensitive content (exam support weeks, event promotions, deadline reminders) is seen first.
+
+- Toggle "Pin to top" on the content editing form
+- Set an expiry date (defaults to 7 days from today)
+- Pinned content sorts above all non-pinned content in both the nudge carousel and article feed
+- When the date passes, the content drops back to its normal position — no manual action required
+
+**Data storage:**
+- Nudges: `pinnedUntil` field within the JSONB nudge object
+- Articles: `pinned_until` TIMESTAMPTZ column on the `university_articles` table
+
 ### Student Insights
 
 Aggregated, anonymised data from student check-ins provides a "Top 10" of student worries and interests, drawn from `fusion_outputs` analysis. This data is available both locally (university-specific) and nationally, providing inspiration for content creation.
@@ -125,11 +172,15 @@ CREATE TABLE university_articles (
   categories JSONB DEFAULT '[]',
   tags JSONB DEFAULT '[]',
   shared_to_pool BOOLEAN DEFAULT FALSE,
+  targeting JSONB DEFAULT NULL,
+  pinned_until TIMESTAMPTZ DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Nudges stored on the universities table
+-- Nudges stored on the universities table as JSONB
+-- Each nudge object includes: id, title, description, category,
+-- eventDate, pinnedUntil, linkUrl, targeting, status, createdAt, updatedAt
 ALTER TABLE universities
   ADD COLUMN IF NOT EXISTS nudges JSONB DEFAULT '[]';
 ```
@@ -144,6 +195,8 @@ ALTER TABLE universities
 | `/api/content/[id]` | GET, PUT | Read and update a specific article |
 | `/api/content/pool` | GET | Fetch shared pool articles from Marketing CMS |
 | `/api/nudges` | GET, POST, PUT, DELETE | CRUD for university nudges |
+| `/api/university-structure` | GET | Schools, departments, halls for the audience selector |
+| `/api/audience-count` | GET | Live count of profiles matching targeting criteria |
 | `/api/insights` | GET | Aggregated student worries and interests |
 | `/api/upload` | POST | Proxy image uploads to S3 via Marketing CMS |
 
@@ -188,4 +241,4 @@ DNS is managed in Cloudflare. Proxy must be **off** (DNS only / grey cloud) for 
 
 ---
 
-*Last updated: February 2026*
+*Last updated: March 2026*
