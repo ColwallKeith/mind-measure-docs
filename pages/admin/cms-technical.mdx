@@ -182,11 +182,12 @@ CREATE TABLE departments (
 
 Two authentication methods:
 
-**1. Superuser Login** (Mind Measure staff)
+**1. Superuser Login** (Mind Measure staff and other allow-listed users)
 - Passwordless 6-digit code via email
-- `POST /api/auth/send-superuser-code` → generates code, sends via AWS SES
-- `POST /api/auth/verify-superuser-code` → validates code, returns JWT
-- Only `@mindmeasure.co.uk` emails accepted
+- `POST /api/auth/send-access-code` → looks up email in `core_users`, generates code, sends via AWS SES
+- `POST /api/auth/verify-access-code` → validates code, returns JWT carrying the user's `permissions` array
+- Allow-list is the `core_users` table (any active user with at least one permission, regardless of email domain)
+- Access to the superuser dashboard requires `super_admin` in `permissions`
 
 **2. University/Company Admin Login**
 - Email + invite token flow
