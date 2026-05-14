@@ -1,7 +1,8 @@
 {
   "title": "Operations",
   "playbooks": "Operational Playbooks",
-  "company-intake": "Company Onboarding Intake",
+  "company-intake": "Company Onboarding Questionnaire",
+  "company-intake-internal": "Company Intake — Internal Import (staff only)",
   "coding-standards": "Coding Standards",
   "testing-panel-guide": "Testing Panel Guide",
   "testing-qa": "Testing & QA",

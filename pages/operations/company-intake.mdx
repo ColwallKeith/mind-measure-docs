@@ -1,278 +1,372 @@
-# Company Onboarding Intake
+# Company Onboarding Questionnaire
 
-A single questionnaire to capture everything we need from a new institutional
-customer before we open the Mind Measure CMS. Send this to the primary
-contact and ask them to return it complete — every section maps directly to
-one of the CMS tabs, so a fully-completed intake means setup is a
-twenty-minute job rather than a two-week back-and-forth.
+Welcome, and thank you for choosing Mind Measure to support your people.
 
-The document is structured so it can be sent as a Word doc, a PDF, a Google
-Form, a Typeform, or pasted into a Notion page without losing meaning. Each
-section header tells the receiver what it's for; each field is marked
-**Required** or *Optional* and shows the format we expect.
+This questionnaire helps us set up your organisation on the Mind Measure
+platform so that we can have everything ready for the day your pilot
+launches. It should take roughly **30 minutes** to complete with the right
+people in the room — typically HR, with an occasional dip into IT for
+section 5.
 
-> Internal note: the right-hand column for each field shows where it lands in
-> the Mind Measure platform (CMS tab → DB column). Hide that column when
-> sharing the intake externally.
+Please return your answers to your Mind Measure account manager once
+complete. If you're unsure of an answer, leave it blank and we'll discuss it
+during your kick-off call.
 
----
-
-## 1. Company basics
-
-| Field | Required? | Format / example | Maps to |
-|---|---|---|---|
-| Registered company name | **Required** | "PricewaterhouseCoopers Middle East Ltd." | CMS → Settings → `name` |
-| Display name | **Required** | "PwC Middle East" — what employees see in the app | `short_name` |
-| Slug | We generate | `pwc-me` — used in URLs and email overrides | `slug` |
-| Website | *Optional* | https://www.pwc.com/me | `website` |
-| Trading regions | **Required** | Countries the trial covers (e.g. UAE, KSA, Egypt) | Used for crisis-resource defaults |
-| Headquarters address | *Optional* | Free text | `address`, `postcode` |
-| Total employee headcount | **Required** | Approx whole number | `total_employees` |
-| Pilot cohort size | **Required** | How many employees in the first wave | Used to set baseline expectations |
-| Pilot launch date | **Required** | DD/MM/YYYY | Status flips `planning → launched` here |
-| Trial duration | **Required** | e.g. "12 weeks" | Renewal calendar |
+> **Note on brand and design** — your communications team will handle
+> logos, colours and marketing assets separately. There are no design
+> questions in this form.
 
 ---
 
-## 2. Contacts
+## 1. About your organisation
 
-We need at least two named contacts so we always have someone reachable.
-
-| Role | Required? | What we need | Why |
-|---|---|---|---|
-| **Primary commercial contact** | **Required** | Name, job title, email, phone | Commercial / scope / billing |
-| **Welfare / HR lead** | **Required** | Name, job title, email, phone | Where we escalate Level-4/5 cases. See [Wellbeing Protection Policy (Pro)](/operations/wellbeing-protection-policy-pro). |
-| **Tech / IT contact** | **Required** | Name, email | SSO setup, email domain whitelisting, deliverability of `noreply@mindmeasure.co.uk` |
-| **Comms / launch contact** | *Optional* | Name, email | Owns the internal launch comms plan |
-| **Mental Health First Aiders** | *Optional* | List of named MHFAs with contact details | Surfaced in the in-app Help screen |
-
----
-
-## 3. Brand assets
-
-Anything not supplied falls back to a Mind Measure default that we'll iterate
-on after first review.
-
-| Asset | Required? | Format | Notes |
-|---|---|---|---|
-| Logo — colour | **Required** | PNG or SVG, ≥ 300px wide, transparent background | Used on the company dashboard header |
-| Logo — white / mono | *Optional* | PNG or SVG | For dark backgrounds (mobile splash, dashboard) |
-| Primary brand colour | **Required** | Hex (e.g. `#D04A02`) | Drives company-specific accents |
-| Secondary brand colour | *Optional* | Hex | Optional — defaults to neutral grey |
-| Brand guidelines doc | *Optional* | PDF link | Helps us pick correct shades for charts |
-| Hero / campus image | *Optional* | JPG, ≥ 1600px wide | Used on the company landing page if requested |
-
----
-
-## 4. Organisational structure
-
-Mind Measure groups employees by **Division** (business unit / line of
-service) and then by **Department** (team / practice). Cohort analytics
-become much richer once this is populated. If the company's nomenclature
-differs, see [Section 6 — Employee profile fields](#6-employee-profile-fields)
-to relabel.
-
-### 4.1 Divisions
-
-For each division, give us:
-
-- Name (e.g. "Consulting")
-- Short name (e.g. "Cons") — used in narrow dashboard cards
-- Approx headcount
-- Departments / practices underneath (see 4.2)
-
-### 4.2 Departments
-
-For each department within a division:
-
-- Name (e.g. "Strategy &amp; Operations")
-- Approx headcount
-
-A blank departments list is fine — we can collect that information later
-once employees self-assign in the mobile app.
-
-### 4.3 Offices / sites
-
-List every physical office or work site the pilot covers:
-
-| Field | Required? | Example |
-|---|---|---|
-| Office name | **Required** | "Emaar Square, Dubai" |
-| City | **Required** | "Dubai" |
-| Country | **Required** | "UAE" |
-| Approx headcount | *Optional* | 1,400 |
-| Address | *Optional* | Used for local-resource mapping |
-
----
-
-## 5. Allowed sign-in email domains
-
-Which email domains identify your employees? We use these to route a user to
-your company on sign-up and to whitelist your domain at Cognito.
-
-| Field | Required? | Example |
-|---|---|---|
-| Primary domain(s) | **Required** | `pwc.com`, `pwc.co.uk` |
-| Contractor / partner domains | *Optional* | `pwc-contractors.com` — should these access the trial? |
-| Should personal email signups be blocked? | **Required** | Yes / No |
-
----
-
-## 6. Employee profile fields
-
-When an employee finishes their baseline assessment, the mobile app asks
-them for a few profile fields. The defaults (below) cover most companies,
-but we can relabel or add/remove fields per company.
-
-| Field | Default label | Default options | Change requested? |
-|---|---|---|---|
-| Division | "Business unit" | from your 4.1 list | |
-| Department | "Department" | from your 4.2 list | |
-| Seniority | "Level" | Junior · Mid-level · Senior · Lead/Manager · Director+ | |
-| Work mode | "Work mode" | Office · Hybrid · Remote | |
-| Office | "Primary office" | from your 4.3 list | |
-
-If your company uses a different ladder (e.g. PwC uses Associate → Senior
-Associate → Manager → Senior Manager → Director → Partner), tell us the
-exact options here. Any field you mark "showInCohortFilter" will appear as
-a slice in the cohort analysis screen.
-
-Bespoke fields we can add: age range, tenure band, ethnicity, gender, line
-manager, secondment status — let us know and we'll wire them in.
-
----
-
-## 7. Wellbeing & welfare services
-
-This section is the most important. It populates the in-app **Help**
-screen, the Jodie agent's knowledge base, and the welfare escalation flow
-described in the [Wellbeing Protection Policy](/operations/wellbeing-protection-policy-pro)
-and [Hierarchy of Help](/operations/hierarchy-of-help).
-
-### 7.1 Internal support
-
-| Service | Required? | What we need |
-|---|---|---|
-| **Employee Assistance Programme (EAP)** | **Required** | Provider name, 24/7 phone, web portal URL, login instructions |
-| **HR support contact** | **Required** | Name, email, phone, hours |
-| **Occupational health** | *Optional* | Provider, contact, how to access |
-| **Mental Health First Aiders** | *Optional* | Named list with contact (Slack, email, phone) |
-| **Manager support / line manager escalation** | *Optional* | One-paragraph description of how an employee escalates a concern |
-| **Internal wellbeing programmes** | *Optional* | Yoga, mindfulness, peer-support groups — name + how to join |
-
-### 7.2 External crisis resources
-
-We include sensible defaults per country (UK: Samaritans 116 123, etc.).
-If your company prefers different services or operates in regions our
-defaults don't cover (e.g. UAE, KSA), list them here:
-
-| Field | Example |
+| Question | Your answer |
 |---|---|
-| Service name | "Estijaba — UAE Mental Wellness Line" |
-| Phone | 8001717 |
-| Hours | 24/7 |
-| Languages | Arabic, English |
-| Web | https://… |
-| Notes | Free for residents of Abu Dhabi |
+| 1.1 Registered company name | |
+| 1.2 Display name (what employees will see in the app) | |
+| 1.3 Company website | |
+| 1.4 Headquarters location (city, country) | |
+| 1.5 Countries this pilot will cover | |
+| 1.6 Total employee headcount | |
+| 1.7 How many employees will be in the first pilot wave? | |
+| 1.8 Preferred pilot launch date | |
+| 1.9 Expected trial duration (e.g. 12 weeks, 6 months) | |
+| 1.10 What does success look like for this pilot? *(one or two sentences)* | |
 
-### 7.3 Hierarchy of help
+---
 
-When Mind Measure detects a Level-3+ score, the in-app interstitial offers
-the employee a graded list of help options. Tell us your preferred order
-for this company. Default Pro order is:
+## 2. People we'll work with
+
+We'll need at least three named contacts at your organisation so that we
+always have someone reachable. Tell us who they are.
+
+### 2.1 Primary HR / programme owner *(required)*
+
+The person who owns the rollout day to day.
+
+| Field | Your answer |
+|---|---|
+| Name | |
+| Job title | |
+| Work email | |
+| Direct phone | |
+
+### 2.2 Welfare lead *(required)*
+
+The person we will escalate to if Mind Measure detects an employee may be at
+risk of harm. This is often the same person as 2.1, but doesn't have to be.
+
+| Field | Your answer |
+|---|---|
+| Name | |
+| Job title | |
+| Work email | |
+| Direct phone | |
+| Out-of-hours contact (if different) | |
+
+### 2.3 IT / tech contact *(required)*
+
+The person who can help with email domains, single sign-on, and ensuring
+Mind Measure emails are delivered reliably.
+
+| Field | Your answer |
+|---|---|
+| Name | |
+| Job title | |
+| Work email | |
+
+### 2.4 Mental Health First Aiders *(optional but recommended)*
+
+A list of trained MHFAs at your organisation. We can surface them in the
+in-app Help screen so employees know exactly who to reach out to. List as
+many as you'd like — name, the best way to contact them (email or chat),
+and any office or team they cover.
+
+> Your answer:
+>
+> *(e.g. "Sarah Khan, sarah.khan@example.com — Dubai office, all teams")*
+>
+>
+>
+>
+>
+
+---
+
+## 3. How your organisation is structured
+
+Mind Measure becomes much more useful when we can show wellbeing patterns
+broken down by team, seniority, work setting, and location. To do that we
+need a picture of how your organisation is structured.
+
+### 3.1 Business units / divisions
+
+What are your top-level business units? For each one, give us its name,
+roughly how many people work in it, and the teams or practices that sit
+underneath it.
+
+> Your answer:
+>
+> *(e.g. "Consulting — 1,400 people — Strategy &amp; Operations, Technology Consulting, People &amp; Organisation, Risk Consulting")*
+>
+>
+>
+>
+>
+>
+
+### 3.2 Offices and work sites
+
+List every physical office or work site this pilot will cover. For each,
+tell us its name, the city and country it's in, and roughly how many people
+are based there.
+
+> Your answer:
+>
+> *(e.g. "Emaar Square, Dubai — UAE — 1,400 employees")*
+>
+>
+>
+>
+>
+
+---
+
+## 4. Workplace details we ask employees for
+
+When an employee completes their first Mind Measure check-in, the mobile
+app asks them a small number of questions about their role so that we can
+group their (anonymised) results into useful patterns later. Tell us what
+your organisation calls each of the following — or whether you'd like us to
+collect something else entirely.
+
+| Question we ask employees | Default label we use | What would you call this? | Notes / options to offer |
+|---|---|---|---|
+| 4.1 Which business unit do you work in? | "Business unit" | | *(uses your answer to 3.1 by default)* |
+| 4.2 Which team or practice? | "Department" | | *(uses your answer to 3.1 by default)* |
+| 4.3 What's your seniority level? | "Level" | | e.g. Junior, Mid-level, Senior, Lead/Manager, Director+. **List your own ladder here if it differs.** |
+| 4.4 How do you mostly work? | "Work mode" | | e.g. Office, Hybrid, Remote — add/remove options as needed |
+| 4.5 Which is your primary office? | "Primary office" | | *(uses your answer to 3.2 by default)* |
+
+### 4.6 Anything else you'd like us to capture?
+
+Examples: tenure band, line manager name, secondment status, ethnicity, age
+range. We can add bespoke fields here.
+
+> Your answer:
+>
+>
+>
+>
+
+---
+
+## 5. Signing in to the app
+
+### 5.1 Which email domains identify your employees?
+
+Mind Measure uses email domain to route employees to your version of the
+app when they sign up. List every domain that belongs to your organisation.
+
+> Your answer:
+>
+> *(e.g. "pwc.com, pwc.co.uk, pwc.ae")*
+>
+>
+
+### 5.2 Should contractors or partners be able to use the trial?
+
+If yes, tell us which contractor or partner domains should also be allowed.
+
+> Your answer:
+>
+>
+
+### 5.3 Should employees signing in with personal email addresses (Gmail, Outlook etc.) be blocked?
+
+> Your answer:
+>
+>
+
+### 5.4 Do you require single sign-on (SSO)?
+
+If yes, tell us which provider — Microsoft Azure AD / Entra ID, Okta, Google
+Workspace, etc. — and whether you have a preferred timeline for switching it
+on. (SSO is not required for the pilot but most organisations enable it for
+full rollout.)
+
+> Your answer:
+>
+>
+
+---
+
+## 6. Your existing wellbeing support
+
+This is the most important section. Mind Measure is designed to **route
+employees back into the support you already provide** — never to replace
+it. Tell us what's already in place so we can build it into the app.
+
+### 6.1 Employee Assistance Programme (EAP)
+
+| Field | Your answer |
+|---|---|
+| Provider name | |
+| 24/7 phone number | |
+| Web portal URL | |
+| How employees access it (e.g. code, login, just call) | |
+| Languages offered | |
+
+### 6.2 HR / People support
+
+| Field | Your answer |
+|---|---|
+| Contact name or team inbox | |
+| Phone | |
+| Hours of availability | |
+
+### 6.3 Occupational health *(if applicable)*
+
+| Field | Your answer |
+|---|---|
+| Provider name | |
+| How employees access it | |
+| Contact details | |
+
+### 6.4 Manager / line manager escalation
+
+In one paragraph, tell us how an employee is expected to raise a wellbeing
+concern through their line manager. We'll mirror this in the app so the
+language and process matches yours.
+
+> Your answer:
+>
+>
+>
+
+### 6.5 Other internal wellbeing programmes *(optional)*
+
+Mindfulness sessions, peer support groups, yoga, financial wellbeing
+programmes, anything similar. Tell us the name and how an employee joins.
+
+> Your answer:
+>
+>
+>
+
+---
+
+## 7. External crisis support
+
+Mind Measure includes sensible defaults for the country you operate in
+(for example UK: Samaritans 116 123). If your organisation prefers
+different services, or if you operate in countries we should specifically
+cover, list them below.
+
+> Your answer:
+>
+> *(For each: service name, phone number, hours, languages, web address.)*
+>
+>
+>
+>
+
+---
+
+## 8. If Mind Measure detects a high-risk score, who should we route the employee to first?
+
+When a check-in result suggests an employee may be struggling, the app
+gently offers them a list of help options. By default we suggest:
 
 1. Your line manager / HR business partner
 2. Your EAP (24/7)
-3. Mental Health First Aider
-4. National crisis line (country-specific)
-5. Emergency services (999 / 911 / 112 / local)
+3. A Mental Health First Aider
+4. A national crisis line
+5. Emergency services (999 / 112 / local equivalent)
 
-Override any step or insert company-specific options here.
+Would you like to keep this order, change it, or insert a company-specific
+step at any point?
+
+> Your answer:
+>
+>
+>
 
 ---
 
-## 8. Jodie — custom check-in questions *(optional)*
+## 9. Bespoke check-in questions *(optional)*
 
-Mind Measure's voice agent Jodie can ask a small number of
-company-specific questions during the daily check-in. Use these to surface
-issues unique to the company or sector. Examples:
+Mind Measure's voice agent — Jodie — runs the daily check-in. She can ask a
+small number of questions that are specific to your organisation, so we can
+track sentiment on issues you care about. Examples:
 
-- Workload sustainability around quarter-end
-- Sentiment toward an active change programme
-- Specific high-risk projects or client engagements
+- "How are you finding the workload as we approach year-end?"
+- "How has the new hybrid working policy been for you?"
+- "Is there anything about the \{Project X\} engagement you'd like to flag?"
 
-| Field | Example |
+Up to **five bespoke questions** are included on the standard tier. For each
+question you'd like us to add, give us:
+
+> Your answer:
+>
+> *(For each: the question itself, when to ask it — always / first month / specific week — and whether the results should appear as a filter on your dashboard.)*
+>
+>
+>
+>
+>
+
+---
+
+## 10. Data, privacy and reporting
+
+| Question | Your answer |
 |---|---|
-| Question | "How are you finding the workload as we approach the close of Q3?" |
-| When to ask | Always · Weekly · Only in the first month |
-| Tone | Neutral · Encouraging · Direct |
-| Surfaces on dashboard? | Yes — as its own cohort filter |
-
-Limit: **five custom questions** per company on the standard tier.
-
----
-
-## 9. Data, privacy & reporting
-
-| Question | Options | Default |
-|---|---|---|
-| Who can see individual scores? | Welfare team only · HR + welfare · Aggregates only | Aggregates only |
-| Anonymisation threshold for cohort views | Minimum cohort size before scores show (typically 5) | 5 |
-| Data retention | 12 months · 24 months · Until employee leaves · Other | 24 months |
-| Reporting cadence | Weekly · Monthly · Quarterly · On-demand only | Monthly |
-| Reporting format | Dashboard access only · PDF · CSV export · API feed | Dashboard + monthly PDF |
-| SSO required? | Yes — provider (Azure AD / Okta / Google) · No | No |
-| Do you require a Data Processing Agreement signed? | Yes / No | Yes — we sign on customer request |
-| GDPR / data residency requirements | Free text | EU + UK |
+| 10.1 Who in your organisation should be able to see results? *(welfare team only / HR + welfare / aggregates only)* | |
+| 10.2 Minimum cohort size before scores are shown *(we recommend 5 — never lower)* | |
+| 10.3 How long should we retain anonymised data? *(12 months / 24 months / until the employee leaves / other)* | |
+| 10.4 How often would you like wellbeing reports? *(weekly / monthly / quarterly / on-demand only)* | |
+| 10.5 In what format? *(dashboard access / PDF report / CSV export / API)* | |
+| 10.6 Do you need a Data Processing Agreement signed? *(Mind Measure can provide a standard DPA — yes/no)* | |
+| 10.7 Any specific data residency requirements? *(e.g. EU only, UK only, GCC)* | |
 
 ---
 
-## 10. Launch logistics
+## 11. Launch and training
 
-| Field | Example / options |
+| Question | Your answer |
 |---|---|
-| Mobile app distribution | Web PWA only · PWA + iOS TestFlight · PWA + custom App Store build |
-| Custom branded marketing landing page? | Yes / No — if yes, we add a `/[company-slug]` route under `mindmeasurepro.com` |
-| Internal launch comms owned by | Comms contact (Section 2) |
-| Pre-launch all-hands brief? | We can provide a 20-min recorded brief — Yes / No |
-| Training session for HR / welfare team | We provide a 45-min live walkthrough of the admin dashboard before launch — Yes / No |
-| Success metrics for the pilot | Free text — e.g. "30% uptake in first month, NPS &gt; 30, two welfare cases caught early" |
+| 11.1 Will you launch via web only, or do you also need an iOS app? | |
+| 11.2 Would you like a 20-minute pre-launch all-hands brief from Mind Measure? *(recorded or live)* | |
+| 11.3 Would you like a 45-minute walkthrough of the admin dashboard for your HR and welfare team? | |
+| 11.4 Who owns internal launch communications? *(name and email)* | |
+| 11.5 Any dates we should avoid for launch? *(e.g. peak audit season, Ramadan, year-end close)* | |
 
 ---
 
-## 11. Sign-off
+## 12. Anything else?
 
-| Field | Value |
+Anything we haven't asked about, anything we should know, anything that
+makes your organisation a bit different — tell us here.
+
+> Your answer:
+>
+>
+>
+>
+
+---
+
+## Sign-off
+
+| Field | Your answer |
 |---|---|
-| Intake completed by | Name, role, date |
-| Mind Measure account manager | Name, date received |
-| Onboarding kickoff scheduled for | Date |
+| Completed by *(name and role)* | |
+| Date | |
+| Best email for follow-up questions | |
 
----
+Thank you. We'll review your answers and come back to you within two
+working days with anything we need to clarify, alongside a proposed
+kick-off date.
 
-## Internal: import workflow
-
-Once the completed intake is returned:
-
-1. **Create the company shell** via Superuser → Companies → New. Paste the
-   data from Sections 1–3.
-2. **Org structure** (Sections 4.1–4.3) — paste into the Organisational
-   Structure tab in the CMS. Divisions JSONB, Departments JSONB, Offices
-   JSONB.
-3. **Profile fields** (Section 6) — Employee Profile Fields tab. If
-   customised, override the default config.
-4. **Welfare services** (Sections 7.1, 7.2, 7.3) — Emergency Resources tab,
-   Hierarchy of Help tab.
-5. **Allowed domains** (Section 5) — Settings → `allowed_email_domains`.
-   Also add to `DOMAIN_OVERRIDES` in `CompanyResolver.ts` if you need an
-   immediate non-DB override.
-6. **Jodie custom questions** (Section 8) — Institutional Agents tab. The
-   Jodie agent is regenerated automatically.
-7. **Brand assets** (Section 3) — upload via the Settings tab. Logo files
-   land in S3 (`mindmeasure-user-content-459338929203`).
-8. **Smoke test** — sign in to the mobile app with a test email matching
-   the allowed domain, complete the baseline, verify cohort analytics
-   surface the correct division/department lists.
-9. **Status flip** — once the smoke test passes, move company status from
-   `planning` → `launched` (this enables real-data display in the dashboard
-   instead of the placeholder zero-state).
+— The Mind Measure team
