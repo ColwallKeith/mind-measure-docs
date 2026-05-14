@@ -83,7 +83,7 @@ All repos live under the Mind Measure workspace root unless noted.
 1. **Do not modify the check-in / assessment conversation pipeline** implemented with ElevenLabs and the multimodal assessment engine in production without an explicit, reviewed change plan. Treat it as frozen unless leadership approves a scoped change.
 2. **Do not hardcode database credentials.** Use `getSecureDbConfig()` from `api/_lib/db-config.ts` (or the established pattern in each repo).
 3. **Avoid partial commits** in any single repo: commit all related files together so Vercel never deploys half a change set.
-4. **Deploy workflow:** push to `main` → Vercel auto-build. **Exceptions** (no GitHub auto-deploy on some projects): university hub, pro hub, and docs site may require manual Vercel deploy — confirm in the repo’s README or ops notes; still avoid casual `vercel --prod` outside that documented process.
+4. **Deploy workflow:** push to `main` → Vercel auto-build. **Exception:** `mind-measure-pro-hub` lives under the `ColwallKeith` personal GitHub account, so the org-wide Vercel App grant doesn't cover it and pushes don't auto-deploy. Deploy it manually with `npx vercel --prod` until the repo is transferred to the `Mind-Measure` org. All other repos (including `mind-measure-docs` and `mind-measure-university-hub`) auto-deploy on push to `main`.
 
 ---
 
