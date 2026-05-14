@@ -57,7 +57,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. JWT session cookie (from login page) — decode-only, no signature check in Edge
+  // 3. JWT session cookie (from login page). Decode only, no signature check in Edge.
   const sessionCookie = req.cookies.get(SESSION_COOKIE);
   if (sessionCookie) {
     const payload = decodeJwtPayload(sessionCookie.value);
@@ -66,7 +66,7 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // 4. Not authenticated — redirect to login
+  // 4. Not authenticated. Redirect to login.
   const loginUrl = req.nextUrl.clone();
   loginUrl.pathname = '/login';
   loginUrl.searchParams.set('from', req.nextUrl.pathname);
@@ -74,5 +74,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!login|api/auth|_next/static|_next/image|favicon.ico|images).*)'],
+  matcher: ['/((?!login|api/auth|_next/static|_next/image|favicon.ico|images|downloads).*)'],
 };
