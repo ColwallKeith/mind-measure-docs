@@ -224,6 +224,16 @@ children.push(
   body(
     'It should take roughly 30 minutes to complete with the right people in the room — typically HR, with an occasional dip into IT for section 5. Please return the completed document to your Mind Measure account manager. If you are unsure of any answer, leave it blank and we will discuss it at your kick-off call.'
   ),
+  heading('How Mind Measure works at your organisation', HeadingLevel.HEADING_2),
+  body(
+    'Mind Measure has two touchpoints, and a few of the questions below relate to each one — so it helps to have this in mind as you go through:'
+  ),
+  body(
+    '  •  The mobile app (iOS and Android — native) is where your employees check in, see their wellbeing scores, and access the support resources you have signed off. Employees do not access Mind Measure through a web browser.'
+  ),
+  body(
+    '  •  The admin dashboard (web) is where your HR and welfare team view anonymised, aggregated results, manage cohort analysis, and run reports. Only your nominated welfare and HR contacts have access.'
+  ),
   small(
     'A note on brand and design: your communications team will handle logos, colours and any marketing assets as a separate workstream. There are no design questions in this document.'
   ),
@@ -363,11 +373,14 @@ children.push(
 
 // ─── 5. Signing in ───
 children.push(
-  heading('5. Signing in to the app'),
+  heading('5. Signing in'),
+  body(
+    'Employees sign in to the mobile app; your HR and welfare team sign in to the web admin dashboard. The questions below cover both.'
+  ),
 
   heading('5.1 Which email domains identify your employees?', HeadingLevel.HEADING_2),
   body(
-    'Mind Measure uses email domain to route employees to your version of the app when they sign up. List every domain that belongs to your organisation.'
+    'Mind Measure uses email domain to recognise an employee belongs to your organisation when they sign up to the mobile app. List every domain that belongs to you.'
   ),
   longAnswer('e.g. "pwc.com, pwc.co.uk, pwc.ae"'),
   blank(),
@@ -383,7 +396,7 @@ children.push(
 
   heading('5.4 Do you require single sign-on (SSO)?', HeadingLevel.HEADING_2),
   body(
-    'If yes, tell us which provider (Microsoft Azure AD / Entra ID, Okta, Google Workspace, etc.) and whether you have a preferred timeline for switching it on. SSO is not required for the pilot but most organisations enable it for full rollout.'
+    'SSO can apply to the mobile app, the admin dashboard, or both. If you require it, tell us which provider (Microsoft Azure AD / Entra ID, Okta, Google Workspace, etc.) and whether you have a preferred timeline for switching it on. SSO is not required for the pilot, but most organisations enable it before full rollout.'
   ),
   longAnswer(),
   divider()
