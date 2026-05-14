@@ -1,4 +1,4 @@
-# Company Intake — Internal Import Workflow
+# Company Intake: Internal Import Workflow
 
 > **Internal use only.** This page maps answers from the customer-facing
 > [Company Onboarding Questionnaire](/operations/company-intake) to the
@@ -12,7 +12,7 @@ order. A clean fully-returned intake should take about 20 minutes to import.
 
 ## Field mapping
 
-### Section 1 — About your organisation
+### Section 1: About your organisation
 
 | Question | CMS field | DB column |
 |---|---|---|
@@ -20,26 +20,26 @@ order. A clean fully-returned intake should take about 20 minutes to import.
 | 1.2 Display name | Settings → Short name | `companies.short_name` |
 | 1.3 Website | Settings → Website | `companies.website` |
 | 1.4 HQ location | Settings → Address | `companies.address`, `postcode` |
-| 1.5 Countries covered | *(internal use — crisis-resource defaults)* | — |
+| 1.5 Countries covered | *(internal use, crisis-resource defaults)* | n/a |
 | 1.6 Total headcount | Settings → Total employees | `companies.total_employees` |
-| 1.7 Pilot cohort size | *(internal — used for uptake expectations)* | — |
+| 1.7 Pilot cohort size | *(internal, used for uptake expectations)* | n/a |
 | 1.8 Launch date | Set status `planning → launched` on this date | `companies.status` |
-| 1.9 Trial duration | Renewal calendar reminder | — |
-| 1.10 Success metrics | Pilot review template | — |
+| 1.9 Trial duration | Renewal calendar reminder | n/a |
+| 1.10 Success metrics | Pilot review template | n/a |
 
 Generate the slug from 1.2 (e.g. "PwC Middle East" → `pwc-me`). Confirm
 uniqueness before saving.
 
-### Section 2 — Contacts
+### Section 2: Contacts
 
 | Question | CMS field | DB column |
 |---|---|---|
 | 2.1 HR / programme owner | Settings → Primary contact | `companies.contact_email`, `contact_phone` |
 | 2.2 Welfare lead | Emergency Resources → Primary welfare contact | `emergency_contacts` JSONB |
-| 2.3 IT contact | *(internal — Cognito, email deliverability)* | — |
+| 2.3 IT contact | *(internal, Cognito, email deliverability)* | n/a |
 | 2.4 MHFAs | Emergency Resources → Mental Health First Aiders | `emergency_contacts` JSONB |
 
-### Section 3 — Org structure
+### Section 3: Org structure
 
 | Question | CMS field | DB column |
 |---|---|---|
@@ -48,10 +48,10 @@ uniqueness before saving.
 | 3.2 Offices | Organisational Structure → Offices | `companies.offices` JSONB |
 
 If the customer gives you headcount per department, fill `employeeCount`
-on each leaf. If they don't, leave it blank — the dashboard will use the
+on each leaf. If they don't, leave it blank, the dashboard will use the
 honest empty state (per the live-only fix).
 
-### Section 4 — Employee profile fields
+### Section 4: Employee profile fields
 
 This maps to the `companies.profile_fields` JSONB column (added in
 migration 013). Edit via the **Employee Profile Fields** tab in the CMS.
@@ -60,28 +60,28 @@ migration 013). Edit via the **Employee Profile Fields** tab in the CMS.
 |---|---|---|
 | 4.1 Business unit name | `division` | `select_from_company_divisions` |
 | 4.2 Team / practice name | `department` | `select_from_company_departments` |
-| 4.3 Seniority ladder | `seniority` | `select` — copy the customer's exact options |
-| 4.4 Work mode options | `work_mode` | `select` — copy the customer's exact options |
+| 4.3 Seniority ladder | `seniority` | `select`, copy the customer's exact options |
+| 4.4 Work mode options | `work_mode` | `select`, copy the customer's exact options |
 | 4.5 Primary office label | `office_location` | `select_from_company_offices` |
-| 4.6 Bespoke fields | new key per field | `select` or `text` — add to `fields[]` array |
+| 4.6 Bespoke fields | new key per field | `select` or `text`, add to `fields[]` array |
 
 For each field, decide whether `showInCohortFilter` should be true based on
 the customer's answer. Set `required: true` for division, department and
 seniority by default.
 
-### Section 5 — Sign-in
+### Section 5: Sign-in
 
 | Question | CMS field | DB column |
 |---|---|---|
 | 5.1 Primary domains | Settings → Allowed email domains | `companies.settings.allowed_email_domains[]` |
 | 5.2 Contractor domains | append to the same list | same |
-| 5.3 Block personal email? | *(Cognito rule)* | — |
-| 5.4 SSO requirement | *(Cognito identity provider — separate ticket)* | — |
+| 5.3 Block personal email? | *(Cognito rule)* | n/a |
+| 5.4 SSO requirement | *(Cognito identity provider, separate ticket)* | n/a |
 
 If you need an immediate non-DB override (testing, demos), also add to
 `DOMAIN_OVERRIDES` in `mind-measure-pro-mobile/src/services/CompanyResolver.ts`.
 
-### Section 6 — Internal support services
+### Section 6: Internal support services
 
 | Question | CMS field | DB column |
 |---|---|---|
@@ -91,7 +91,7 @@ If you need an immediate non-DB override (testing, demos), also add to
 | 6.4 Manager escalation paragraph | Hierarchy of Help → step 1 description | `companies.hierarchy_of_help` JSONB |
 | 6.5 Other programmes | Emergency Resources → custom cards | `local_resources` JSONB |
 
-### Section 7 — External crisis support
+### Section 7: External crisis support
 
 | Question | CMS field | DB column |
 |---|---|---|
@@ -99,9 +99,9 @@ If you need an immediate non-DB override (testing, demos), also add to
 
 If the customer didn't list anything, leave the platform defaults in place
 for their country (UK: Samaritans, Shout; US: 988; UAE: Estijaba 8001717,
-etc. — see `national_mental_health_resources` table).
+etc., see `national_mental_health_resources` table).
 
-### Section 8 — Hierarchy of help
+### Section 8: Hierarchy of help
 
 | Question | CMS field | DB column |
 |---|---|---|
@@ -110,7 +110,7 @@ etc. — see `national_mental_health_resources` table).
 Default order is documented at [Hierarchy of Help](/operations/hierarchy-of-help).
 Apply any customer overrides as steps in that JSONB structure.
 
-### Section 9 — Bespoke Jodie questions
+### Section 9: Bespoke Jodie questions
 
 | Question | CMS field | DB column |
 |---|---|---|
@@ -120,19 +120,19 @@ Adding a custom question triggers Jodie regeneration via the
 `/api/agents/create` endpoint. Verify the new prompt is live before
 launch.
 
-### Section 10 — Privacy & reporting
+### Section 10: Privacy & reporting
 
 | Question | Where it lives |
 |---|---|
-| 10.1 Who sees results | RBAC config — set role visibility in Settings |
+| 10.1 Who sees results | RBAC config, set role visibility in Settings |
 | 10.2 Cohort minimum size | Settings → `companies.settings.cohort_min_size` (default 5) |
 | 10.3 Retention period | Settings → `companies.settings.retention_months` |
 | 10.4 Reporting cadence | Wellbeing Reports → schedule |
 | 10.5 Format | Wellbeing Reports → channels |
-| 10.6 DPA | Legal — send standard DPA, file signed copy |
-| 10.7 Data residency | *(internal — Aurora region routing)* |
+| 10.6 DPA | Legal, send standard DPA, file signed copy |
+| 10.7 Data residency | *(internal, Aurora region routing)* |
 
-### Section 11 — Launch & training
+### Section 11: Launch & training
 
 | Question | Where it lives |
 |---|---|
@@ -146,30 +146,30 @@ launch.
 
 ## Import order
 
-1. **Create the company shell** — Superuser → Companies → New. Paste
-   sections 1.1–1.6 and the slug.
-2. **Org structure** — Organisational Structure tab. Paste section 3.1
+1. **Create the company shell**, Superuser → Companies → New. Paste
+   sections 1.1-1.6 and the slug.
+2. **Org structure**, Organisational Structure tab. Paste section 3.1
    (divisions and their departments) and section 3.2 (offices).
-3. **Employee Profile Fields** — paste any customer overrides from
+3. **Employee Profile Fields**, paste any customer overrides from
    section 4. If the customer didn't change anything, the corporate
    default from migration 013 is already in place.
-4. **Allowed email domains** — Settings tab. Paste section 5.1 and 5.2 in.
-5. **Emergency Resources** — paste sections 6.1, 6.2, 6.3, 6.5 and 7.
-6. **Hierarchy of Help** — paste section 8.
-7. **Custom Jodie questions** — Institutional Agents tab. Paste section 9.
+4. **Allowed email domains**, Settings tab. Paste section 5.1 and 5.2 in.
+5. **Emergency Resources**, paste sections 6.1, 6.2, 6.3, 6.5 and 7.
+6. **Hierarchy of Help**, paste section 8.
+7. **Custom Jodie questions**, Institutional Agents tab. Paste section 9.
    Confirm Jodie regeneration succeeded.
-8. **Privacy settings** — Settings tab. Apply section 10 answers.
-9. **Smoke test** — sign in to the mobile app with a test email matching
+8. **Privacy settings**, Settings tab. Apply section 10 answers.
+9. **Smoke test**, sign in to the mobile app with a test email matching
    the allowed domain, complete the baseline, open the dashboard and
    confirm the cohort filters surface the right division/department lists.
-10. **Status flip** — when the smoke test passes and the launch date is
+10. **Status flip**, when the smoke test passes and the launch date is
     confirmed, move `status` from `planning` to `launched`.
 
 ---
 
 ## Brand assets (handled separately by Comms)
 
-Brand assets are explicitly excluded from the customer questionnaire — the
+Brand assets are explicitly excluded from the customer questionnaire, the
 customer's communications team handles logo files, brand colour and any
 campus / hero imagery as a side workstream. When those arrive:
 

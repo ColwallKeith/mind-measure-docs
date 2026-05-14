@@ -10,7 +10,7 @@
  * and can be linked from the questionnaire page.
  *
  * Keep the content in this file in sync with
- * pages/operations/company-intake.mdx — both target the same audience.
+ * pages/operations/company-intake.mdx (both target the same audience).
  */
 
 import {
@@ -169,7 +169,7 @@ const fourColTable = (rows) =>
   });
 
 /**
- * Multi-line free-text answer block — labelled prompt with an empty
+ * Multi-line free-text answer block. Labelled prompt with an empty
  * shaded box people can write inside.
  */
 const longAnswer = (placeholder = '') => {
@@ -222,14 +222,14 @@ children.push(
     'Welcome, and thank you for choosing Mind Measure to support your people. This short questionnaire helps us set up your organisation on the Mind Measure platform so that everything is ready for the day your pilot launches.'
   ),
   body(
-    'It should take roughly 30 minutes to complete with the right people in the room — typically HR, with an occasional dip into IT for section 5. Please return the completed document to your Mind Measure account manager. If you are unsure of any answer, leave it blank and we will discuss it at your kick-off call.'
+    'It should take roughly 30 minutes to complete with the right people in the room (typically HR, with an occasional dip into IT for section 5). Please return the completed document to your Mind Measure account manager. If you are unsure of any answer, leave it blank and we will discuss it at your kick-off call.'
   ),
   heading('How Mind Measure works at your organisation', HeadingLevel.HEADING_2),
   body(
-    'Mind Measure has two touchpoints, and a few of the questions below relate to each one — so it helps to have this in mind as you go through:'
+    'Mind Measure has two touchpoints, and a few of the questions below relate to each one, so it helps to have this in mind as you go through:'
   ),
   body(
-    '  •  The mobile app (iOS and Android — native) is where your employees check in, see their wellbeing scores, and access the support resources you have signed off. Employees do not access Mind Measure through a web browser.'
+    '  •  The mobile app (native iOS and Android) is where your employees check in, see their wellbeing scores, and access the support resources you have signed off. Employees do not access Mind Measure through a web browser.'
   ),
   body(
     '  •  The admin dashboard (web) is where your HR and welfare team view anonymised, aggregated results, manage cohort analysis, and run reports. Only your nominated welfare and HR contacts have access.'
@@ -294,9 +294,9 @@ children.push(
 
   heading('2.4 Mental Health First Aiders (optional but recommended)', HeadingLevel.HEADING_2),
   body(
-    'A list of trained MHFAs at your organisation. We can surface them in the in-app Help screen. List as many as you would like — name, best way to contact them (email or chat), and any office or team they cover.'
+    'A list of trained MHFAs at your organisation. We can surface them in the in-app Help screen. List as many as you would like, with name, best way to contact them (email or chat), and any office or team they cover.'
   ),
-  longAnswer('e.g. "Sarah Khan, sarah.khan@example.com — Dubai office, all teams"'),
+  longAnswer('e.g. "Sarah Khan, sarah.khan@example.com, Dubai office, all teams"'),
   divider()
 );
 
@@ -312,7 +312,7 @@ children.push(
     'What are your top-level business units? For each one, give us its name, roughly how many people work in it, and the teams or practices that sit underneath it.'
   ),
   longAnswer(
-    'e.g. "Consulting — 1,400 people — Strategy & Operations, Technology Consulting, People & Organisation, Risk Consulting"'
+    'e.g. "Consulting, 1,400 people. Practices: Strategy & Operations, Technology Consulting, People & Organisation, Risk Consulting"'
   ),
   blank(),
 
@@ -320,7 +320,7 @@ children.push(
   body(
     'List every physical office or work site this pilot will cover. For each, tell us its name, the city and country it is in, and roughly how many people are based there.'
   ),
-  longAnswer('e.g. "Emaar Square, Dubai — UAE — 1,400 employees"'),
+  longAnswer('e.g. "Emaar Square, Dubai, UAE, 1,400 employees"'),
   divider()
 );
 
@@ -347,13 +347,13 @@ children.push(
       'What is your seniority level?',
       'Level',
       '',
-      'e.g. Junior, Mid-level, Senior, Lead/Manager, Director+ — list your own ladder here if it differs',
+      'e.g. Junior, Mid-level, Senior, Lead/Manager, Director+. List your own ladder here if it differs',
     ],
     [
       'How do you mostly work?',
       'Work mode',
       '',
-      'e.g. Office, Hybrid, Remote — add/remove options as needed',
+      'e.g. Office, Hybrid, Remote. Add or remove options as needed',
     ],
     [
       'Which is your primary office?',
@@ -406,7 +406,7 @@ children.push(
 children.push(
   heading('6. Your existing wellbeing support'),
   body(
-    'This section is the most important. Mind Measure is designed to route employees back into the support you already provide — never to replace it. Tell us what is already in place so we can build it into the app.'
+    'This section is the most important. Mind Measure is designed to route employees back into the support you already provide, never to replace it. Tell us what is already in place so we can build it into the app.'
   ),
 
   heading('6.1 Employee Assistance Programme (EAP)', HeadingLevel.HEADING_2),
@@ -473,7 +473,7 @@ children.push(
 children.push(
   heading('9. Bespoke check-in questions (optional)'),
   body(
-    "Mind Measure's voice agent — Jodie — runs the daily check-in. She can ask a small number of questions that are specific to your organisation, so we can track sentiment on issues you care about. Examples:"
+    "Mind Measure's voice agent, Jodie, runs the daily check-in. She can ask a small number of questions that are specific to your organisation, so we can track sentiment on issues you care about. Examples:"
   ),
   body('  • "How are you finding the workload as we approach year-end?"'),
   body('  • "How has the new hybrid working policy been for you?"'),
@@ -490,11 +490,11 @@ children.push(
   heading('10. Data, privacy and reporting'),
   qaTable([
     'Who in your organisation should be able to see results? (welfare team only / HR + welfare / aggregates only)',
-    'Minimum cohort size before scores are shown (we recommend 5 — never lower)',
+    'Minimum cohort size before scores are shown (we recommend 5, never lower)',
     'How long should we retain anonymised data? (12 months / 24 months / until the employee leaves / other)',
     'How often would you like wellbeing reports? (weekly / monthly / quarterly / on-demand only)',
     'In what format? (dashboard access / PDF report / CSV export / API)',
-    'Do you need a Data Processing Agreement signed? (Mind Measure can provide a standard DPA — yes/no)',
+    'Do you need a Data Processing Agreement signed? (Mind Measure can provide a standard DPA, yes/no)',
     'Any specific data residency requirements? (e.g. EU only, UK only, GCC)',
   ]),
   divider()
@@ -515,7 +515,7 @@ children.push(
 children.push(
   heading('12. Anything else?'),
   body(
-    "Anything we have not asked about, anything we should know, anything that makes your organisation a bit different — tell us here."
+    "Anything we have not asked about, anything we should know, anything that makes your organisation a bit different, tell us here."
   ),
   longAnswer(),
   divider()
@@ -533,7 +533,7 @@ children.push(
   body(
     'Thank you. We will review your answers and come back to you within two working days with anything we need to clarify, alongside a proposed kick-off date.'
   ),
-  body('— The Mind Measure team', { italic: true })
+  body('The Mind Measure team', { italic: true })
 );
 
 // ─── Build the document ──────────────────────────────────────────────────
@@ -569,7 +569,7 @@ const doc = new Document({
               alignment: AlignmentType.RIGHT,
               children: [
                 new TextRun({
-                  text: 'Mind Measure — Onboarding Questionnaire',
+                  text: 'Mind Measure: Onboarding Questionnaire',
                   color: STEEL,
                   size: 18,
                 }),

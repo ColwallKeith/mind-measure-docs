@@ -1,6 +1,6 @@
 # Platform handbook
 
-**Status:** Canonical — single source of truth for how Mind Measure is organised, constrained, and deployed.  
+**Status:** Canonical, single source of truth for how Mind Measure is organised, constrained, and deployed.  
 **Audience:** Engineers and AI agents working in the workspace.  
 **Supersedes:** `docs/archive/DEVELOPMENT_PROTOCOL_MASTER.md` in each core repo (historical; do not treat as current workflow).
 
@@ -28,6 +28,8 @@ If this page disagrees with an old “master” PDF or archive doc, **this page 
 | **University** | Students | `mind-measure-core` → admin.mindmeasure.co.uk | `mind-measure-mobile-final` → mobile.mindmeasure.app | `mind-measure-university-hub` → hub.mindmeasure.co.uk | mindmeasure.co.uk, mindmeasure.app (student) |
 | **Pro** | Employees | `mind-measure-pro-core` → admin.mindmeasurepro.com | `mind-measure-pro-mobile` → mobile.mindmeasurepro.app | `mind-measure-pro-hub` → hub.mindmeasurepro.com | mindmeasurepro.com |
 
+**End-user touchpoints.** Students and employees only use Mind Measure through the **native iOS / Android mobile apps**. They never sign in to a web browser. The "Admin" column above (`admin.mindmeasure.co.uk`, `admin.mindmeasurepro.com`) is the back office used by Mind Measure staff and customer HR / welfare teams. The `mobile.*` domains exist for OTA bundle hosting (Capacitor loads the web bundle from there); customers never visit them in a browser.
+
 **Internal / founder ops (not a product surface):** `mind-measure-ops` → **business.mindmeasure.co.uk** (Next.js, private planning and compliance tracker; super-admin auth only).
 
 ---
@@ -41,7 +43,7 @@ All repos live under the Mind Measure workspace root unless noted.
 | Repo | Domain | Stack | Role |
 |------|--------|-------|------|
 | `mind-measure-core/` | admin.mindmeasure.co.uk | React + Vite | Superuser + university dashboards, **all** `api/*` serverless APIs |
-| `mind-measure-mobile-final/` | mobile.mindmeasure.app | React + Vite + Capacitor | Student app (web + iOS) |
+| `mind-measure-mobile-final/` | mobile.mindmeasure.app | React + Vite + Capacitor | Student native mobile app (iOS, Android). Students access only via the native apps, never via a web browser. |
 | `mind-measure-university-hub/` | hub.mindmeasure.co.uk | Next.js | Content hub |
 | `mind-measure-university-site/` (`Mind Measure website/`) | mindmeasure.co.uk | React + Vite | University marketing |
 
@@ -50,7 +52,7 @@ All repos live under the Mind Measure workspace root unless noted.
 | Repo | Domain | Stack | Role |
 |------|--------|-------|------|
 | `mind-measure-pro-core/` | admin.mindmeasurepro.com | React + Vite | Company dashboards, APIs |
-| `mind-measure-pro-mobile/` | mobile.mindmeasurepro.app | React + Vite + Capacitor | Employee app |
+| `mind-measure-pro-mobile/` | mobile.mindmeasurepro.app | React + Vite + Capacitor | Employee native mobile app (iOS, Android). Employees access only via the native apps, never via a web browser. |
 | `mind-measure-pro-hub/` | hub.mindmeasurepro.com | Next.js | Company content hub |
 | `mindmeasurepro/` | mindmeasurepro.com | React + Vite | Corporate marketing |
 
@@ -65,7 +67,7 @@ All repos live under the Mind Measure workspace root unless noted.
 
 ### Packages (npm, `@mindmeasure/*`)
 
-`mindmeasure-shared-types`, `mindmeasure-shared-services`, `mindmeasure-shared-ui`, `mindmeasure-api-lib` — shared libraries; publish/version per package workflow.
+Shared libraries: `mindmeasure-shared-types`, `mindmeasure-shared-services`, `mindmeasure-shared-ui`, `mindmeasure-api-lib`. Publish and version per package workflow.
 
 ---
 
@@ -109,7 +111,7 @@ Before **writing code or plans** for work that affects production behaviour:
    - [Weekly reflection](/operations/weekly-reflection)
    - [Weekly reflection runbook](/operations/weekly-reflection-runbook)
 3. If changing welfare or disclosure behaviour, also read [Wellbeing protection policy](/operations/wellbeing-protection-policy) and [Wellbeing protection tech spec](/operations/wellbeing-protection-tech-spec).
-4. Read the **actual source files** you will change — documentation is not a substitute.
+4. Read the **actual source files** you will change, documentation is not a substitute.
 
 Cursor rule: `.cursor/rules/session-start-protocol.mdc` mirrors this list.
 
@@ -119,9 +121,9 @@ Cursor rule: `.cursor/rules/session-start-protocol.mdc` mirrors this list.
 
 Workspace root and variants:
 
-- `jodie_prompt_v2.md` — base  
-- `jodie_prompt_v2_uni.md` — university / student  
-- `jodie_prompt_v2_pro.md` — workplace  
+- `jodie_prompt_v2.md` (base)  
+- `jodie_prompt_v2_uni.md` (university / student)  
+- `jodie_prompt_v2_pro.md` (workplace)  
 
 UK English; one question at a time; consistent UX rules as documented in prompt files and [Jodie](/admin) sections where applicable.
 
@@ -147,7 +149,7 @@ Institutional agents are provisioned per university/company; see [Institutional 
 | Repo detail | [Repository map](/architecture/repository-map) |
 | System diagram & legacy detail | [Architecture overview](/architecture) |
 | Roadmap / goals | Internal `.cursor/rules/current-goals.mdc` (also summarise in planning docs) |
-| Archived master (historical) | `mind-measure-core/docs/archive/DEVELOPMENT_PROTOCOL_MASTER.md` — redirect only |
+| Archived master (historical) | `mind-measure-core/docs/archive/DEVELOPMENT_PROTOCOL_MASTER.md` (redirect only) |
 
 ---
 
