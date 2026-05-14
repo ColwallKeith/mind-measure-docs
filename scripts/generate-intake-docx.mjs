@@ -491,11 +491,9 @@ children.push(
 children.push(
   heading('11. Launch and training'),
   qaTable([
-    'Will you launch via web only, or do you also need an iOS app?',
-    'Would you like a 20-minute pre-launch all-hands brief from Mind Measure? (recorded or live)',
-    'Would you like a 45-minute walkthrough of the admin dashboard for your HR and welfare team?',
-    'Who owns internal launch communications? (name and email)',
-    'Any dates we should avoid for launch? (e.g. peak audit season, Ramadan, year-end close)',
+    'Would you like a 45-minute walkthrough of the admin dashboard for your HR and welfare team before launch?',
+    'Who owns internal launch communications at your end? (name and email)',
+    'Any dates we should avoid for launch? (e.g. peak audit season, Ramadan, year-end close, results week)',
   ]),
   divider()
 );
