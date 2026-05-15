@@ -131,14 +131,21 @@ UK English; one question at a time; consistent UX rules as documented in prompt 
 
 ## ElevenLabs marketing agent IDs (widgets)
 
-| Context | Agent ID |
-|---------|------------|
-| University marketing (mindmeasure.co.uk) | `agent_2101kjqr5fyhffbrb84syvvkf5yn` |
-| Student marketing (mindmeasure.app) | `agent_2201kjrf3g1z4b4rsc4k3gawkfxj` |
-| Corporate marketing (mindmeasurepro.com) | `agent_3801kjrfhe4de10vgjbdjfw0z4ph` |
-| Employee marketing | `agent_3901kjrfnhpa9jxmh0b8bz0dwf7u` |
+| Context | Agent ID | Audience |
+|---------|----------|----------|
+| University marketing (mindmeasure.co.uk) | `agent_2101kjqr5fyhffbrb84syvvkf5yn` | B2B (HE professionals) |
+| Corporate marketing (mindmeasurepro.com) | `agent_3801kjrfhe4de10vgjbdjfw0z4ph` | B2B (HR / decision-makers) |
+| Student marketing (mindmeasure.app, "Talk to Jodie" card) | `agent_0601kjqvx23ee7sbgtqene7hwpzn` | B2C (students) |
 
-Institutional agents are provisioned per university/company; see [Institutional agents](/architecture/institutional-agents).
+There is currently **no employee marketing agent**. The corporate site (mindmeasurepro.com) is the only employer-facing surface; we'll add an employee-facing agent if/when we launch a separate consumer-style site for workers.
+
+**Editing rules** (May 2026):
+- All marketing agents are managed in the ElevenLabs dashboard, not in our serverless codebase. The source of truth for each agent's prompt now lives in `mind-measure-pro-core/scripts/patch-marketing-agents.ts`. Edit the prompt constant there, dry-run, then re-apply with `--apply`. The script backs up the live prompt before each PATCH.
+- Audit current live prompts with `mind-measure-pro-core/scripts/audit-marketing-agents.ts`.
+- **Jodie never quotes pricing on any surface.** Both B2B agents now have an explicit "PRICING IS HANDLED BY THE TEAM" rule; the B2C agent only ever says the app is "free to you". Pricing is a sales conversation, not an AI-companion conversation.
+- The B2C student agent runs **prompt-only** (no KB doc attached). The previous attachment was the B2B University Professional Handbook and could leak commercial framing into student conversations.
+
+Institutional / assessment agents (one per university or company) are a different system. They are provisioned via `api/agents/create` and their prompts are synced via `api/agents/update-base-prompts`; see [Institutional agents](/architecture/institutional-agents). The two systems must not be confused.
 
 ---
 
