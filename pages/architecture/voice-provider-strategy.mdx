@@ -24,35 +24,43 @@ Every check-in conversation across both products runs through **ElevenLabs Conve
 | LLM credit bundle | 300,000 credits/month |
 | Concurrent calls | 10 |
 
-ElevenLabs ConvAI bundles three things into the per-minute hosting fee:
+ElevenLabs ConvAI conversations have **two separate billable components**:
 
-1. **Text-to-speech (TTS)** — Jodie's voice output
-2. **Speech-to-text (STT)** — transcription of the user's speech
-3. **Conversation orchestration** — turn-taking, interruption handling, latency optimisation
+1. **Hosting** — the $0.09/min per-minute fee that covers Text-to-Speech (Jodie's voice), Speech-to-Text (transcription of the user), and conversation orchestration (turn-taking, interruption handling, latency optimisation).
+2. **LLM token pass-through** — billed separately, in credits, against the 300,000-credit bundle. Surfaced in the ElevenLabs dashboard per-conversation as "LLM cost: $X.XX / min · Total: $Y total".
 
-The underlying **LLM tokens are passed through separately** and consume from the credit bundle. At Creator tier 300k credits covers a generous volume of conversations before we'd ever see incremental LLM cost.
+Both components are billed for the *full call duration* (not just agent-speaking time). For a typical 3:13 check-in:
+
+- Hosting: 3.22 min × $0.09 = **$0.29**
+- LLM: ~$0.0789/min × 3.22 min = **$0.25**
+- **Fully loaded per check-in: ~$0.54**
+
+We track both in `cost_tracking` as separate rows (`operation_type='convai_conversation'` for hosting, `operation_type='convai_llm'` for LLM). The Live Providers tab on the cost dashboard shows the split.
+
+At Creator-tier bundle inclusion, the marginal cost of an additional check-in is **$0** until we exceed either 250 minutes or 300,000 credits — the $22 base subscription covers the lot.
 
 ---
 
 ## Tier economics
 
-ElevenLabs publishes per-tier pricing for ConvAI hosting. The cliff is Creator → Pro; everything beyond Pro is flat unit cost.
+The numbers below are **hosting only** — the per-minute ConvAI fee. LLM token pass-through is a separate ~$0.08/min on top, billed against the per-tier credit bundle (300k for Creator, 2M for Pro, 11M+ for Scale and Business).
 
-| Tier | Monthly (annual billing) | Minutes included | Effective $/min within bundle | Overage rate | Est. cost / check-in (3.5 min) |
+| Tier | Monthly (annual billing) | Minutes included | Hosting $/min within bundle | Hosting overage | Est. fully-loaded cost / check-in (3.5 min, hosting + LLM) |
 |---|---|---|---|---|---|
 | **Free** | $0 | 15 | $0.00 | $0.08/min | — |
-| **Starter** | $6 | 50 | $0.12 | $0.08/min | $0.28 |
-| **Creator** ← *us* | $22 | 250 | $0.088 | $0.12/min | $0.31 |
-| **Pro** | $82.50 | 1,238 | $0.067 | $0.08/min | $0.23 |
-| **Scale** | $249.17 | 3,738 | $0.067 | $0.08/min | $0.23 |
-| **Business** | $825 | 12,375 | $0.067 | $0.08/min | $0.23 |
+| **Starter** | $6 | 50 | $0.12 | $0.08/min | ~$0.56 |
+| **Creator** ← *us* | $22 | 250 | $0.088 | $0.12/min | ~$0.54 |
+| **Pro** | $82.50 | 1,238 | $0.067 | $0.08/min | ~$0.46 |
+| **Scale** | $249.17 | 3,738 | $0.067 | $0.08/min | ~$0.46 |
+| **Business** | $825 | 12,375 | $0.067 | $0.08/min | ~$0.46 |
 | **Enterprise** | Custom | Custom | Negotiated | Negotiated | TBD |
 
 Key observations:
 
-- **Pro tier saves ~24% per minute** versus Creator, plus unlocks a 5× larger bundle.
-- **Scale and Business are the same unit cost as Pro** — those tiers buy capacity (more minutes, more concurrent calls, more workspace seats), not better economics.
-- **Creator overage is punitive** ($0.12/min vs $0.09 within bundle). The moment we exceed 250 min/month, the marginal cost rises 33%. This is the trigger to upgrade.
+- **Pro tier saves ~24% on hosting** vs Creator, plus unlocks a 5× larger minute bundle and 6× larger credit bundle. Net fully-loaded saving: ~15% per check-in.
+- **Scale and Business have the same per-unit cost as Pro** — those tiers buy capacity (more minutes, more concurrent calls, more workspace seats, more LLM credits), not better economics.
+- **Creator hosting overage is punitive** ($0.12/min vs $0.09 within bundle, +33%). The moment we exceed 250 min/month, the marginal hosting cost rises sharply. This is the primary trigger to upgrade.
+- **LLM cost is fairly stable across tiers** — pass-through pricing is tied to the underlying LLM (Claude/GPT) rather than the ElevenLabs plan. Adding more tier headroom doesn't reduce LLM cost per call.
 
 ---
 
@@ -74,27 +82,31 @@ Creator gives 1 workspace seat. Pro gives 3. We'll need this once more than one 
 
 ### Approximate scale at each tier
 
-Rough projections assuming 3.5 min/check-in and reasonable rollout:
+Rough projections assuming 3.5 min/check-in (~3,000 LLM credits/check-in) and reasonable rollout. Constraining factor in brackets where it's tight:
 
-| Tier | Monthly check-ins | Reasonable institution size |
-|---|---|---|
-| Creator (250 min) | ~70 | Single small pilot, ~50 users at weekly cadence |
-| Pro (1,238 min) | ~350 | Single pilot at full deployment, ~150 users weekly |
-| Scale (3,738 min) | ~1,000 | Multi-institution rollout, ~500 active users |
-| Business (12,375 min) | ~3,500 | Production at ~1,500 active users |
-| Enterprise | Negotiated | Beyond 1,500 active users — revisit unit economics |
+| Tier | Monthly check-ins (hosting bundle) | LLM credit headroom | Reasonable institution size |
+|---|---|---|---|
+| Creator (250 min · 300k credits) | ~70 | ~100 check-ins before credits exhaust | Single small pilot, ~50 users weekly *(LLM-bound)* |
+| Pro (1,238 min · 2M credits) | ~350 | ~660 check-ins before credits exhaust | Single pilot at full deployment, ~150 users weekly *(hosting-bound)* |
+| Scale (3,738 min · 11M credits) | ~1,000 | ~3,600 check-ins before credits exhaust | Multi-institution rollout, ~500 active users *(hosting-bound)* |
+| Business (12,375 min · 11M+ credits) | ~3,500 | ~3,600+ check-ins before credits exhaust | Production at ~1,500 active users *(possibly credit-bound at high LLM use)* |
+| Enterprise | Negotiated | Negotiated | Beyond 1,500 active users — revisit unit economics |
+
+Note: On Creator, LLM credits run out before the hosting bundle (we'd hit 300k credits at ~100 check-ins vs 70 hosting-minutes' worth of conversations). LLM consumption is the tighter constraint for our prompt design.
 
 ---
 
 ## Cost-tracking infrastructure
 
-Our cost ledger (`cost_tracking` table, Aurora) is provider-agnostic by design. Each row tags `service_type` and `operation_type`, with per-operation cost in USD and flexible `metadata` JSONB. This means switching or adding providers requires:
+Our cost ledger (`cost_tracking` table, Aurora) is provider-agnostic by design. Each row tags `service_type` and `operation_type`, with per-operation cost in USD and flexible `metadata` JSONB. The unique constraint `(service_type, operation_type, external_id)` lets a single provider event have multiple cost components (e.g. an ElevenLabs conversation = one `convai_conversation` hosting row + one `convai_llm` row), which is exactly the pattern we use for ConvAI.
+
+Switching or adding providers requires:
 
 1. A new sync endpoint (one file per provider, modelled on `api/cost/sync-elevenlabs.ts`)
 2. No schema changes
 3. No dashboard changes (it already groups by service)
 
-The dashboard at `admin.mindmeasurepro.com → Costs` aggregates per-provider, per-company, per-period spend and surfaces the bundle utilisation panel showing where we sit relative to plan limits.
+The dashboard at `admin.mindmeasurepro.com → Costs` aggregates per-provider, per-company, per-period spend and surfaces the bundle utilisation panel showing where we sit relative to plan limits. For ElevenLabs it shows hosting and LLM as separate tiles with a "Fully-loaded total" pill below.
 
 ---
 
@@ -181,7 +193,7 @@ Roadmap item: **Voice Provider Abstraction** — listed as Low (R&D) on the curr
 
 ## Open questions
 
-1. **What's the right unit cost ceiling per check-in?** Our scoring relies on a 5-minute conversation. At Business tier that's ~$0.40/check-in fully loaded. Is that the right ceiling for our pricing model, or should we plan to drive it lower before institutional rollout?
+1. **What's the right unit cost ceiling per check-in?** Our scoring relies on a 3-5 minute conversation. At Business tier that's ~$0.46/check-in fully loaded (hosting + LLM). Is that the right ceiling for our pricing model, or should we plan to drive it lower before institutional rollout? Levers: shorter conversations, cheaper LLM, self-hosted TTS.
 
 2. **How do we measure conversational quality between providers?** A blind A/B test needs a quality rubric — empathy, naturalness, recovery from interruption. Worth defining before any provider trial.
 
