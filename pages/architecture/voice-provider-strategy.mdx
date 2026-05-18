@@ -110,6 +110,22 @@ The dashboard at `admin.mindmeasurepro.com → Costs` aggregates per-provider, p
 
 A condensed **Network Costs (MTD)** widget also sits on the superuser **Overview** tab, showing the same total with a per-company breakdown table (cost, check-ins, cost / check-in, % of total). It hits `/api/cost/company-summary?period=mtd` — a lightweight aggregation that joins `cost_tracking` against `companies` and collapses unattributed rows into a single "Platform / uncategorised" row.
 
+### Beyond voice: text and visual analysis are billed separately too
+
+A typical check-in actually consumes **four** distinct paid services, each with its own cost row:
+
+| Service | Cost row | Per check-in (Creator tier, 3.5 min) |
+|---|---|---|
+| ElevenLabs ConvAI hosting | `aws_elevenlabs / convai_conversation` | ~$0.29 |
+| ElevenLabs LLM pass-through | `aws_elevenlabs / convai_llm` | ~$0.25 |
+| AWS Bedrock (Claude 3.7 Sonnet text analysis) | `aws_bedrock / claude_text_analysis` | ~$0.02 |
+| AWS Rekognition (DetectFaces × ~20 frames) | `aws_rekognition / detect_faces` | ~$0.02 |
+| **Total fully loaded** | | **~$0.58** |
+
+Each row carries `external_id = checkinId` (the ElevenLabs conversation id), so all four components for a single check-in can be joined and analysed together. Cost rows are written fire-and-forget from the mobile API routes (`/api/bedrock/analyze-text`, `/api/rekognition/analyze-frames`) — failure to write a cost row never affects the scoring response.
+
+The Pro mobile app (`mind-measure-pro-mobile`) instruments all four components. The university mobile app (`mind-measure-mobile-final`) currently only sees ElevenLabs cost rows; full parity needs a uni-side `cost_tracking` schema migration (the uni table is on the pre-October 2025 minimal shape).
+
 ---
 
 ## Alternative providers
