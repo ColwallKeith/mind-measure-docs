@@ -1,0 +1,200 @@
+# Voice Provider Strategy
+
+Mind Measure's check-in experience is fronted by a conversational voice agent ("Jodie"). The provider behind Jodie has direct, material implications for unit economics, latency, brand voice, and compliance posture. This page captures the current state, the cost ladder we'll move along as we scale, and the alternatives we should be evaluating in parallel.
+
+**Status**: Living document — last reviewed May 2026  
+**Owner**: Founders + engineering lead  
+**Primary repos**: `mind-measure-pro-core`, `mind-measure-core`, `mind-measure-mobile-final`, `mind-measure-pro-mobile`
+
+---
+
+## Current state (May 2026)
+
+Every check-in conversation across both products runs through **ElevenLabs Conversational AI** ("ConvAI") on the **Creator** plan ($22/month).
+
+| Property | Value |
+|---|---|
+| Provider | ElevenLabs ConvAI |
+| Plan | Creator |
+| Base subscription | $22/month |
+| ConvAI minutes included | 250/month |
+| Per-minute rate (within bundle) | $0.09/min |
+| Per-minute rate (overage) | $0.12/min |
+| Burst rate (concurrency overflow) | $0.24/min |
+| LLM credit bundle | 300,000 credits/month |
+| Concurrent calls | 10 |
+
+ElevenLabs ConvAI bundles three things into the per-minute hosting fee:
+
+1. **Text-to-speech (TTS)** — Jodie's voice output
+2. **Speech-to-text (STT)** — transcription of the user's speech
+3. **Conversation orchestration** — turn-taking, interruption handling, latency optimisation
+
+The underlying **LLM tokens are passed through separately** and consume from the credit bundle. At Creator tier 300k credits covers a generous volume of conversations before we'd ever see incremental LLM cost.
+
+---
+
+## Tier economics
+
+ElevenLabs publishes per-tier pricing for ConvAI hosting. The cliff is Creator → Pro; everything beyond Pro is flat unit cost.
+
+| Tier | Monthly (annual billing) | Minutes included | Effective $/min within bundle | Overage rate | Est. cost / check-in (3.5 min) |
+|---|---|---|---|---|---|
+| **Free** | $0 | 15 | $0.00 | $0.08/min | — |
+| **Starter** | $6 | 50 | $0.12 | $0.08/min | $0.28 |
+| **Creator** ← *us* | $22 | 250 | $0.088 | $0.12/min | $0.31 |
+| **Pro** | $82.50 | 1,238 | $0.067 | $0.08/min | $0.23 |
+| **Scale** | $249.17 | 3,738 | $0.067 | $0.08/min | $0.23 |
+| **Business** | $825 | 12,375 | $0.067 | $0.08/min | $0.23 |
+| **Enterprise** | Custom | Custom | Negotiated | Negotiated | TBD |
+
+Key observations:
+
+- **Pro tier saves ~24% per minute** versus Creator, plus unlocks a 5× larger bundle.
+- **Scale and Business are the same unit cost as Pro** — those tiers buy capacity (more minutes, more concurrent calls, more workspace seats), not better economics.
+- **Creator overage is punitive** ($0.12/min vs $0.09 within bundle). The moment we exceed 250 min/month, the marginal cost rises 33%. This is the trigger to upgrade.
+
+---
+
+## When do we upgrade?
+
+The break-even isn't purely about minute volume — it's about **bundle economics**.
+
+### Trigger 1: We exceed 250 minutes/month on Creator
+
+At Creator, the 251st minute costs $0.12 instead of $0.09. Upgrading to Pro brings every minute back down to $0.067 *and* gives us headroom to 1,238 minutes. **Upgrade as soon as we project consistently exceeding 250 min/month** (~71 check-ins at 3.5 min each).
+
+### Trigger 2: Concurrency exceeds 10 calls
+
+Creator caps at 10 concurrent calls. With Jodie's typical 3-minute sessions and even distribution, that supports ~200 check-ins/hour. We won't hit this in early trials but a synchronised "daily 9am check-in" push from a single institution could spike concurrent demand.
+
+### Trigger 3: Workspace seats
+
+Creator gives 1 workspace seat. Pro gives 3. We'll need this once more than one Mind Measure team member needs ElevenLabs dashboard access for agent tuning.
+
+### Approximate scale at each tier
+
+Rough projections assuming 3.5 min/check-in and reasonable rollout:
+
+| Tier | Monthly check-ins | Reasonable institution size |
+|---|---|---|
+| Creator (250 min) | ~70 | Single small pilot, ~50 users at weekly cadence |
+| Pro (1,238 min) | ~350 | Single pilot at full deployment, ~150 users weekly |
+| Scale (3,738 min) | ~1,000 | Multi-institution rollout, ~500 active users |
+| Business (12,375 min) | ~3,500 | Production at ~1,500 active users |
+| Enterprise | Negotiated | Beyond 1,500 active users — revisit unit economics |
+
+---
+
+## Cost-tracking infrastructure
+
+Our cost ledger (`cost_tracking` table, Aurora) is provider-agnostic by design. Each row tags `service_type` and `operation_type`, with per-operation cost in USD and flexible `metadata` JSONB. This means switching or adding providers requires:
+
+1. A new sync endpoint (one file per provider, modelled on `api/cost/sync-elevenlabs.ts`)
+2. No schema changes
+3. No dashboard changes (it already groups by service)
+
+The dashboard at `admin.mindmeasurepro.com → Costs` aggregates per-provider, per-company, per-period spend and surfaces the bundle utilisation panel showing where we sit relative to plan limits.
+
+---
+
+## Alternative providers
+
+We should be evaluating alternatives in parallel with scaling on ElevenLabs. The voice provider market is moving fast.
+
+### Fish Audio
+
+**Site**: [fish.audio](https://fish.audio/)  
+**Pitch**: Real-time expressive voice with emotion control. Published [blind-test results](https://fish.audio/) claim 66% win rate vs ElevenLabs V3.
+
+**Strengths**:
+
+- Pricing positioned at meaningful discount to ElevenLabs ("90-95% cheaper than traditional voice acting", framed as cheaper than ElevenLabs at comparable quality)
+- 2M+ voices including emotion tags and special acoustic effects (laughing, sighing, pauses)
+- Full Voice Agent API — end-to-end stack, not just TTS
+- 30+ languages
+- Open-source heritage (Fish Speech is on GitHub) — gives us a self-hosting fallback route
+
+**Risks**:
+
+- Younger company — less production track record
+- Brand-asset risk: Jodie's voice is part of the brand by now; swapping needs an A/B blind test on real users before any commitment
+- Less institutional comfort: investors and partners recognise ElevenLabs; Fish Audio doesn't yet carry the same name recognition
+
+**Decision criteria for a switch**: blind A/B test on actual check-in users, 30%+ cost saving at our projected scale, latency within 100ms of ElevenLabs.
+
+### OpenAI Realtime (gpt-4o-realtime)
+
+**Pitch**: Speech-to-speech model with very low latency. If we ever move Jodie's reasoning layer to OpenAI's stack, the integration would be tight — no separate LLM pass-through.
+
+**Strengths**:
+
+- Single API for voice + reasoning (collapses LLM + TTS + STT into one call)
+- Latency is excellent — OpenAI has been pushing hard here
+- Strong English voice quality
+- We already have OpenAI billing infrastructure
+
+**Risks**:
+
+- Limited voice variety — handful of preset voices vs ElevenLabs' 2M+
+- Tied to OpenAI's model — if Anthropic's reasoning models pull ahead for empathetic conversations (relevant for Jodie), we lose flexibility
+- Pricing has shifted multiple times; not yet stable
+
+**Decision criteria for a switch**: comparable empathy in conversation (A/B test with mental health practitioners), latency improvement that materially reduces hangup rates, or a step-change in pricing.
+
+### Self-hosted (PersonaPlex / Fish Speech / Coqui)
+
+**Pitch**: Run the inference ourselves on GPU instances. Roadmap calls out "100x cost reduction potential" for serious scale.
+
+**Strengths**:
+
+- True unit economics control — we pay for GPU time, not per-minute markup
+- No vendor lock-in
+- Customisation depth — train Jodie's voice on Mind Measure-specific data
+- Compliance posture — sensitive data never leaves our infrastructure
+
+**Risks**:
+
+- Engineering cost is real — a 6-12 month project to match ElevenLabs quality and reliability
+- Operational burden — we own the GPU fleet, the scaling, the monitoring
+- Quality gap — open-source TTS still trails ElevenLabs on naturalness, especially for empathetic conversation
+
+**Decision criteria**: only worth it once we're on Business tier and projecting Enterprise-scale volume (~3,500+ check-ins/month sustained). At that point the per-month spend justifies a dedicated engineering effort.
+
+---
+
+## Architectural constraints
+
+Per the [platform handbook](/architecture/platform-handbook), the check-in pipeline is currently **off-limits for modification** — the ElevenLabs multimodal engine is production and must not be touched. This is a deliberate stability constraint, not an architectural decision against switching.
+
+When we *do* swap providers, the work will be a focused, well-scoped project:
+
+1. Build a "voice provider abstraction" interface (`VoiceProvider`) in shared services
+2. Implement adapters: `ElevenLabsAdapter`, `FishAudioAdapter`, etc.
+3. Per-institution provider config (`institutional_agents.provider` column)
+4. Feature flag to dual-run providers and compare outcomes
+5. Gradual rollout starting with internal test institutions
+
+Roadmap item: **Voice Provider Abstraction** — listed as Low (R&D) on the current roadmap; recommend promoting to Medium and writing a spec by mid-summer 2026 so we're ready to act if a strong alternative demos well.
+
+---
+
+## Open questions
+
+1. **What's the right unit cost ceiling per check-in?** Our scoring relies on a 5-minute conversation. At Business tier that's ~$0.40/check-in fully loaded. Is that the right ceiling for our pricing model, or should we plan to drive it lower before institutional rollout?
+
+2. **How do we measure conversational quality between providers?** A blind A/B test needs a quality rubric — empathy, naturalness, recovery from interruption. Worth defining before any provider trial.
+
+3. **What's the right time to lock in annual billing?** Annual saves 16-30% across all tiers but commits us. Once we're consistently on Pro+ for 3+ months, annual makes sense.
+
+4. **When do we own the voice?** Cloning Jodie's voice into a self-hosted system means the voice survives any provider change. Cheap to do (~$200 one-time on ElevenLabs) and worth it as soon as we're sure of the final voice character.
+
+---
+
+## References
+
+- [ElevenLabs ConvAI pricing](https://elevenlabs.io/pricing?price.platform=agents_platform)
+- [How much does Conversational AI cost?](https://help.elevenlabs.io/hc/en-us/articles/29298065878929-How-much-does-Conversational-AI-cost) (ElevenLabs help centre)
+- [Fish Audio](https://fish.audio/)
+- [Cost-tracking infrastructure](/architecture/backend) — the `cost_tracking` table and sync endpoints
+- [Institutional Agents](/architecture/institutional-agents) — how Jodie is configured per institution

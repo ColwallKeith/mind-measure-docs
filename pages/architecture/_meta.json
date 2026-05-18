@@ -8,5 +8,6 @@
   "backend": "Backend Services",
   "mobile": "Mobile App",
   "aurora-serverless-v2": "Aurora Serverless v2",
-  "institutional-agents": "Institutional Agents"
+  "institutional-agents": "Institutional Agents",
+  "voice-provider-strategy": "Voice Provider Strategy"
 }
