@@ -108,6 +108,8 @@ Switching or adding providers requires:
 
 The dashboard at `admin.mindmeasurepro.com → Costs` aggregates per-provider, per-company, per-period spend and surfaces the bundle utilisation panel showing where we sit relative to plan limits. For ElevenLabs it shows hosting and LLM as separate tiles with a "Fully-loaded total" pill below.
 
+A condensed **Network Costs (MTD)** widget also sits on the superuser **Overview** tab, showing the same total with a per-company breakdown table (cost, check-ins, cost / check-in, % of total). It hits `/api/cost/company-summary?period=mtd` — a lightweight aggregation that joins `cost_tracking` against `companies` and collapses unattributed rows into a single "Platform / uncategorised" row.
+
 ---
 
 ## Alternative providers
