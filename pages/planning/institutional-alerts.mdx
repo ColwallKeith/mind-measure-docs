@@ -1,0 +1,273 @@
+# Institutional Alerts
+
+**Priority**: High (PwC ME pilot driver)
+**Status**: Spec — ready for Phase 1 build
+**Platforms**: Pro admin (`admin.mindmeasurepro.com`), Pro mobile (`mobile.mindmeasurepro.app`)
+**Last Updated**: May 2026
+
+---
+
+## What This Is
+
+An institutional broadcast channel that lets company admins push time-sensitive, severity-tagged messages directly into the mobile app. Renders as a prominent card on the dashboard (positioned beneath the score, above the check-in button), fires a push notification on insert for higher tiers, and tracks acknowledgement so admins can see reach.
+
+Not a chat. Not a nudge. A short, important message from the institution to its people — *delivered fast, framed for wellbeing*.
+
+## Why It Matters
+
+The trigger for this spec is the PwC Middle East pilot. The region is in active conflict and staff are checking multiple channels every morning to find out whether offices are open. That is exactly the use case this feature is built for: **the institution becomes the source of truth, and the app becomes a daily-driver because there's a real reason to open it.**
+
+But the use case generalises well beyond crisis. Every company has moments where staff need a heads-up:
+
+- Office closed for severe weather
+- Town hall at 4pm — please join
+- Lift maintenance — use stairwell B
+- Phishing email circulating — do not click
+- "We're thinking of you" following a community tragedy
+
+A wellbeing app is the right surface for this because staff already have it installed and it's not noisy with marketing. Used carefully, alerts strengthen — rather than dilute — the wellbeing relationship.
+
+## Positioning Principle
+
+Mind Measure is **not** the source of truth for what's happening in the world. The institution is. We are the channel that gets the institution's message in front of staff fast, with their wellbeing in mind. Every alert — even an operational one — should land with care. That means:
+
+- Default to plain, calm language. No exclamation marks. No emoji in body copy.
+- Pair distressing alerts with support links automatically (employee assistance, internal welfare, the app's Help page).
+- Anonymity floor and aggregation never apply here — these are *broadcasts*, not surveys. But staff data flowing the other direction (who saw the alert, when) is exposed to admins as an anonymous aggregate count, never as a named list.
+
+---
+
+## Severity Model
+
+Four tiers, each with a defined visual treatment, push behaviour, and dismiss rule. Admins choose at compose time; copy lint flags risky combinations (e.g. "urgent" tone in an "info" alert).
+
+| Severity | Use case | Card colour | Icon | Push notification | Dismissable | Default expiry |
+|---|---|---|---|---|---|---|
+| **Welfare** | Support after distressing news; "we're thinking of you" | Soft purple | Heart | Yes (no sound) | Yes | 72 hours |
+| **Info** | Town hall, FYI, event reminder | Light blue | Info circle | No | Yes | 24 hours |
+| **Notice** | Schedule change, parking, office closing early | Amber | Calendar | Yes | Yes | 48 hours |
+| **Urgent** | Safety — shelter, evacuate, do not come in | Red | Shield | Yes (with sound) | No | 12 hours (re-dismissable after first view) |
+
+Visual treatment is a tinted card border + matching pill icon top-left. Body is always the same near-black `#1a1a1a` text — colour communicates priority, not content.
+
+### Welfare alerts are special
+
+Welfare-tier alerts must include at least one support link. The compose UI requires it before save. The card renders that link as a pinned button beneath the body. Examples:
+
+- "Talk to someone confidentially — Employee Assistance: 0800 xxx xxxx"
+- "Support resources for staff affected by recent events"
+
+This pattern is what differentiates this from a generic broadcast tool. It bakes the wellbeing posture into the channel.
+
+---
+
+## Data Model
+
+Two tables. Lives in the Pro Aurora database (and mirrored to University if the pattern proves out).
+
+```sql
+CREATE TABLE institution_alerts (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id      TEXT NOT NULL REFERENCES companies(id),
+  severity        TEXT NOT NULL CHECK (severity IN ('welfare','info','notice','urgent')),
+  title           TEXT NOT NULL,
+  body            TEXT NOT NULL,
+  support_links   JSONB NOT NULL DEFAULT '[]'::JSONB,  -- [{label, url}]
+  audience        JSONB NOT NULL DEFAULT '{"all":true}'::JSONB,
+  starts_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ends_at         TIMESTAMPTZ NOT NULL,
+  push_sent       BOOLEAN NOT NULL DEFAULT FALSE,
+  push_sent_at    TIMESTAMPTZ,
+  dismissable     BOOLEAN NOT NULL DEFAULT TRUE,
+  created_by      TEXT NOT NULL,            -- core_users.id or company_authorized_users.id
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  archived_at     TIMESTAMPTZ
+);
+
+CREATE INDEX idx_alerts_company_active
+  ON institution_alerts (company_id, ends_at)
+  WHERE archived_at IS NULL;
+
+CREATE TABLE institution_alert_acks (
+  alert_id        UUID NOT NULL REFERENCES institution_alerts(id) ON DELETE CASCADE,
+  user_id         TEXT NOT NULL REFERENCES profiles(user_id),
+  seen_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  dismissed_at   TIMESTAMPTZ,
+  PRIMARY KEY (alert_id, user_id)
+);
+
+CREATE INDEX idx_alert_acks_alert ON institution_alert_acks (alert_id);
+```
+
+### Audience targeting (Phase 2)
+
+The `audience` JSONB column is structured so Phase 1 only handles `{ all: true }`, but later phases can slot in:
+
+```json
+{ "all": true }
+{ "office_ids": ["office_dubai", "office_abu_dhabi"] }
+{ "division_ids": ["tax", "advisory"] }
+{ "department_ids": ["dept_123"] }
+{ "team_ids": ["team_456"] }
+```
+
+The resolver query walks `profiles.office_id` / `profiles.division_id` / etc. and produces a `user_id[]` for push delivery and card visibility.
+
+---
+
+## API Surface
+
+All endpoints under `api/alerts/` in `mind-measure-pro-core`.
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| `GET` | `/api/alerts/list?company_id=...` | Company admin or staff | Active alerts for the company (admin view) |
+| `POST` | `/api/alerts/create` | Company admin or staff | Compose + immediate send |
+| `PATCH` | `/api/alerts/:id` | Same | Edit (only before any acks recorded) |
+| `POST` | `/api/alerts/:id/archive` | Same | Pull an alert early |
+| `GET` | `/api/alerts/active` | Mobile (Cognito) | The current user's active alerts (filtered by audience + ends_at) |
+| `POST` | `/api/alerts/:id/seen` | Mobile | Record first view |
+| `POST` | `/api/alerts/:id/dismiss` | Mobile | Record dismissal |
+| `GET` | `/api/alerts/:id/reach` | Company admin or staff | Anonymous aggregate — % seen, % dismissed |
+
+`/api/alerts/active` is the mobile endpoint that returns *only* alerts the calling user should see, based on their `company_id` and audience matching. No alert is ever delivered to the wrong tenant.
+
+---
+
+## Mobile Rendering
+
+The active alerts card sits in a fixed position on the home dashboard:
+
+- **Above** the "+ Check in" / "Need Help?" button pair
+- **Below** the score number / greeting block
+- Full-width with the same card radius and shadow language as existing dashboard widgets
+
+If multiple alerts are active simultaneously, they stack:
+
+- Top card always fully expanded
+- Cards beneath collapse to a 28px-high header strip showing their severity dot, title (one line, truncated), and a chevron
+- Tapping a collapsed strip expands it and collapses the previously-open card
+- Severity ordering: urgent → welfare → notice → info, then by `starts_at` desc within tier
+
+The expanded card includes:
+1. Severity icon and short label ("Urgent", "We're thinking of you", "Heads up", "FYI")
+2. Title (up to 60 chars, single line)
+3. Body (up to 500 chars, supports basic markdown — bold, line breaks, links)
+4. Support links (welfare only) — rendered as full-width secondary buttons
+5. "Dismiss" pill bottom-right (only if `dismissable`)
+6. Timestamp small-print: "Posted 2 hours ago"
+
+Optimistic UI: tapping dismiss removes the card immediately, fires `POST /api/alerts/:id/dismiss` in the background, and reverts if the call fails.
+
+### Push notification copy
+
+The push payload uses the alert's title verbatim and includes a one-line preview of the body. Tap → deep link to the dashboard with the alert expanded.
+
+```
+[Urgent] Office closed today
+Dubai office is closed Monday due to security concerns. Tap for details.
+```
+
+`urgent` tier fires with sound; `notice` and `welfare` fire silent; `info` does not fire push at all.
+
+---
+
+## Admin Authoring UX
+
+Lives inside the existing `CompanyScopedCMS` as a new "Alerts" tab, between "Nudges" and "Reports".
+
+### Compose flow
+
+1. **Severity picker** — four large tiles with the visual treatment previewed. Selecting one unlocks the rest of the form and adjusts copy guidance.
+2. **Title** — up to 60 chars, counter visible. Lint rule: no all-caps for any severity below urgent.
+3. **Body** — up to 500 chars. Markdown toolbar (bold, link, line break only).
+4. **Support links** (welfare only) — required, can add up to 3. Each is `{ label, url }`. Helper text suggests EAP, internal welfare contact, app Help page.
+5. **Audience** — Phase 1: "All employees in this company" (the only option). Phase 2: office/division/team multi-select.
+6. **Schedule** — "Send now" or "Schedule for…" (Phase 3).
+7. **Expiry** — auto-set from severity default, editable up to a tier-specific maximum (7 days for welfare, 24h for urgent, etc.).
+8. **Preview** — live preview card on the right, rendered exactly as it will appear in the mobile app.
+9. **Send** — confirmation modal with the audience size: *"This alert will be sent to 12,000 people in the next 30 seconds. You won't be able to edit it after acknowledgement, but you can archive it early."*
+
+### Reach panel
+
+Once sent, each alert shows a reach card on the admin Alerts list:
+
+- Sent to: 12,000 people
+- Seen: 9,840 (82%) — bar
+- Dismissed: 7,720 (64%) — bar
+- Time-to-50%-reach: 1h 12m
+
+These three metrics are the proof-of-life for the channel. Admin sees that broadcasts work and gets useful operational data without ever seeing who individually has or hasn't read.
+
+---
+
+## Push Notification Plumbing
+
+Pro mobile already has the Capacitor `PushNotifications` plugin wired up (the same one we recently de-noised in Sentry). The `/api/alerts/create` flow:
+
+1. Insert row into `institution_alerts`
+2. Resolve the audience to a `user_id[]`
+3. Look up each user's device tokens from `device_tokens` (existing table)
+4. Batch-send via APNs/FCM (existing send infrastructure used by nudges)
+5. Mark `push_sent_at`
+
+Failures are logged but don't fail the alert creation — the in-app card is the primary delivery; push is the assist.
+
+---
+
+## Phased Build
+
+### Phase 1 — MVP (~1 week)
+
+**Goal**: PwC ME can use this for "office status this morning" by end of next sprint.
+
+- DB migration (both tables + indexes)
+- `api/alerts/{list,create,archive,active,seen,dismiss}` endpoints
+- Admin Alerts tab in `CompanyScopedCMS` — compose + list + reach card
+- Mobile alert card component + dashboard integration
+- Push notification fan-out for `urgent`, `notice`, `welfare`
+- Audience is "everyone in company" only
+
+### Phase 2 — Targeting (~3 days)
+
+- Audience picker UI (office / division / team multi-select)
+- Audience resolver in `/api/alerts/active`
+- Reach panel breaks down by audience segment
+
+### Phase 3 — Scheduling and templates (~2 days)
+
+- "Send at" datetime in the compose form
+- Recurring templates ("Daily office status — 7am every weekday")
+- Template library — saved compositions for fast reuse
+
+### Phase 4 — University parity (~2 days)
+
+- Same tables, same endpoints, same components in `mind-measure-core` / `mind-measure-mobile-final`
+- Use cases differ (campus-wide closures, exam-period support messages, hall-specific notices) but the primitive is identical
+
+---
+
+## Risks and Guardrails
+
+- **Alert fatigue.** Cap free-tier institutions at 3 sent alerts per 7 days. Soft warn at 2. Paid tier unlimited but the dashboard shows a "send velocity" indicator.
+- **Mis-targeting.** The audience confirmation modal must show the resolved count, not just the selection criteria. *"This will go to 12,000 people"* is a hard stop; *"This will go to all employees in Tax division"* invites mistakes.
+- **Compounding distress.** Welfare alerts about distressing events can themselves be distressing. The required support links partly mitigate. Longer term, the body of a welfare alert should be reviewable by a second admin before send for institutions that opt into a two-person rule.
+- **Cross-tenant leakage.** All read endpoints must verify the alert's `company_id` matches the caller's. `/api/alerts/active` resolves the user's `company_id` from their authenticated profile, never from a client-supplied parameter.
+- **Acknowledgement is not consent.** "Seen" is not "agreed". Copy in compose UI should warn admins not to use this for policy attestation or anything requiring legal record-keeping.
+
+---
+
+## Open Questions
+
+1. Should institutions be able to *target by self-declared support need* — e.g. send welfare resources to users who've checked in with low scores recently? The data exists. The ethics need a separate conversation.
+2. Two-person rule for welfare alerts — opt-in default? Off by default? Same for urgent?
+3. Acknowledgement requirement — should we add an explicit "Acknowledge" button (separate from dismiss) for the urgent tier, so admins know the message was read, not just dismissed?
+4. Cross-app reach — when we have a Mind Measure for Universities equivalent, can a parent organisation (e.g. a multi-academy trust) broadcast across child organisations? Probably out of scope for v1.
+
+---
+
+## Commercial Case
+
+Worth stating plainly: this is the feature that makes the app a daily-driver. A wellbeing app that someone opens once a week is a tool. A wellbeing app that someone opens every morning because their employer told them the office is open is a habit. Once the habit is there, check-ins, content reads, and survey responses all rise as a function of installed surface area.
+
+PwC ME is the proof point. If we ship Phase 1 in time for the active pilot, and the alerts channel becomes how staff find out their office status, the engagement data tells a story we can take to every other corporate prospect: *"During the regional crisis, our partner saw daily open-rates of X% sustained over Y weeks."*
