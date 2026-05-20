@@ -23,6 +23,30 @@ Full spec: [Institutional Alerts](/planning/institutional-alerts).
 
 ---
 
+### Conversational Insight v2 — Cohort Filtering + Always-On Dashboard
+
+**Priority**: High — extends the highest-engagement paid-tier feature
+**Status**: Phase 1 (schema + authoring) and Phase 2 (dashboard surface + CTA wiring) shipped to both products. Phase 4 (per-session prompt override into mobile) pending sign-off — the schema and resolver are live but nothing is being asked yet because the mobile check-in still uses the agent's stored prompt.
+
+v1 shipped the primitive (three live questions per institution, everyone gets all three). v2 lifts three real constraints: every employee/student got every question regardless of relevance; the dashboard hid the feature when no questions were configured; and admins were limited to a 3-question library that was a poor fit for institutions wanting to run themed pulses over a quarter.
+
+What's now live in production:
+
+- Audience targeting using the same `AudiencePicker` Alerts uses. Defaults to `{ all: true }` so v1 questions auto-resolve. Live reach estimate in the compose dialog with k-anon clamp at 5.
+- Per-user ask-once rotation via `institutional_question_asks` (schema + resolver only — the check-in path that calls the resolver is Phase 4). Silence honoured: an asked-but-unanswered question rotates off that user's eligible pool.
+- True anonymity for responses — `user_id` dropped from `institutional_question_responses` in migration 030 (pro) / 021 (uni). Aggregate answers are now permanent institutional intel that survives staff turnover.
+- Library cap raised from 3 → soft warn at 50 / hard cap at 200 active questions. The per-user ceiling moves to the resolver (2 per check-in).
+- Always-on dashboard card on the Overview, replacing the v1 "hide if empty" behaviour. Empty state CTA lands in one click on the CMS Questions tab. Each live question shows Asked / Answered / Cohort running stats.
+
+What's NOT live yet:
+
+- **Phase 4**: per-session prompt override that calls `pickQuestionsForUser` and passes the result as `overrides.agent.prompt` to ElevenLabs. Until this ships, every question still goes to every matching user via the agent's stored prompt (v1 behaviour preserved as the fallback). Touches the check-in code path — pending explicit sign-off before building.
+- **Phase 5** (deferred): archive snapshot + CSV export of aggregate question data, per-user exposure stats on the library counters, thread comparison view across runs of the same question.
+
+Full spec: [Conversational Insight v2](/planning/conversational-insight-v2).
+
+---
+
 ### Weekly Reflection — Production Wiring
 
 **Priority**: High

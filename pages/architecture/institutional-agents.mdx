@@ -256,38 +256,53 @@ When a user mentions needing help or asks about services, Jodie references the k
 
 ---
 
-## Custom Questions
+## Custom Questions — Conversational Insight
 
-Institutions can request specific questions to be woven into check-ins. These are natural conversation prompts — not survey questions — that Jodie asks when appropriate.
+Institutions write natural-language questions that Jodie weaves into check-ins for the relevant audience. These are conversation prompts — not survey questions — and they're authored by the institution's own admins, not by Mind Measure staff. Full architecture in the [Conversational Insight v2 spec](/planning/conversational-insight-v2); the relevant facts for the agent layer are below.
 
 ### Question Properties
 
-- **Category**: `localized_knowledge` (about the institution) or `strategic_insight` (about wellbeing topics)
-- **Priority**: `required` (Jodie must ask) or `optional` (ask if the conversation flows naturally)
-- **Status**: `draft` → `active` → `archived`
-- **Time windows**: Optional `active_from` / `active_until` for seasonal questions
+- **Category**: `localized_knowledge` (about the institution) or `strategic_insight` (about wellbeing topics). Admin-authored questions are always `strategic_insight`; `localized_knowledge` is reserved for MM-staff factual additions.
+- **Priority**: `required` (Jodie should ask if the conversation allows) or `optional` (ask only if the conversation invites it naturally).
+- **Status**: `draft` → `active` → `archived`. No unarchive path; clone-then-edit to re-run a theme.
+- **Audience** (v2): JSONB cohort filter using the same `parseAudience` helper as Alerts. Defaults to `{ all: true }`. Persisted on `institutional_questions.audience`.
+- **Time windows**: Optional `active_from` / `active_until` for seasonal questions.
 
-### Example
+### Authoring
 
-| Institution | Question | Priority |
-|-------------|----------|----------|
-| Durham Uni | "How are you finding your accommodation this term?" | Optional |
-| Acme Corp | "How manageable has your workload felt this month?" | Required |
+- Company admins author via `admin.mindmeasurepro.com → Company → CMS → Questions`.
+- University admins author via `admin.mindmeasure.co.uk → University → CMS → Questions`.
+- MM superusers can also create questions via the legacy `/api/agents/questions` endpoint (broader access, e.g. to set `category: localized_knowledge`).
 
-Questions are managed by superusers via the Agents tab and synced to ElevenLabs as part of the prompt.
+Every successful write fires a server-side `/api/agents/sync` for the institution's agent so the ElevenLabs prompt picks up the change within seconds. Sync failures are logged but don't fail the write — the row is in DB and the next manual sync (or the next scheduled cron) will reconcile.
+
+### Library limits (v2)
+
+- Soft warn at 50 currently-active questions per institution.
+- Hard cap at 200 currently-active.
+- Archived questions don't count toward either limit.
+
+### Per-check-in exposure (v2, partial — schema only)
+
+The resolver (`pickQuestionsForUser` in `api/_lib/questions.ts`) selects up to 2 audience-matching questions per check-in and atomically logs the ask in `institutional_question_asks`. Asked questions drop off that user's eligible pool whether they answered or stayed silent — silence is honoured.
+
+**Note:** The per-session prompt override that calls this resolver is not yet wired into the mobile check-in path (Phase 4 in the [v2 spec](/planning/conversational-insight-v2)). Until that ships, the agent's stored prompt continues to include every active question and every user matching `{all:true}` hears all of them. v1 behaviour preserved as the fallback.
+
+### Reporting
+
+Shipped in Phase 3 of v1, enhanced in v2:
+
+- Aggregate response counts per institution, surfaced via `ConversationalInsightCard` on the Overview.
+- Bedrock-paraphrased samples and a 1-paragraph synthesis at n ≥ 8.
+- K-anonymity floor of 5 responses gates display of sentiment, samples, and summary.
+- Running stats per question (v2): Asked / Answered / Cohort.
+
+### Future work
+
+- CSV export of archived question aggregates (Phase 5 in v2 spec).
+- Thread comparison view across runs of the same question (`thread_id` already in the schema).
+- Per-user exposure stats on the library counters (depends on the Phase 4 resolver wiring being live).
 
 ---
 
-## Future Work
-
-### Phase 4: Custom Question Reporting
-
-Not yet implemented. Planned features:
-- Aggregate custom question responses per institution (from Bedrock analysis output)
-- Superuser dashboard view for response trends
-- CSV/PDF export of aggregated data
-- Trend visualisation over time
-
----
-
-*Last updated: 22 February 2026*
+*Last updated: 20 May 2026*
