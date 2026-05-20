@@ -1,7 +1,7 @@
 # Institutional Alerts
 
 **Priority**: High (PwC ME pilot driver)
-**Status**: Spec — ready for Phase 1 build
+**Status**: Phase 1 shipped. Phase 2 (audience targeting) in build.
 **Platforms**: Pro admin (`admin.mindmeasurepro.com`), Pro mobile (`mobile.mindmeasurepro.app`)
 **Last Updated**: May 2026
 
@@ -101,17 +101,56 @@ CREATE INDEX idx_alert_acks_alert ON institution_alert_acks (alert_id);
 
 ### Audience targeting (Phase 2)
 
-The `audience` JSONB column is structured so Phase 1 only handles `{ all: true }`, but later phases can slot in:
+Phase 2 uses the existing per-company `profile_fields` JSONB config as the targeting vocabulary. Whatever fields the company has configured for employees (Country, City, Office, Division, Grade, Practice…) become the same dropdowns admins use to pick an audience. Admins don't learn a new schema — they target on the same dimensions they already use for the dashboard's `CohortFilters`.
+
+The `audience` JSONB shape:
 
 ```json
+// Phase 1 default — broadcast to everyone in the company
 { "all": true }
-{ "office_ids": ["office_dubai", "office_abu_dhabi"] }
-{ "division_ids": ["tax", "advisory"] }
-{ "department_ids": ["dept_123"] }
-{ "team_ids": ["team_456"] }
+
+// Phase 2 — multi-field filters
+{
+  "all": false,
+  "filters": {
+    "country": ["UAE", "KSA"],
+    "office":  ["dubai-difc", "abu-dhabi-al-maryah"],
+    "grade":   ["partner", "director"]
+  }
+}
 ```
 
-The resolver query walks `profiles.office_id` / `profiles.division_id` / etc. and produces a `user_id[]` for push delivery and card visibility.
+Semantics, mirroring the existing dashboard cohort filters:
+
+- **OR within a field** — `country IN ("UAE","KSA")`
+- **AND across fields** — `(country IN …) AND (office IN …) AND (grade IN …)`
+- `all: true` ignores `filters` entirely.
+
+Resolver query in `/api/alerts/active`:
+
+```sql
+SELECT a.*
+  FROM institution_alerts a
+ WHERE a.company_id = $caller_company
+   AND a.archived_at IS NULL
+   AND a.starts_at <= NOW() AND a.ends_at > NOW()
+   AND (
+     (a.audience ->> 'all')::boolean = TRUE
+     OR audience_matches(a.audience, $caller_profile)
+   );
+```
+
+`audience_matches()` is implemented in TypeScript on the server (not a Postgres function) so the field keys stay aligned with the same `companyProfileFields` parser the admin UI uses — single source of truth.
+
+At create time the server **resolves and snapshots** the matching audience count into a new `resolved_audience_size INT` column on `institution_alerts`. This is what the reach panel divides against ("412 of ~840 employees seen"), so later cohort-population drift can't make the percentage look wrong.
+
+#### Privacy guard (k-anonymity)
+
+The live reach estimate is clamped:
+
+- If the predicted match count is `< 5`, the picker shows **"Too few employees match — broaden the filters"** rather than the exact number. This prevents an admin using overly-specific filters to identify a single person via the count alone.
+- The same threshold applies to the post-send reach panel. We show `"<5 employees saw this"` rather than the exact small number.
+- Filter dimensions configured with `showInCohortFilter: false` are hidden from the audience picker — same control the dashboard already honours.
 
 ---
 
@@ -182,7 +221,7 @@ Lives inside the existing `CompanyScopedCMS` as a new "Alerts" tab, between "Nud
 2. **Title** — up to 60 chars, counter visible. Lint rule: no all-caps for any severity below urgent.
 3. **Body** — up to 500 chars. Markdown toolbar (bold, link, line break only).
 4. **Support links** (welfare only) — required, can add up to 3. Each is `{ label, url }`. Helper text suggests EAP, internal welfare contact, app Help page.
-5. **Audience** — Phase 1: "All employees in this company" (the only option). Phase 2: office/division/team multi-select.
+5. **Audience** — Phase 1: "All employees in this company" only. Phase 2: per-profile-field multi-select using the company's existing cohort vocabulary, with live reach count and a k-anonymity floor (`n ≥ 5`).
 6. **Schedule** — "Send now" or "Schedule for…" (Phase 3).
 7. **Expiry** — auto-set from severity default, editable up to a tier-specific maximum (7 days for welfare, 24h for urgent, etc.).
 8. **Preview** — live preview card on the right, rendered exactly as it will appear in the mobile app.
@@ -230,9 +269,17 @@ Failures are logged but don't fail the alert creation — the in-app card is the
 
 ### Phase 2 — Targeting (~3 days)
 
-- Audience picker UI (office / division / team multi-select)
-- Audience resolver in `/api/alerts/active`
-- Reach panel breaks down by audience segment
+**Goal**: a PwC ME admin can send "Office closed today" to just the Dubai offices, not all 12,000 employees worldwide.
+
+- New `AudiencePicker` component — reads the company's `profile_fields` config (same source the dashboard `CohortFilters` uses), renders one multi-select per field, lets admin pick "Everyone" or "Specific employees".
+- New `POST /api/alerts/reach-estimate` endpoint — returns the matching profile count for a draft `audience` JSONB, with the n≥5 k-anonymity clamp.
+- Live reach indicator inside the compose dialog — debounced 300ms, updates as filters change ("This will reach ~840 employees").
+- `/api/alerts/create` accepts the new `audience` shape and snapshots the resolved count into `resolved_audience_size`.
+- `/api/alerts/active` honours `filters` against the caller's profile values (Phase 1's `{ all: true }` alerts still pass — backwards compatible).
+- `/api/alerts/reach` divides against `resolved_audience_size` so percentages stay honest as the company grows/shrinks.
+- Admin list shows an audience summary line per alert ("Dubai · Partners · ~120 people") so reviewing past alerts doesn't require expanding each one.
+- DB migration: add `resolved_audience_size INT` to `institution_alerts` (default NULL — Phase 1 rows untouched).
+- Saved cohorts ("Dubai office staff", reusable across alerts/nudges/articles) **out of scope** — picked up by the Cohort Template Library build. Alerts will adopt that via a future `audience_id` field with zero schema rework here.
 
 ### Phase 3 — Scheduling and templates (~2 days)
 
