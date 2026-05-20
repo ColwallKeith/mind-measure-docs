@@ -1,0 +1,173 @@
+# Conversational Insight (Custom Questions) — v1
+
+**Priority**: High — paid-tier differentiator for both products
+**Status**: Shipped (Pro + Uni). Parts of this spec are superseded by [Conversational Insight v2](/planning/conversational-insight-v2) — see the box below.
+**Platforms**: Pro admin (`admin.mindmeasurepro.com`), Pro mobile (`mobile.mindmeasurepro.app`), University equivalents (`admin.mindmeasure.co.uk`, `mobile.mindmeasure.app`)
+**Last Updated**: Original spec May 2026; superseded by v2 May 2026
+
+> **This is the original v1 spec, kept for historical context.** The parts that have changed in v2:
+>
+> - The three-question hard cap is gone (now a soft warn at 50 live questions, hard backstop at 200).
+> - "Every employee gets every question" is gone (cohort-targeted via the same `audience` picker Alerts uses, and ask-once-per-user via `institutional_question_asks`).
+> - The dashboard card used to hide when no questions existed; now it's always-on with an empty-state CTA into the CMS Questions tab.
+> - `institutional_question_responses.user_id` has been dropped — answers are anonymous by construction.
+>
+> Anything not contradicted by v2 still describes how the feature works today. See [Conversational Insight v2](/planning/conversational-insight-v2) for the current architecture.
+
+---
+
+## What This Is
+
+A way for the institution itself — not just Mind Measure — to ask its employees a question through the daily check-in conversation. The admin writes a short natural-language question in the CMS ("How are you finding our new return-to-office policy?"), Jodie weaves it into the next 30 days of check-ins, and the dashboard surfaces an aggregated, anonymised view of what employees said.
+
+This is the bridge between **passive wellbeing measurement** ("we observe scores trending down") and **active conversation** ("we asked, and here's what employees told us"). It positions Mind Measure as a wellbeing platform that also lets the organisation listen.
+
+## Why It Matters
+
+Existing pulse-survey tools (Glint, Culture Amp, Officevibe) generate fatigue because they sit outside the daily flow. Our advantage is that the conversation is already happening — a single question added to it costs the employee almost nothing. For paid-tier institutions this is the line item that justifies the upgrade: *Conversation, not surveys.*
+
+Three concrete use cases the PwC pilot will exercise:
+
+- **Policy probes.** "How do you feel about the new hybrid policy?" Aggregated themes feed back to HR within a week.
+- **Local welfare check-ins.** A region-specific event happens. The institution adds "Have you been affected by the situation in Dubai this week?" Welfare team gets a daily summary, not a survey form to chase.
+- **Onboarding pulse.** New joiners get an extra question for their first 90 days. The institution sees what's landing.
+
+## Positioning Principle
+
+Custom questions are still part of a wellbeing conversation. Three guardrails:
+
+1. **Cap at three active questions per institution.** More than three and Jodie can't weave them in without sounding like a survey. Soft warn at two.
+2. **Never about a single named person.** All aggregation respects a k-anonymity floor (`n ≥ 5`). If only four people have answered, the dashboard says "Awaiting more responses" — same guard the alerts audience picker uses.
+3. **No verbatim quotes from a check-in transcript.** Phase 3 aggregation surfaces *summaries* of themes and *paraphrased* sample responses, never word-for-word lines that could identify the speaker.
+
+---
+
+## Data Model
+
+Already exists from migration 012. We're opening it up, not replacing it.
+
+```sql
+institutional_questions (
+  id                        UUID PRIMARY KEY,
+  institutional_agent_id    UUID NOT NULL REFERENCES institutional_agents(id),
+  question_text             TEXT NOT NULL,
+  question_context          TEXT,             -- internal notes, not asked
+  category                  TEXT NOT NULL,    -- 'localized_knowledge' | 'strategic_insight'
+  status                    TEXT NOT NULL,    -- 'draft' | 'active' | 'archived'
+  priority                  TEXT NOT NULL,    -- 'required' | 'optional'
+  created_by                TEXT NOT NULL,
+  approved_by               TEXT,
+  active_from               TIMESTAMPTZ,
+  active_until              TIMESTAMPTZ,
+  created_at                TIMESTAMPTZ,
+  updated_at                TIMESTAMPTZ
+)
+```
+
+Company-admin UI hides `category` (always `strategic_insight` for company-authored questions — `localized_knowledge` is reserved for MM staff fact-style additions), and hides `approved_by` (auto-set on first publish to the admin's own email).
+
+Phase 2 adds:
+
+```sql
+institutional_question_responses (
+  id                  UUID PRIMARY KEY,
+  question_id         UUID NOT NULL REFERENCES institutional_questions(id),
+  fusion_output_id    UUID NOT NULL REFERENCES fusion_outputs(id),
+  user_id             UUID NOT NULL,
+  answer_text         TEXT NOT NULL,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+)
+```
+
+`answer_text` is the Bedrock-extracted span of the transcript that addresses this question — typically one or two paraphrased sentences, not a verbatim quote. The link to `user_id` exists for cohort filtering and so a user can later request deletion of their responses (GDPR), but the dashboard aggregation never exposes the join.
+
+---
+
+## API Surface
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| `GET` | `/api/companies/questions?companyId=…` | Company admin or staff | List the company's questions (any status) |
+| `POST` | `/api/companies/questions` | Company admin or staff | Create a question (defaults to `draft`) |
+| `PATCH` | `/api/companies/questions/:id` | Same | Edit / publish / archive |
+| `GET` | `/api/companies/question-responses?questionId=…&days=30` | Same | Aggregated response card data (Phase 3) |
+
+Each write call to `/api/companies/questions*` triggers a server-side `/api/agents/sync` for the institution's agent so the ElevenLabs prompt picks up the change within seconds. Sync failures are logged but don't fail the write — the row is in DB and the next manual sync (or the next scheduled cron) will pick it up.
+
+The existing `/api/agents/questions` superuser endpoint stays in place for MM staff who need broader access (e.g. setting `category: localized_knowledge` for factual additions, manipulating other institutions' questions).
+
+---
+
+## Admin UX
+
+New "Questions" tab in `CompanyScopedCMS`, slotted between Alerts and Reports.
+
+Layout mirrors `AlertsManager`:
+
+- **Header:** "+ New question" button, refresh, active-question counter (`2 of 3`).
+- **List:** Each question card shows status badge (Draft / Live / Archived), priority badge (Ask every check-in / When natural), date range if set, last edit time. Click expands to show context notes.
+- **Compose dialog:** Question text (60–200 chars), optional internal notes ("HR is reviewing this — back it off if signal stays neutral after 2 weeks"), priority radio, active window, mobile preview ("Jodie might ask: '*[your question]*'").
+- **Cap enforcement:** If three questions are already active, the publish button on a fourth shows "Archive one first" instead.
+- **Auto-sync indicator:** After save, a quiet "Updated Jodie" pill appears for 3 seconds.
+
+## Mobile rendering
+
+No new component. Jodie already weaves active questions into the conversation via the system prompt — `buildAgentPrompt` appends each active question as a "must ask" or "ask if relevant" bullet depending on priority.
+
+The mobile app does not need to know which question is which; the transcript captures the conversation as a whole, and Phase 2's enrichment service matches answers back to questions server-side.
+
+---
+
+## Phased Build
+
+### Phase 1 — Company-admin authoring (~2 days)
+
+**Goal:** PwC's admin writes a question and it's live in check-ins within seconds.
+
+- New `/api/companies/questions*` endpoints (auth via `resolveCompanyAdmin`)
+- Fix the latent `email` undefined bug in the existing superuser handler (`api/agents/questions.ts`)
+- Server-side cap at 3 active questions per company
+- `CustomQuestionsManager.tsx` (UI) wired into `CompanyScopedCMS` as a new tab
+- Auto-sync on write (fire-and-forget `/api/agents/sync` after each successful write)
+
+### Phase 2 — Structured answer capture (~3 days)
+
+**Goal:** When an employee answers a custom question in a check-in, the answer is stored linked to the question so we can aggregate it later.
+
+- Migration 029: `institutional_question_responses` table
+- Extend `enrichmentService.ts` in pro-mobile (post-conversation Bedrock analysis — **not** the live ElevenLabs runtime) to identify which active questions were addressed and extract a paraphrased answer per question
+- New `POST /api/agents/questions/responses` endpoint called from the mobile app after enrichment completes
+- Bedrock prompt extension: pre-pend "Here are the institution-authored questions; for each one, identify whether the user answered it and extract the answer as one or two paraphrased sentences. Never return verbatim quotes."
+
+### Phase 3 — Dashboard surface (~2 days)
+
+**Goal:** PwC admin sees themes, counts, sample paraphrased responses per question.
+
+- `/api/companies/question-responses?questionId=X&days=N` aggregation endpoint
+  - Returns: total responses, sentiment distribution, top themes (Bedrock), 2–3 anonymised sample responses
+  - Enforces n ≥ 5 floor — below that, returns `{ pending: true, count: <n }`
+- `ConversationalInsightCard` on company Overview (Row 5, below current themes lists)
+- One card per active question, collapsible, with "View detail" modal for fuller summary
+
+### Phase 4 — University parity (~1 day per phase)
+
+After Pro is solid, mirror into `mind-measure-core`, `mind-measure-mobile-final`. Data layer is shared (same Aurora), so this is mostly UI port.
+
+---
+
+## Risks and Guardrails
+
+- **Survey fatigue.** Three-question cap, soft-warn at two. Reach indicator on the compose dialog reminds admins that the question lands inside an existing 6-exchange conversation.
+- **Phantom questions.** If the agent fails to sync after a write, the DB has a "live" question that the prompt doesn't know about. A nightly cron resyncs all active agents and admin UI shows "Last synced" timestamp.
+- **Sensitive answers.** All aggregation goes through Bedrock-paraphrased themes; verbatim transcript spans never leave the server. Same wellbeing-protection policy as engagement metrics.
+- **Cross-tenant leakage.** All endpoints verify `companyId` against the caller's authorised company via the shared `resolveCompanyAdmin` helper used by Alerts.
+- **Bedrock cost.** Phase 2 adds either an extra Bedrock call per check-in or an extension to the existing one. Cost-tracking is already in place; we'll budget and monitor.
+
+---
+
+## Open Questions
+
+1. **Time-boxed questions vs evergreen.** Should we default to a 30-day active window so questions retire automatically? Probably yes — keeps the dashboard clean.
+2. **Question authoring assistance.** Should the compose dialog suggest phrasing improvements ("Your question is too long for a check-in — try this shorter version")? Useful, but defer to Phase 4.
+3. **Cross-question themes.** When two questions are about overlapping topics ("How's the new policy?" + "How's hybrid working?"), should the dashboard offer a combined view? Defer.
+4. **Two-person rule.** Should publishing a question require a second admin to approve, like the welfare alert guardrail considered in `institutional-alerts.mdx`? Probably not — questions are gentler than alerts. Revisit if institutions ask for it.

@@ -1,0 +1,437 @@
+# Conversational Insight v2 — Cohort Filtering, Library, Archive
+
+**Priority**: High — extends the highest-engagement paid-tier feature
+**Status**: Phase 1 (schema + authoring) and Phase 2 (dashboard surface) shipped to both products. Phase 3 (per-session resolver wiring through to mobile) pending mobile sign-off.
+**Platforms**: Pro admin + mobile, University admin + mobile
+**Last Updated**: May 2026
+**Builds on**: [Conversational Insight v1](/planning/conversational-insight) (shipped)
+
+---
+
+## What's Changing
+
+v1 shipped the primitive: three live questions per institution, every employee or student gets all three. v2 takes the same primitive and lifts three real constraints that limit how institutions can actually use it.
+
+| | v1 (shipped) | v2 (this spec) |
+|---|---|---|
+| Audience | Everyone in the institution | Cohort-targetable using the same picker Alerts already uses |
+| Active cap | 3 questions per institution | Many configured; protection is **per-user exposure**, not per-org config |
+| Per-check-in ceiling | All 3 always asked | **Max 2 questions asked per check-in**, framed as natural opportunities not forced asks |
+| Re-asking | Same question asked every check-in | **Asked questions drop off** that user's eligible pool — silence is honoured exactly the same as an answer |
+| Dashboard surface | Card hidden when no questions exist | Always-on card with empty-state CTA |
+| Archived questions | Data retained, no UI to view | Archive view in CMS + CSV export |
+
+Nothing in v1 is removed. The database schema is additive. Existing questions auto-resolve to `audience: { all: true }` so they keep behaving exactly as before.
+
+---
+
+## Why Now
+
+Three concrete drivers, in priority order.
+
+**PwC are paying for insight, not surveys.** During the Middle East trial, "how is the Tax division coping with workload" is a different question from "how is the Audit division coping with workload". Today both questions would burn the same shared 3-slot, force every employee in every division to be asked both, and dilute the response signal. With cohort scoping each lands only with the relevant audience.
+
+**Universities care about lived-experience cohorts even more.** Hall of residence, year group, faculty, distance-learning vs on-campus — these are *the* questions a university wellbeing team wants to ask differently. v1's "everyone gets the same three" was always going to feel blunt to a wellbeing director at a university.
+
+**The current dashboard hides the feature when it's most useful.** A new institution that hasn't yet configured questions doesn't even know the feature exists — the card returns `null`. We lose adoption silently. An always-on card with a clear CTA fixes that.
+
+---
+
+## Positioning Principle
+
+Conversational Insight is still a wellbeing conversation, not a survey. The new affordances are designed to deepen that posture, not erode it. The constraint that protects people is **individual exposure**, not how many questions an institution has on file.
+
+1. **Per-user, per-check-in ceiling: 2.** No matter how many questions are configured or how many a person matches, Jodie is only ever given 2 candidates for a single check-in. The conversation stays a conversation.
+2. **Natural opportunity, not checklist.** The agent prompt frames the 2 candidates as "weave in if the conversation invites it" — never as questions Jodie *must* ask. If the conversation goes somewhere else, Jodie drops the question cleanly.
+3. **Asked questions rotate off — even if unanswered.** Once Jodie has been given a question for a user, it leaves that user's eligible pool whether they answered, deflected, or said nothing. If someone chose not to engage with a particular question, that's their business; we don't get a second go. The next check-in gives them a different 2.
+4. **Cohort filters use the same vocabulary as Alerts.** Admins don't learn a new audience model. The AudiencePicker is identical.
+5. **K-anonymity (n ≥ 5) still gates display.** A cohort-scoped question that doesn't reach five responses shows "Awaiting more" rather than detail. The floor protects identification through narrow targeting.
+6. **Archive view is aggregate-only.** No verbatim transcript fragments are ever exposed, even for historical questions. The same Bedrock-paraphrased samples that v1 surfaces live are what the archive holds permanently.
+
+---
+
+## Data Model
+
+Four changes: a cohort column, a thread column, a new asks table, and a privacy-driven cleanup of the existing responses table.
+
+```sql
+-- 1. Cohort targeting on questions (additive; v1 rows default to {all:true}).
+ALTER TABLE institutional_questions
+  ADD COLUMN audience JSONB NOT NULL DEFAULT '{"all": true}'::JSONB;
+
+-- 2. Thread id for grouping clones of the same question across time, so a
+--    future "compare runs of this question over time" view in the dashboard
+--    is a single WHERE thread_id = X query. New questions self-reference;
+--    cloned-from-archive questions inherit their parent's thread_id.
+ALTER TABLE institutional_questions
+  ADD COLUMN thread_id UUID;
+UPDATE institutional_questions SET thread_id = id WHERE thread_id IS NULL;
+ALTER TABLE institutional_questions
+  ALTER COLUMN thread_id SET NOT NULL;
+CREATE INDEX idx_iquest_thread ON institutional_questions (thread_id);
+
+-- 3. Per-user ask log. The resolver writes here at prompt-build time so a
+--    user never sees the same question put to them twice -- regardless of
+--    whether they answered, deflected, or stayed silent. Operational
+--    tracking only; cascade-deleted if a user is removed.
+CREATE TABLE institutional_question_asks (
+  question_id  UUID NOT NULL REFERENCES institutional_questions(id) ON DELETE CASCADE,
+  user_id      UUID NOT NULL,
+  asked_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (question_id, user_id)
+);
+CREATE INDEX idx_iqasks_user ON institutional_question_asks (user_id);
+
+-- 4. Anonymise the responses table. v1 stored user_id "for cohort filtering
+--    and GDPR deletion". Both reasons are obviated in v2: cohort filtering
+--    is now baked into the question itself, and the paraphrased response
+--    isn't personal data once detached from the user. Drop the column. v1
+--    rows are anonymised by the migration; new rows are written without it.
+ALTER TABLE institutional_question_responses
+  DROP COLUMN user_id;
+
+-- 5. Useful for the resolver itself:
+CREATE INDEX idx_iquest_active_per_inst
+  ON institutional_questions (institutional_agent_id, status)
+  WHERE status = 'active';
+```
+
+### Why a separate asks table, not an extension to responses
+
+Responses are the data we aggregate. Asks are the operational record of who got which prompt. Two different concerns, two different lifecycles. Aggregation queries stay clean. The asks table holds only `user_id` + `question_id` + timestamp, no content, and is cascade-deleted on user removal. The responses table holds anonymised text and survives any user lifecycle event because there's no longer anything personal in it.
+
+### Why drop user_id from responses
+
+v1 said the link "exists for cohort filtering and so a user can later request deletion of their responses". v2 makes both reasons obsolete:
+
+- **Cohort filtering** is now a property of the question's `audience`. All responses to a Tax-division question are by definition from Tax employees — no per-response join needed.
+- **Deletion** isn't needed when the answer is already an AI-paraphrased fragment with no identifier attached. It is, by construction, not personal data. Same standing as an anonymous comment in an aggregate report.
+
+The unblocking effect: the response data is permanent institutional intel that survives staff turnover. PwC's response patterns from last quarter remain comparable to this quarter even after the people who said them have moved on. That's the right shape for an analytics layer.
+
+### Why thread_id, even though we're not building the comparison view yet
+
+It's one nullable column and a backfill. Adding it later costs more (we'd need to retro-thread historical questions and clones would have lost their lineage). Adding it now costs almost nothing and makes the v3 comparison dashboard a SELECT.
+
+`audience` follows exactly the shape used by `institution_alerts.audience`:
+
+```jsonc
+// Everyone (the default; v1 questions auto-receive this on migration)
+{ "all": true }
+
+// Cohort-targeted
+{
+  "all": false,
+  "filters": {
+    "year_of_study": ["3", "4"],
+    "hall_of_residence": ["sansome", "ross"]
+  }
+}
+```
+
+Semantics:
+- OR within a field, AND across fields
+- Empty filter array on a field = field ignored
+- `all: true` ignores `filters` entirely
+- Same parser (`parseAudience` in `api/_lib/audience.ts`) that Alerts uses — no duplicate logic
+
+### Why we are not adding a `priority` ordering field
+
+`institutional_questions` already has `priority` (`required` vs `optional`) from v1. That's enough for the per-check-in resolver to pick two from a larger matching set: take all `required` matches first (capped at 2), then fill with `optional` matches by recency. If we hit a real need for explicit ordering ("ask my Eid question before my onboarding question"), add a numeric `display_order` then.
+
+---
+
+## Per-Check-in Resolution
+
+The load-bearing new mechanic. At check-in session start, before Jodie's prompt is built:
+
+```ts
+const matching = await pickQuestionsForUser({
+  agentId: agent.id,
+  user: userProfile,
+  limit: 2,
+});
+
+// matching: up to 2 institutional_questions rows, sorted:
+//   1. priority='required' first (cap 2)
+//   2. then priority='optional' by created_at desc
+//   3. all filtered so profileMatchesAudience(q.audience, userProfile) === true
+//   4. all excluded if user has been asked before (LEFT JOIN institutional_question_asks)
+//
+// Then, atomically:
+//   INSERT INTO institutional_question_asks (question_id, user_id)
+//     VALUES (...) ON CONFLICT DO NOTHING;
+```
+
+The resolver runs in the existing agent-prompt-build path (`buildAgentPrompt` per v1 spec). The prompt only ever sees the matching subset — Jodie has no awareness of the wider library.
+
+### Agent prompt framing — natural, not forced (Phase 4)
+
+This framing applies to the per-session prompt override built in Phase 4 below. Until that ships, the agent's stored prompt continues to list every active question (v1 behaviour) and no per-user filtering occurs in the conversation itself.
+
+The 2 selected questions go into the prompt as **opportunities**, not commands. The prompt addition looks like this:
+
+> *During this check-in, your institution would like you to weave in these questions if — and only if — the conversation invites them naturally:*
+> *— "How is exam prep going for you?"*
+> *— "Are you finding hall life supportive at the moment?"*
+> *If the user takes the conversation somewhere else, drop these questions cleanly. Never force them in. Never repeat them within the check-in. If the user has already touched on a topic implicitly, take that as the answer and don't ask the formal version.*
+
+This framing matters as much as the resolver logic. A wellbeing conversation that pivots awkwardly to "and now, your institution would like to know..." is worse than no question at all.
+
+### Why we record the ask at prompt-build time, not at "Jodie verbalised it" time
+
+Conservative-by-design. If a question is put in front of Jodie for a particular user, we treat that user as having had their chance to encounter it — even if Jodie ultimately decided the conversation didn't allow a natural weave-in. The alternative (only record asks Jodie actually verbalised) would require post-conversation analysis to determine, and would re-expose users to questions they were already in the vicinity of. The cost of the conservative rule is that some users might "miss" a question they never actually heard. The benefit is we never pester. We accept the trade.
+
+### Why server-side and not in the agent
+
+Two reasons. First, the agent's prompt is set per-institution, not per-session. We'd otherwise need per-user prompt overrides for every check-in. ElevenLabs supports first-message and prompt overrides per session, and we use them here — but the *selection logic* runs server-side because of reason two: audience matching needs the user's profile, which the server has but the agent shouldn't be trusted with (PII out of the conversation context is a wellbeing-protection principle).
+
+### Stale matching is fine
+
+The resolver runs at session start; if the user's profile changes during the check-in, we don't re-resolve mid-conversation. The next check-in picks up the new state.
+
+### When a user has exhausted their queue
+
+If every question matching a user has been asked, the resolver returns an empty array and the check-in proceeds without any custom questions — same as for institutions that haven't configured any.
+
+**Deferred (post-Phase 4):** the admin dashboard could surface this as a soft signal, e.g. *"42% of matching users have heard all the questions you've published in their cohort — consider adding new questions to keep learning."* Not built yet; flagged here because the data is collectable from `institutional_question_asks` the moment Phase 4 wiring lands.
+
+---
+
+## Admin Authoring UX
+
+The `CustomQuestionsManager` (existing component) gains three things:
+
+**1. AudiencePicker embedded in the compose dialog.** Same component the Alerts compose dialog uses. Default state is "Everyone" (`{ all: true }`). The picker is positioned beneath the question text and above the priority radio.
+
+**2. Live reach estimate** (same debounce, same `useReachEstimate` hook). Below the picker:
+
+> *"Will reach ~840 employees in the next 30 days (estimated)."*
+
+Below the k-anonymity floor, the same message Alerts uses:
+
+> *"Fewer than 5 people match this audience. Broaden the filters before publishing."*
+
+**3. The 3-active cap is removed; the protection moves to the user.** The header counter is replaced with the library/live/archived split plus a soft-warn and hard-cap pair surfaced from the server:
+
+> *"Question library · Live now: 14 · Drafts: 2 · Archived: 11"*
+> *"Each employee hears at most two questions per check-in, picked from those matching their cohort. Build the library to feel like a research bank, not a checklist."*
+
+Above 50 live questions the panel switches to a softer warning ("a library this large can get hard to govern — consider archiving anything that's served its purpose"). At 200 live questions the publish button is disabled outright with copy explaining the backstop.
+
+**Per-user exposure stats — deferred.** A richer panel showing "average questions still ahead of a matching user" and "the highest single-user count" was scoped in early drafts of this spec. It's powered by `institutional_question_asks` and is genuinely useful, but it depends on Phase 4 (resolver wiring) actually populating that table. Once Phase 4 ships and the table has data, this is a one-query add. Until then, the library/live/archived counters are the housekeeping signal.
+
+**No hard org-level ceiling.** The constraint that matters is per-user exposure, and that's handled at the resolver (2 per check-in, asked-once-then-rotate-off). A pulse of 100 questions over a year — one or two new ones a week — is a perfectly healthy library and the system should not stop it. We do enforce one practical limit:
+
+- **Soft warn at 50 currently-active questions** in the institution's library, because the admin UI's list view gets unwieldy and the resolver query's plan starts to need watching.
+- **Hard cap at 200 currently-active** as a backstop against runaway misconfiguration (a script publishing nightly questions, for example). This is well above any plausible legitimate use.
+
+Archived questions don't count toward either limit — they're inert as far as the resolver is concerned.
+
+---
+
+## Always-On Dashboard Card
+
+v1's behaviour was `if (no questions OR no responses) return null`. v2 makes the card three explicit states.
+
+**State A — no questions configured.** The card is visible with a short pitch and a CTA into the CMS:
+
+> *"Conversational Insight*
+> *Add a natural-language question and Jodie will weave it into employees' check-ins. You'll see anonymised themes and sentiment here, with a k-anonymity floor of five responses before anything surfaces."*
+> *[ + Set up your first question ]*
+
+The university variant swaps "employees' check-ins" for "students' check-ins". The CTA only renders when the parent provides `onConfigureClick` — the dashboard wires it to `/(company|university)/{slug}/cms?section=questions`, and the scoped CMS reads the section query param on mount so the click lands directly on the Questions tab.
+
+**State B — questions configured, waiting on responses (n < 5 for all live questions).**
+
+Same `QuestionPanel` list as v1, expanded with the v2 running-stats strip. While `total < 5` the expanded panel renders a `PendingNotice` ("We need at least 5 employees to answer before showing themes — currently N"). For panels with `asked > 0 && total === 0` we instead render a `NoResponsesYet` strip that distinguishes "Jodie hasn't presented this yet" from "Jodie has presented this but no one engaged" — the latter is a Phase 4 signal (today, with no resolver wiring, every question reads `asked = 0`).
+
+**State C — questions configured with data.** v1's panel, plus a running-stats pill row on every question header showing the three numbers that drive housekeeping:
+
+> *Live · Engineering · Year 4 — "How is exam prep going?"*
+> *[ Asked 187 ] [ Answered 112 ] [ Cohort 320 ]*
+
+Plus a `Manage` link in the card header (same destination as the empty-state CTA).
+
+The numbers come from:
+- **Asked** — `COUNT(*) FROM institutional_question_asks WHERE question_id = X AND asked_at >= windowFrom`
+- **Answered** — `COUNT(*) FROM institutional_question_responses WHERE question_id = X AND created_at >= windowFrom`. Every row in this table is an answer; the v1 schema's nullable `answer_text` is gone with the `user_id` cleanup — a row only exists if there's a paraphrased answer to log.
+- **Cohort** — live count of `profiles` matching the question's `audience` for the institution, k-anon clamped to `<5` for narrow audiences. Single bulk profile query at dashboard load; matching runs in JS.
+
+### Why we show all three, not the derived ratios
+
+The card shows raw counts rather than the derived percentages (`response rate = Answered ÷ Asked`, `cohort reach = Asked ÷ Cohort`). Reasoning:
+
+- The three raw numbers carry the same information and don't pre-judge what "enough" means.
+- Percentages collapse two distinct signals into one. A new question with 60% response rate but 5% reach is signal-rich and still spreading; a long-running question with 80% reach and 30% response rate is saturated. The admin reads both stories more cleanly from the three pills than from two derived ratios.
+- An admin who wants ratios can compute them in their head from the three numbers in front of them.
+
+If field testing shows admins consistently asking for the ratios, the card can surface them — but the spec's bias is toward letting admins frame their own interpretation.
+
+---
+
+## Archive View & Export
+
+A new "Archived" sub-section inside the existing Questions tab in `CompanyScopedCMS` and `UniversityScopedCMS`. Lists every archived question with its **final aggregate snapshot**, frozen at archive time:
+
+> *"How is exam prep going?" · Asked 2 Feb – 2 Mar 2026 · Audience: undergraduates*
+> *247 responses · 64% positive · 18% mixed · 12% negative · 6% neutral*
+> *[ Expand: anonymous samples ▼ ] [ Download CSV ]*
+
+The "final aggregate" is snapshotted at the moment of archive, not recomputed every dashboard load. We store it as a JSONB blob on `institutional_questions.archive_snapshot` so the data is immutable from the moment the question retires.
+
+```sql
+ALTER TABLE institutional_questions
+  ADD COLUMN archive_snapshot JSONB;  -- set on transition to 'archived'
+```
+
+### CSV export
+
+One CSV per archived question. Aggregate-only, no user IDs.
+
+```
+question_id,question_text,active_from,active_until,audience_summary,
+total_responses,sentiment_positive,sentiment_neutral,sentiment_negative,
+sentiment_mixed,sentiment_unknown,bedrock_summary,paraphrased_sample_1,
+paraphrased_sample_2,paraphrased_sample_3
+```
+
+Downloadable via `GET /api/companies/questions/:id/export.csv` (and the uni equivalent).
+
+---
+
+## API Surface (changes from v1)
+
+| Change | Endpoint | Note |
+|---|---|---|
+| Accepts `audience` | `POST /api/companies/questions` + `PATCH` | Validates via `parseAudience()` from shared audience lib |
+| Honours `audience` | `GET /api/companies/question-responses` | Aggregates only over matching responses |
+| New: live reach | `POST /api/companies/questions-reach-estimate` | Mirrors `/api/alerts/reach-estimate`, returns clamped count. Sibling-file rather than nested route to avoid Vercel collision with `/api/companies/questions`. |
+| New: CSV export | `GET /api/companies/questions/:id/export.csv` | Archived questions only |
+| Resolver | (internal, `pickQuestionsForUser`) | Called from `buildAgentPrompt` |
+
+University versions mirror under `/api/universities/...`.
+
+---
+
+## Phased Build
+
+### Phase 1 — Cohort filtering + ask-once resolver on Pro (~2 days)
+
+- **Migration 030 (pro):**
+  - Add `audience` column on `institutional_questions` (defaults to `{all:true}` — v1 rows unchanged).
+  - Add `thread_id` column on `institutional_questions`, backfill self-reference, set NOT NULL.
+  - Add `institutional_question_asks` table with `(question_id, user_id)` PK.
+  - **Drop `user_id` from `institutional_question_responses`** — v1 rows are anonymised retroactively in the same migration.
+  - Add the partial index on active questions, the thread_id index, and the asks(user_id) index.
+- Extend `POST/PATCH /api/companies/questions` to accept and validate `audience` via `parseAudience`. New questions get `thread_id = id`; future "clone-from-archived" inherits the parent's `thread_id`.
+- `/api/companies/questions-reach-estimate` (mirrors alerts pattern; sibling-file routing).
+- `CustomQuestionsManager.tsx`: embed `AudiencePicker` + `useReachEstimate`.
+- Replace the 3-active cap with the new counters: "in library / live now / avg per user / most for one user". Soft warn at 50 active, hard cap at 200 active.
+- Resolver `pickQuestionsForUser`:
+  - Implemented in `mind-measure-pro-core/api/_lib/questions.ts`
+  - Returns up to 2 questions matching audience and not in `institutional_question_asks` for that user
+  - Atomically writes to `institutional_question_asks` for each returned question (same DB transaction as the read, `ON CONFLICT DO NOTHING`)
+  - Called from `buildAgentPrompt` at session start
+- **Enrichment service:** stops writing `user_id` to `institutional_question_responses` (column is gone). Otherwise unchanged.
+- Agent prompt addition: the "natural opportunity" framing in the institutional questions section of the prompt (see Per-Check-in Resolution above).
+
+Phase 1 ships the entire mechanism end-to-end except the dashboard surface — those changes live in Phase 2.
+
+### Phase 2 — Always-on card + running stats on Pro and Uni ✅ Shipped
+
+Slice 2a — dashboard surface:
+
+- `ConversationalInsightCard` no longer hides when there are no questions — always-on with an empty-state CTA ("Set up your first question").
+- Each live question now shows a `Asked / Answered / Cohort` running-stats strip plus an audience summary ("Engineering · Year 4" / "Everyone").
+- `Cohort` is k-anon clamped (`<5` when a narrow audience would otherwise leak an individual count).
+- `Manage` button on the populated card (mirrors the CTA's destination once parent wires `onConfigureClick`).
+- `/api/companies/question-responses` and `/api/universities/question-responses` extended with three new fields per question: `asked` (count from `institutional_question_asks` in window), `cohort` (live JSONB-audience match against profiles), `cohortBelowFloor`. Two extra queries per call regardless of question count.
+- Drafts stay hidden on the dashboard — they belong in the CMS.
+
+Slice 2b — CTA wiring:
+
+- `InstitutionalDashboard` in both repos now imports `useNavigate` and passes `onConfigureClick` to the card, routing to `/company/{slug}/cms?section=questions` (pro) and `/university/{slug}/cms?section=questions` (uni).
+- `CompanyScopedCMS` and `UniversityScopedCMS` honour the `?section=` query param on mount via `useSearchParams`. Falls back to `dashboard` for unknown values.
+- The empty-state "Set up your first question" button and the populated-state "Manage" link both land on the Questions tab in one click.
+
+Slice 2c (separate spike — Archive, export):
+
+- Snapshot logic: when a question transitions to `archived`, freeze the aggregate JSONB (final Asked/Answered/Cohort + sentiment + samples).
+- "Archived" sub-section in the Questions tab with the snapshot view.
+- `GET .../questions/:id/export.csv` endpoint + download button.
+
+### Phase 3 — University parity ✅ Shipped (alongside Phase 2)
+
+Mirrored to `mind-measure-core`:
+
+- Migration `021_conversational_insight_v2.sql` (matches pro-core `030`) — `audience` + `thread_id` on `institutional_questions`, `institutional_question_asks` table, drop `user_id` from `institutional_question_responses`, partial index on `(institutional_agent_id, status)`.
+- Same audience helper updates (uni already has its own `api/_lib/audience.ts`).
+- Admin UI mirrored in `CustomQuestionsManager` (uni variant), `AudiencePicker`, `useReachEstimate`.
+- Dashboard `ConversationalInsightCard` mirrored: same always-on behaviour, running stats, audience summary; tone adjusted for student framing.
+
+Still pending Phase 4 (resolver wiring) which applies to both products.
+
+### Phase 4 — Per-session prompt override wiring (mobile + agent sync) — pending sign-off
+
+This is the work that makes the cohort filtering and ask-once rotation actually FIRE during a check-in. Currently the schema and resolver exist (`pickQuestionsForUser`), the dashboard reports `Asked / Answered / Cohort`, but nothing populates the `institutional_question_asks` table because the resolver isn't wired into the mobile check-in start.
+
+- `/api/agents/session-prompt` endpoint (both repos) — calls `pickQuestionsForUser`, returns `{ promptOverride, agentId, askedQuestionIds }`. Logs the asks in `institutional_question_asks` atomically.
+- Mobile change in `CheckinAssessmentSDK.tsx` — call the new endpoint before `conversation.startSession`, pass returned prompt as `overrides.agent.prompt`. Existing `overrides: { agent: { firstMessage } }` already extends this exact shape, so it's a one-key addition.
+- ElevenLabs agent sync (`InstitutionalAgentService`) — enable `Allow prompt overrides` on every institutional agent so the override isn't silently dropped at the SDK boundary.
+- Old mobile builds (pre-update) keep working: they don't call the new endpoint, ElevenLabs falls back to the agent's stored prompt (which lists all live questions), every question goes to every user. v1 behaviour preserved.
+
+Requires explicit sign-off because it touches the check-in code path even if surgically.
+
+### Phase 5 — Stretch / deferred
+
+- Slice 2c finishers: archive snapshot column + CSV export endpoint + Archived sub-view in the CMS.
+- Per-user exposure stats on the library counters ("avg / most questions still ahead of a matching user") — depends on Phase 4 populating `institutional_question_asks`.
+- "Manage questions →" admin nudge when matching users have exhausted their queue.
+- Question theme tagging + cross-question trend dashboard.
+- Question authoring assistance ("Your question is too long — try this shorter version").
+- Question library starter packs by institution type (university wellbeing, corporate hybrid working, etc.).
+- Thread comparison view powered by `thread_id` (already in the schema, no UI yet).
+
+---
+
+## Risks and Guardrails
+
+- **Resolver performance.** With ~50 active questions and a profile-rich audience plus a LEFT JOIN against the asks table, the resolver runs at every check-in start. Mitigated by the partial index on active questions, the index on `asks(user_id)`, and the bounded constants (audience fields ≤8). Worst case on Aurora is expected to be single-digit ms. We'll watch query times in CloudWatch and add a per-resolver cache (60s, keyed on institutional_agent_id + user_id) only if needed.
+- **Honour the silence.** The most important behavioural property of v2 is that an asked-but-unanswered question is never re-asked. Tested explicitly: `(user_id, question_id)` PK on `institutional_question_asks` makes a duplicate ask impossible at the database level. Anything that bypasses the asks table is a bug.
+- **Resolver double-write.** If a check-in starts but never completes (network drop, app crash), we've written to the asks table for questions the user never heard. By design — the conservative rule. The user is treated as exposed, and the next check-in picks fresh questions. Worst case: the user "loses" one question slot to a dropped session. Acceptable.
+- **Over-targeting (narrow audiences).** Admins might write very narrow audiences (one hall, one year, one faculty) and never clear the k-anonymity floor. The compose UI's reach estimate makes this visible *before* publishing, same way Alerts does. Below n=5 the publish button is replaced with "Broaden the filters before publishing."
+- **Library bloat.** With no per-institution hard cap below 200, a confused admin could publish dozens of barely-different questions. Soft warn at 50 keeps the admin UI honest. Beyond that, the library view sorts by recency and admins can archive in bulk.
+- **Archive immutability.** Once snapshotted, the JSONB doesn't recompute. If we later improve the Bedrock summarisation, archived summaries stay on the older version. Acceptable trade-off — the alternative is recomputation per-load, which costs Bedrock tokens for every dashboard render of an archived question.
+- **Cross-tenant leakage.** Every endpoint resolves `companyId` / `universityId` against the caller's authorised institution via the existing shared helpers. No change from v1.
+- **Migration backfill.** v1 questions get `audience = { all: true }`. They also do **not** get backfilled into the asks table — so existing users will continue to be asked v1 questions in their next check-in (and only their next check-in, since they'll then be added to asks). This is the right behaviour: it would be unfair to retroactively decide "you've already been asked everything" for users who joined while v1 was live.
+
+---
+
+## Open Questions
+
+Decided in spec review:
+
+- ✅ **Cap-per-check-in is 2**, not 3.
+- ✅ **Rotation is keyed on asks, not responses.** Silence honoured the same as an answer.
+- ✅ **No org-level hard cap on configured questions** (soft warn at 50 active, hard backstop at 200). Per-user protection is at the resolver.
+- ✅ **CSV export auth same as live response access** (any institution admin).
+- ✅ **Audience preview uses the existing reach-estimate component.**
+- ✅ **`required` crowding out `optional` is admin housekeeping, not system business.** The running-stats display (Asked / Answered / Cohort) is what surfaces the problem and lets the admin act. No system-level warnings.
+- ✅ **Archived = archived.** No unarchive path. Admins clone-then-edit to re-run a theme; thread_id maintains the lineage for the future comparison view.
+- ✅ **Anonymised responses are not personal data once Bedrock has paraphrased them.** `user_id` is dropped from `institutional_question_responses` in this migration. The asks table keeps `user_id` because it's operational tracking, and gets cascade-deleted on user removal in the standard GDPR cleanup. Update the privacy policy line to reflect this: aggregate anonymous answers are retained indefinitely as institutional intel.
+
+Still open:
+
+1. **Thread comparison dashboard (v3).** The schema accommodates it via `thread_id`. The UI for "plot every run of this question over time" needs its own design pass. Not in v2 scope but the data is ready when we get there.
+2. **Cohort theming.** If two questions in the library share a cohort ("undergraduate Year 3 in halls"), should the dashboard offer a combined view? Defer to v3 alongside the thread comparison UI.
+
+---
+
+## Commercial Case (additive to v1)
+
+v1 is what gets the paid-tier line item. v2 is what makes it stick.
+
+A wellbeing platform that lets HR ask the same three questions to every employee for a quarter becomes a thin survey tool. A wellbeing platform that lets HR ask **the right question to the right people, every week, with a memory of every question they've ever asked**, is a strategic insight layer that no general-purpose pulse tool can match. The archive view is the artefact: at the end of the year, an institution looks back at a library of 40 anonymous-aggregate conversations they had with their people, all without sending a single survey form.
+
+That's the story we sell into renewal.
