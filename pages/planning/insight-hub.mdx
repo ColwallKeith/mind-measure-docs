@@ -1,0 +1,258 @@
+# Insight Hub — Conversational Insight as a Standalone Module
+
+**Priority**: High — repositions the highest-engagement paid-tier feature as a discrete, sellable add-on
+**Status**: Planning — scope agreed, Pass 1 (scaffolding) in progress May 2026
+**Platforms**: Pro first, then mirror to University
+**Builds on**: [Conversational Insight v2](/planning/conversational-insight-v2) (shipped both products)
+
+---
+
+## What's Changing
+
+Conversational Insight is currently a tab inside `CompanyScopedCMS` / `UniversityScopedCMS`. Functionally it works. Commercially it doesn't — buried in a CMS settings page, it's hard to perceive as the value-added product it actually is.
+
+This work pulls Conversational Insight out of the CMS and gives it its own standalone hub — a new Next.js app at its own subdomain, mirroring the architecture of the existing Content Hub. Same SSO handoff from admin (no separate password), same visual language, but a dedicated surface that institutions can recognise as a distinct paid module.
+
+| | Today (shipped) | After this work |
+|---|---|---|
+| Surface | "Questions" tab in CMS | Standalone hub at `insight.mindmeasurepro.com` |
+| Brand presence | None — invisible inside a settings tab | First-class sidebar item in admin: "Open Insight Hub" |
+| Access control | Bundled with CMS access | Per-org boolean flag `conversational_insight_enabled` |
+| Landing experience | Dashboard card on company overview | Full landing dashboard with KPIs, themes, quotes, HQ tips |
+| Cohort comparison | Audience filter on individual questions | Dedicated cohort comparison view across any live question |
+| Archive access | None — data retained but invisible | Full archive page with aggregates and CSV export |
+
+Nothing in the underlying Conversational Insight v2 product is changing. The data model, the resolver, the per-user exposure rules, the k-anonymity floor — all unchanged. This is a repositioning and surfacing of work already shipped.
+
+---
+
+## Positioning Principle
+
+Conversational Insight is not a separate product. It only works because of the engaged network of users motivated by wellbeing support — without that network there is no audience and no data. What it is, instead, is **additional value for the organisation already paying for Mind Measure**.
+
+The hub model exists to make that value legible:
+
+1. **It's recognisably a thing.** A buyer can see it, click into it, demo it, point at it on an invoice.
+2. **It has a home for new features.** Cohort comparisons, board-pack exports, theme tracking over time, scheduled digests — all of these feel right as Insight Hub features and would feel wrong as CMS sub-tabs.
+3. **It's permissionable.** (Follow-up work.) An HR analytics person who should see Insight responses but should not be able to send platform alerts gets exactly the access they need, no more.
+4. **It mirrors a pattern that already works.** The Content Hub does the same thing for content/marketing. Institutions and their teams are already familiar with the pattern: click "Open Content Hub" from admin, land in a focused workspace, do the work, come back.
+
+---
+
+## Architecture
+
+### New repo
+
+`mind-measure-pro-insight-hub` — Next.js 16 App Router, React 19, Postgres via `pg`, lucide-react icons, inline styles with Inter + Lato fonts. Same stack as `mind-measure-pro-hub` so there's no new technology to learn.
+
+Domain: `insight.mindmeasurepro.com`. Vercel project name: `mind-measure-pro-insight-hub`.
+
+### Auth handoff (SSO from admin)
+
+Identical pattern to the Content Hub:
+
+1. Admin user clicks "Open Insight Hub" in the sidebar of `admin.mindmeasurepro.com`.
+2. Admin frontend hits `POST /api/companies/[id]/insight-hub-token`, which validates that:
+   - the user has company-admin access for that company, AND
+   - `companies.conversational_insight_enabled = true`
+3. Endpoint returns a base64-encoded JSON payload `{ email, companyId, role, ts }` and the redirect URL.
+4. Browser navigates to `insight.mindmeasurepro.com/api/auth/session?token=...&name=...`.
+5. Hub session endpoint sets an httpOnly cookie `insight_session` (7-day expiry) and redirects to `/dashboard`.
+6. Every hub page calls `getInsightUser()` server-side; if no cookie, redirect back to admin.
+
+No password screen on the hub. No separate identity. The hub is gated by the admin's existing auth + the per-company entitlement flag.
+
+### Gating
+
+One new column on `companies`:
+
+```sql
+ALTER TABLE companies
+  ADD COLUMN conversational_insight_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+```
+
+When `false`:
+- The "Open Insight Hub" sidebar item does not render in admin.
+- The token-issuing endpoint returns 403.
+- Direct hits on `insight.mindmeasurepro.com` (with or without a stale cookie) get bounced to admin.
+
+When `true` (set by Mind Measure superuser per company):
+- The sidebar item renders.
+- Token issuance succeeds.
+- The hub serves all its pages.
+
+Tiered pricing (basic/pro/enterprise) is deferred. A single boolean is reversible and matches what we actually know about pricing right now (zero confirmed tiers).
+
+### Backend reuse
+
+The Insight Hub does not introduce new business logic. Its API routes are thin proxies to the existing Conversational Insight v2 endpoints in `mind-measure-pro-core`:
+
+| Hub route | Proxies to |
+|---|---|
+| `GET /api/dashboard` | `/api/companies/questions` + `/api/companies/question-responses` |
+| `GET /api/questions` | `/api/companies/questions` |
+| `POST /api/questions` | `/api/companies/questions` |
+| `PATCH /api/questions/:id` | `/api/companies/questions` |
+| `GET /api/responses/:id` | `/api/companies/question-responses?questionId=:id` |
+| `GET /api/questions/:id/export.csv` | `/api/companies/questions/:id/export.csv` |
+| `POST /api/cohorts/compare` | `/api/companies/question-cohort-comparison` (new — see below) |
+
+### New backend endpoint
+
+One new aggregation endpoint added to `mind-measure-pro-core`:
+
+```ts
+POST /api/companies/question-cohort-comparison
+Body: {
+  questionId: string,
+  cohorts: Array<{ label: string, audience: AudienceSpec }>
+}
+Returns: {
+  question: { id, prompt, ... },
+  cohorts: Array<{
+    label: string,
+    cohortSize: number,
+    responseCount: number,
+    belowFloor: boolean,         // true if responseCount < AUDIENCE_MIN_FLOOR (5)
+    themes: Array<{ theme: string, weight: number }>,
+    sampleQuotes: string[]       // only populated if !belowFloor
+  }>
+}
+```
+
+K-anonymity floor of 5 applied **per cohort**, not just per question. A cohort with fewer than 5 responses shows "Awaiting more" instead of detail.
+
+---
+
+## Hub Pages
+
+### `/dashboard` — Landing
+
+Six sections, top to bottom:
+
+1. **Top stat bar** — company name, today's date, three KPIs: active questions, total responses this period, average response rate. Prominent placement, not a footer afterthought.
+2. **Live Questions panel** — list of active questions with running stats per question (Asked / Answered / Cohort), small 14-day sparkline of daily responses, click-through to the per-question deep dive.
+3. **What employees are saying** — two-column treatment mirroring the Content Hub dashboard: "Most discussed themes" and "Emerging signals". Pulled from Bedrock summarisation across recent responses. K-anonymity floor of 5.
+4. **Recent quotes** — anonymised sample-quote carousel, 3-4 visible cards. Each shows the question and a Bedrock-paraphrased snippet. K-anonymity already enforced in the API.
+5. **From Mind Measure HQ** — content tips, suggested questions to ask this month, best-practice prompts. Mirrors the HQ suggestions block on the Content Hub.
+6. **Quick actions** — "Ask a new question" primary CTA, "View archive" secondary, "Export this month" link.
+
+### `/questions` — Question library
+
+Port of `CustomQuestionsManager` from pro-core, rehoused in the hub with more breathing room. Author new, edit live, archive, set audience. Same underlying CRUD against `/api/companies/questions`.
+
+### `/cohorts` — Cohort comparison
+
+Pick a live question, build 2+ cohorts using the same profile-field-aware filter strip pattern as `CohortFilters` in pro-core, hit "Compare". Surface for each cohort:
+
+- Cohort size (audience match against `profiles`)
+- Response count (with `belowFloor` indicator if < 5)
+- Theme distribution (Bedrock-extracted, bar chart per cohort)
+- Sample quotes (only when `!belowFloor`)
+
+Why this is a new component and not a port of the existing `CohortAnalysis.tsx`:
+
+- The existing component is wired to placeholder sine/cosine data, not real data
+- Its chart shapes are designed for time-series MMS comparison; this use case is distribution across cohorts for a single question
+- Built fit-for-purpose with real data from day one is cleaner than dragging legacy scaffolding across
+
+Deep link from any question's response page: `/cohorts?question=:id` preloads the question selector.
+
+### `/archive` — Archived questions
+
+List of archived questions with their lifetime aggregates (total asked, total answered, top themes). Per-row "Export CSV" button. Anonymous, aggregate-only — never any verbatim transcript fragments.
+
+### `/responses/[id]` — Per-question deep dive
+
+For a single live question: response timeline (daily chart), audience reach breakdown, paraphrased sample quotes, "Compare cohorts" CTA that routes to `/cohorts?question=:id`.
+
+### `/login` — Fallback bounce
+
+If anyone hits `insight.mindmeasurepro.com` without a valid cookie (and isn't coming through the token endpoint), bounce to `https://admin.mindmeasurepro.com` with a flash message.
+
+---
+
+## What's Removed from Admin
+
+Once the Insight Hub is live and verified:
+
+- The "Questions" tab in `CompanyScopedCMS.tsx` is removed.
+- The "Conversational Insight" card on the company Overview dashboard is **kept** — it still surfaces running stats in the main admin, but the configure CTA now opens the hub.
+- Existing `/api/companies/questions` and `/api/companies/question-responses` endpoints stay exactly as-is — the hub calls them, the mobile resolver calls them.
+
+The removal is a separate commit, separate deploy from the hub launch — don't fly the cutover without a net.
+
+---
+
+## Build Order (Four Passes)
+
+Sized to allow validation at each step rather than landing as a single 3-day PR.
+
+### Pass 1 — Scaffolding (~½ day)
+
+- Create `mind-measure-pro-insight-hub` repo
+- Copy HubShell pattern, brand tokens, layout from pro-hub
+- Port auth handoff: `getInsightUser()`, `/api/auth/session`, `/api/auth/logout`
+- Stub all routes (`/dashboard`, `/questions`, `/cohorts`, `/archive`, `/responses/[id]`, `/login`) with placeholder content
+- Add the gating migration + runner endpoint in pro-core
+- Add `POST /api/companies/[id]/insight-hub-token` to pro-core
+- Add the "Open Insight Hub" sidebar item in admin, gated on the flag
+
+**Validation**: Mind Measure superuser sets the flag for one company → company admin sees the sidebar item → clicks it → lands on the (placeholder) hub dashboard.
+
+### Pass 2 — Questions surface (~½ day)
+
+- Port `CustomQuestionsManager` UI into `/questions`
+- Wire to `/api/companies/questions` via hub proxy
+- Confirm audience picker still works (port `AudiencePicker` if needed)
+
+**Validation**: Hub admin creates, edits, archives questions; changes appear in admin's existing dashboard card unchanged.
+
+### Pass 3 — Landing dashboard (~1 day)
+
+- Build the six-section dashboard
+- KPIs, live questions panel, themes, quotes, HQ tips, quick actions
+- This is the bit that defines whether it feels like a product
+
+**Validation**: Open the hub with a populated dataset (PwC) and see a magazine-style landing page comparable to the Content Hub.
+
+### Pass 4 — Cohort comparison, archive, export (~1 day)
+
+- Build `/cohorts` and the new `/api/companies/question-cohort-comparison` endpoint
+- Build `/archive` with CSV export
+- Remove the Questions tab from `CompanyScopedCMS.tsx` (separate commit, separate deploy)
+
+**Validation**: Pick the most-answered PwC question, build "Tax vs Audit" cohorts, see distinct theme distributions. Export the archive as CSV.
+
+### After Pro is verified — mirror to University
+
+`mind-measure-uni-insight-hub` repo, `insight.mindmeasure.co.uk` domain, university-flavour vocabulary ("students" not "employees"), coral brand colour treatment instead of navy. ~1-2 days.
+
+---
+
+## Permissioning (Follow-Up)
+
+Out of scope for this work. Once the hub is live and a buyer asks "can our analytics team get access without being full admins?", we'll add:
+
+- `core_users.user_permission[]` entry `insight_viewer`, OR
+- a new `company_authorized_users.role` value `insight_viewer`
+
+`getInsightUser()` will check this role and either show the full hub or a read-only subset. Implementation choice deferred until there's a real ask to anchor the design.
+
+---
+
+## Out of Scope (For This Work)
+
+- Tiered pricing model — one boolean for now
+- Permissioned non-admin viewers — see above
+- Cross-institution benchmarks ("PwC vs anonymised industry average") — interesting but premature; needs more institutions live first
+- Scheduled email digests / board-pack PDFs — Phase 5+
+- White-labelling the hub for institutional intranets — only worth doing if asked
+
+---
+
+## Reference
+
+- Spec the hub builds on: [Conversational Insight v2](/planning/conversational-insight-v2)
+- Pattern the hub mirrors: `mind-measure-pro-hub` repo (Content Hub)
+- Existing admin CMS that surrenders the Questions tab: `mind-measure-pro-core/src/components/institutional/CompanyScopedCMS.tsx`
