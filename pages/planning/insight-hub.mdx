@@ -257,6 +257,8 @@ Carves out the two remaining sections of the spec plus per-question 14-day spark
 
 **Deferred** (separate commit after hub is verified): remove the Questions tab from `CompanyScopedCMS.tsx`. The hub-only flow needs a couple of days of smoke testing first so we don't strand admins mid-edit if there's a bug in the hub-side CRUD.
 
+**Shipped (Questions tab removal)**: hub is verified end-to-end on the production domain (`insight.mindmeasurepro.com`, custom domain attached, SSL provisioned, SSO handoff confirmed), so the in-CMS Questions tab has been stripped from `CompanyScopedCMS.tsx`. Affects all companies regardless of `conversational_insight_enabled` — the spec was always full removal. The Overview's empty-state Conversational Insight card now deep-links to `?section=insight` (the Insight Hub launch card) instead of `?section=questions`. The `CustomQuestionsManager.tsx` source file is left on disk as dead code; a housekeeping commit can delete it once we're confident nothing else references the symbol.
+
 ### After Pro is verified — mirror to University
 
 `mind-measure-uni-insight-hub` repo, `insight.mindmeasure.co.uk` domain, university-flavour vocabulary ("students" not "employees"), coral brand colour treatment instead of navy. ~1-2 days.
