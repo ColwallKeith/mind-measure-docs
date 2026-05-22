@@ -184,7 +184,7 @@ The removal is a separate commit, separate deploy from the hub launch — don't 
 
 ---
 
-## Build Order (Four Passes)
+## Build Order (Five Passes)
 
 Sized to allow validation at each step rather than landing as a single 3-day PR.
 
@@ -207,6 +207,18 @@ Sized to allow validation at each step rather than landing as a single 3-day PR.
 - Confirm audience picker still works (port `AudiencePicker` if needed)
 
 **Validation**: Hub admin creates, edits, archives questions; changes appear in admin's existing dashboard card unchanged.
+
+**Shipped**: Questions list (live / drafts / archived), compose dialog (text, internal note, priority, duration), publish / pause / archive / restore actions. Auth bridge: hub mints a short-lived `iss: 'mindmeasure-platform'` JWT signed with `SUPERUSER_JWT_SECRET`, carries only the caller's email; pro-core's `resolveCompanyAdmin` does the actual authorisation against `company_authorized_users`. Audience defaults to "Everyone" for new hub-authored questions; existing cohort-targeted questions are preserved on edit because PATCH omits the `audience` field unless explicitly set.
+
+### Pass 2.1 — Audience picker (~½ day)
+
+Defers the full `AudiencePicker` port from Pass 2 because the picker pulls in a non-trivial dependency tree (shadcn primitives, `useReachEstimate` hook, `companyProfileFields` config, `parseProfileFieldsConfig`) that doesn't yet exist in the hub.
+
+- Port `AudiencePicker` and its dependencies to the hub
+- Wire the reach-estimate proxy (`/api/questions-reach-estimate` -> pro-core `/api/companies/questions-reach-estimate`)
+- Replace the "Audience: Everyone" hint in the compose dialog with the real picker
+
+**Validation**: Hub admin creates a new question targeted at a specific cohort (e.g. Tax department only); resolver only exposes it to employees matching that cohort.
 
 ### Pass 3 — Landing dashboard (~1 day)
 
