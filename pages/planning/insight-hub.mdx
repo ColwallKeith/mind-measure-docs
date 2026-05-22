@@ -307,27 +307,54 @@ Out of scope for this work. Once the hub is live and a buyer asks "can our analy
 
 ---
 
-## Follow-Up: Passwordless Front Door (backlog)
+## Passwordless Front Door (shipped)
 
-The current SSO model requires every Insight Hub user to land via `admin.mindmeasurepro.com` first. That's a reasonable simplification for v1 (one cookie session, one source of truth for who an admin is) but it has friction: a buyer's HR analytics person who's been added to `company_authorized_users` still has to learn the existence of the admin app, sign in there, and click through. For an audience that thinks of Insight Hub as "the conversational insight product", that's an unnecessary hop.
+The hub now has its own sign-in page at `insight.mindmeasurepro.com/login`. Company admins on `company_authorized_users` can land direct at the hub URL — typed, bookmarked, or from a welcome email — without going through `admin.mindmeasurepro.com` first.
 
-Backlog idea: a separate passwordless front door at `insight.mindmeasurepro.com/login` (and the equivalent for university). The flow:
+### Why ship this now
 
-1. User enters their work email.
-2. We check the email against `company_authorized_users` (and `university_authorized_users` for the uni side). If not found: silent "if your email is on the list, we've sent you a link" response, no enumeration.
-3. If found: send a magic link (or a 6-digit code via SES) that, when clicked/entered, sets the same `insight_session` cookie the SSO path sets today.
-4. From there it's the same hub the SSO users see.
+Better demos (one URL to send a buyer's HR analytics team), and a cleaner mental model for the people who think of Insight Hub as "the conversational insight product" rather than "a thing inside the admin tool". Mind Measure staff still come through the admin SSO sidebar; the front door is specifically for institutional admins.
 
-Why backlog rather than scope creep on this work:
-- v1 needs zero new login surface to ship; the SSO path is the constraint.
-- Magic-link auth has its own threat model (email account compromise, link-stealing, rate-limiting, replay) that wants its own design + threat-modelling pass.
-- The fix also wants thinking about session lifetime on the hub: SSO sessions today inherit admin's session length implicitly, a standalone magic-link login probably wants a shorter explicit expiry.
-- Worth doing properly when the first buyer asks "can I just give my analyst the URL?" rather than rushing it ahead of demand.
+### How it works
 
-When we pick it up, the work splits roughly into:
-- New hub-side `/api/auth/email-link` route that mints + emails a single-use token (Aurora-backed table, indexed by email + token hash).
-- A small landing page at `/login` that handles both the entry form and the token-redemption return.
-- A symmetric implementation in `mind-measure-uni-insight-hub` when the university hub lands.
+The hub doesn't have its own auth stack. It proxies onto pro-core's existing `POST /api/auth/send-access-code` and `POST /api/auth/verify-access-code` (the same endpoints `SuperuserLogin` uses), which already know how to:
+
+- Resolve an email against `core_users` AND `company_authorized_users`.
+- Mint a JWT challenge token tied to a hashed 6-digit code (10-minute expiry, signed with `SUPERUSER_JWT_SECRET`).
+- Send the code via SES from `noreply@mindmeasurepro.com`.
+- Rate-limit per IP via `@mindmeasure/api-lib/rate-limiter`.
+
+Reuse over reinvention. The only hub-specific work is on the wrapper:
+
+| Hub route | Purpose |
+|---|---|
+| `POST /api/auth/email-login/request` | Forwards `{ email }` to pro-core send-access-code. Passes `x-forwarded-for` through so the rate limiter keys per-user, not per-hub-instance. Returns `{ challengeToken }`. |
+| `POST /api/auth/email-login/verify` | Forwards `{ email, code, challengeToken }` to pro-core. On success, runs two extra gates before issuing a session cookie. |
+| `GET /login` | Server-rendered page that bypasses the form if `getInsightUser()` returns a user (already signed in → straight to `/dashboard`). Otherwise renders the two-step client form. |
+| `GET /api/auth/logout` | (unchanged) Clears the `insight_session` cookie and bounces to `admin.mindmeasurepro.com`. |
+
+### Verify-side gates
+
+After pro-core verifies the code, the hub applies two further checks before promoting the result into a session cookie:
+
+1. **No `companyId` on the verified user** → 403 with "Mind Measure staff: sign in via admin and use the *Open Insight Hub* sidebar link instead." Staff coming via `core_users` have platform-wide permissions, not a single-company scope, and we don't ship a company picker for v1.
+2. **`conversational_insight_enabled = false`** on the company → 403 with "Insight Hub isn't enabled for {company name}. Contact your Mind Measure account manager." Catches the case where an admin's email is on the access list but their org hasn't bought the module. Without this check the user would log in successfully, then `getInsightUser()` would bounce them silently on the next request, which is a confusing UX.
+
+Only if both gates pass do we mint a `base64(JSON)` session token via `createSessionToken(email, companyId, role, companyName)` and set it as `insight_session` with `httpOnly + secure + sameSite=Lax + maxAge=24h`. From the cookie's perspective, the front-door flow and the SSO handoff are indistinguishable — `getInsightUser()` reads the same shape either way and re-validates the entitlement flag on every request.
+
+### Client UI
+
+`/login` mirrors `SuperuserLogin` from pro-core for platform consistency:
+
+- Full-bleed backdrop image (`public/fabien-bellanger-WyfXOHgI49s-unsplash.jpg`) with a darken-gradient overlay so the white form card pops at any breakpoint.
+- Left at `lg+`: backdrop-blur branding panel — "Conversational insight, on demand" headline, copy describing the cohort/anonymity story, security note about passwordless sign-in.
+- Right: form card. Step 1 is an email input with the access-list explainer; step 2 is six separate digit inputs that auto-advance, accept clipboard paste, and auto-submit on the sixth digit. Resend code, change email, and a footer link routing Mind Measure staff to admin.
+
+### Follow-ups for this surface
+
+- **Image optimisation**: the backdrop is 8MB on disk. Run it through a build-time compress (or swap to next/image with a smaller asset) before any high-traffic demo.
+- **Welcome email / new-admin onboarding**: when a company admin is added via the admin app's user-management UI, the invite email currently sends them to `admin.mindmeasurepro.com`. For Insight-Hub-only admins it could send them straight to `insight.mindmeasurepro.com/login` instead.
+- **University parity**: the mirror to `mind-measure-uni-insight-hub` will need the same passwordless flow against uni-core's `university_authorized_users`. Same architecture, different table.
 
 ---
 
