@@ -230,6 +230,17 @@ Defers the full `AudiencePicker` port from Pass 2 because the picker pulls in a 
 
 **Validation**: Open the hub with a populated dataset (PwC) and see a magazine-style landing page comparable to the Content Hub.
 
+**Shipped**: Four of the six planned sections — top stat bar (active questions, responses in window, average response rate), Live Questions panel (expandable: sentiment bar + Bedrock summary + anonymised paraphrased samples + audience), Recent Quotes carousel (aggregated samples across questions), Quick Actions (links into Questions / Cohort Compare / Archive). Window selector (30 / 90 / 365 days) drives the entire dashboard. K-anonymity floor of 5 enforced server-side by pro-core's `/api/companies/question-responses` — no hub-side reimplementation.
+
+### Pass 3.1 — Sparklines, themes, HQ tips (~½–1 day)
+
+Carves out the two remaining sections of the spec plus per-question 14-day sparklines that needed pro-core endpoint work.
+
+- Per-question 14-day response sparkline — needs new `GET /api/companies/question-responses/timeline?questionId=&days=14` returning `[{day, responses}]`
+- Cross-question theme aggregation ("Most discussed themes" + "Emerging signals") — needs a new Bedrock pass that summarises across questions, k-anonymity floor of 5 applied to the union
+- From Mind Measure HQ tips block — suggested questions for this month, best-practice prompts (probably hand-curated content for the MVP, dynamic later)
+- "Export this month" quick action wiring
+
 ### Pass 4 — Cohort comparison, archive, export (~1 day)
 
 - Build `/cohorts` and the new `/api/companies/question-cohort-comparison` endpoint
