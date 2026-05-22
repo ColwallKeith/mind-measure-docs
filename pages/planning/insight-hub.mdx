@@ -249,6 +249,14 @@ Carves out the two remaining sections of the spec plus per-question 14-day spark
 
 **Validation**: Pick the most-answered PwC question, build "Tax vs Audit" cohorts, see distinct theme distributions. Export the archive as CSV.
 
+**Shipped (endpoint + UI)**:
+
+- New `POST /api/companies/question-cohort-comparison` in pro-core. Takes `{ companyId, questionId, cohorts: [{ label, audience }], days? }`, returns per-cohort `{ label, cohortSize, responseCount, belowFloor, themes: [{theme, weight}], sampleQuotes }`. Lifetime-by-default, optional `days` window override capped at 365. K-anonymity floor of 5 applied PER COHORT (not just per question). Cohort sizes for filtered audiences are clamped to the floor so a narrow filter can't reveal a small headcount. Bedrock theme extraction (Claude 3 Haiku) capped at 25 samples per cohort to bound token spend; failures degrade gracefully to empty themes + visible sample quotes.
+- Hub `/cohorts` UI: question selector (preselects from `?question=:id` deep link), 2–6 dynamic cohort builders each with the full AudiencePicker + label input, Compare button, per-cohort result cards with horizontal theme bars, sample quotes and below-floor lock state. Native HTML + Tailwind throughout — no chart libraries added.
+- Hub `/archive` UI: list of archived questions with asked / answered / response rate / cohort running stats. Expandable row reveals sentiment bar + Bedrock summary + paraphrased samples. Per-row `CSV` button generates an anonymised single-row CSV client-side (aggregate counts, sentiment buckets, summary, samples — never verbatim transcripts). Each row also has a `Compare` button that deep-links into `/cohorts?question=:id`. CSV-injection guard on cells starting with `=+-@`.
+
+**Deferred** (separate commit after hub is verified): remove the Questions tab from `CompanyScopedCMS.tsx`. The hub-only flow needs a couple of days of smoke testing first so we don't strand admins mid-edit if there's a bug in the hub-side CRUD.
+
 ### After Pro is verified — mirror to University
 
 `mind-measure-uni-insight-hub` repo, `insight.mindmeasure.co.uk` domain, university-flavour vocabulary ("students" not "employees"), coral brand colour treatment instead of navy. ~1-2 days.
