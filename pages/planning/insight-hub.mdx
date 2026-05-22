@@ -220,6 +220,8 @@ Defers the full `AudiencePicker` port from Pass 2 because the picker pulls in a 
 
 **Validation**: Hub admin creates a new question targeted at a specific cohort (e.g. Tax department only); resolver only exposes it to employees matching that cohort.
 
+**Shipped**: Picker rebuilt for the hub with native HTML + Tailwind (no shadcn primitive port needed). Company row (divisions / departments / offices / profile_fields / total_employees) is server-rendered alongside the question list in a single SSR pass via `src/lib/company.ts`, so cascading dropdowns are populated on first paint. Reach estimate hits the new `/api/questions-reach-estimate` hub proxy, which forwards to pro-core's `/api/companies/questions-reach-estimate` via the bridge JWT and applies the k-anonymity floor of 5. POST and PATCH from the hub now always include the audience field so picker edits round-trip correctly.
+
 ### Pass 3 — Landing dashboard (~1 day)
 
 - Build the six-section dashboard
