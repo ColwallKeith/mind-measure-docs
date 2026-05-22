@@ -338,7 +338,7 @@ Reuse over reinvention. The only hub-specific work is on the wrapper:
 After pro-core verifies the code, the hub applies two further checks before promoting the result into a session cookie:
 
 1. **No `companyId` on the verified user** → 403 with "Mind Measure staff: sign in via admin and use the *Open Insight Hub* sidebar link instead." Staff coming via `core_users` have platform-wide permissions, not a single-company scope, and we don't ship a company picker for v1.
-2. **`conversational_insight_enabled = false`** on the company → 403 with "Insight Hub isn't enabled for {company name}. Contact your Mind Measure account manager." Catches the case where an admin's email is on the access list but their org hasn't bought the module. Without this check the user would log in successfully, then `getInsightUser()` would bounce them silently on the next request, which is a confusing UX.
+2. **`conversational_insight_enabled = false`** on the company → 403 with `"Insight Hub isn't enabled for <company name>. Contact your Mind Measure account manager."` Catches the case where an admin's email is on the access list but their org hasn't bought the module. Without this check the user would log in successfully, then `getInsightUser()` would bounce them silently on the next request, which is a confusing UX.
 
 Only if both gates pass do we mint a `base64(JSON)` session token via `createSessionToken(email, companyId, role, companyName)` and set it as `insight_session` with `httpOnly + secure + sameSite=Lax + maxAge=24h`. From the cookie's perspective, the front-door flow and the SSO handoff are indistinguishable — `getInsightUser()` reads the same shape either way and re-validates the entitlement flag on every request.
 
