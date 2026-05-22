@@ -236,10 +236,31 @@ Defers the full `AudiencePicker` port from Pass 2 because the picker pulls in a 
 
 Carves out the two remaining sections of the spec plus per-question 14-day sparklines that needed pro-core endpoint work.
 
-- Per-question 14-day response sparkline — needs new `GET /api/companies/question-responses/timeline?questionId=&days=14` returning `[{day, responses}]`
-- Cross-question theme aggregation ("Most discussed themes" + "Emerging signals") — needs a new Bedrock pass that summarises across questions, k-anonymity floor of 5 applied to the union
-- From Mind Measure HQ tips block — suggested questions for this month, best-practice prompts (probably hand-curated content for the MVP, dynamic later)
-- "Export this month" quick action wiring
+**Shipped:**
+
+- **14-day response sparklines** on every Live Question card. New `GET /api/companies/question-responses-timeline?companyId=&questionId=&days=` endpoint in pro-core returns one row per day in the window (uses `generate_series` so zero-response days still appear — no client-side date backfilling). Window-decoupled from the main dashboard window: sparklines are always 14d because they exist to answer "is this question alive RIGHT NOW", not to mirror the larger aggregate. Fetched in parallel client-side after mount so the dashboard's first paint isn't blocked on N round-trips. Rendered with a native SVG component (`src/components/charts/Sparkline.tsx`) — no chart library dependency.
+- **"What employees are saying"** section: cross-question themes. New `GET /api/companies/cross-question-themes?companyId=&days=` endpoint sends every active question's last-30d responses to Bedrock (Claude 3 Haiku) in a single pass grouped by question, returning two buckets: `discussed` (3–5 dominant themes that span multiple questions or are heavily mentioned in any single one) and `emerging` (2–4 distinct low-frequency signals worth watching). Per-question response cap (25) + corpus cap (200) with round-robin sampling so a chatty question can't monopolise the prompt. K-anonymity applied at the **corpus level** (5 total responses across all active questions, not per question) — the whole point of cross-question aggregation is to surface signal that wouldn't clear a per-question floor on its own. Theme-extraction failures return empty buckets non-fatally; the dashboard renders a graceful "AI summary unavailable right now" state.
+- **From Mind Measure HQ** tips block: three hand-curated tip cards (keep questions live for at least a fortnight, cohort-target sensitive topics, use cohort comparison after a change). Static content for v1 — considered driving from the marketing CMS but tips are stable product guidance, not weekly content. If/when this becomes a regular touchpoint we'll move it.
+- **Export last Nd** quick action: replaces the previous "Manage questions" action card (which was duplicative — it routed to the same place as "Ask a new question"). Generates a client-side CSV bundle of every question's aggregates for the current dashboard window. Aggregates only — no verbatim quotes, paraphrased samples excluded for safety. CSV-injection-guarded (cells starting with `=+-@` get a leading apostrophe), RFC-4180-compliant.
+
+Supporting infrastructure: `src/lib/csv.ts` was extracted with shared `escapeCsv` / `rowsToCsv` / `downloadCsv` helpers so the dashboard export and the existing archive per-row export share one implementation.
+
+### `/responses/[id]` — Per-question deep dive (shipped)
+
+Per-question deep dive page replaces the Pass 1 placeholder. Server-renders the question aggregate (last 30d) and 90-day daily timeline in parallel via two upstream calls, so first paint arrives with everything populated.
+
+**Page layout:**
+
+- Back-to-dashboard link.
+- **Header**: question prompt + status pill + audience summary + active-from/until dates + "Compare cohorts" CTA (deep-links into `/cohorts?question=:id`).
+- **KPI strip**: asked / answered / response rate / cohort.
+- **Response timeline**: 90-day sparkline (`<Sparkline>` component shared with the dashboard) with peak day, daily average, and active-day count callouts.
+- **What employees told us**: sentiment bar + Bedrock summary + paraphrased samples. Mirrors the dashboard's expanded panel but bigger and permalinked.
+- **Audience reach**: visualised cohort breakdown with k-anon-clamped reach number.
+
+Below the k-anonymity floor of 5, detail sections collapse to the same "Awaiting more responses" lock state the dashboard uses, so narrow-cohort questions stay opaque even when permalinked. Stale bookmarks for deleted/wrong-company question IDs surface a `notFound()` rather than a 500.
+
+The dashboard's Live Question cards each include a "View full details →" footer link to the deep dive plus a "Compare cohorts" shortcut for parity with the archive page.
 
 ### Pass 4 — Cohort comparison, archive, export (~1 day)
 
@@ -283,6 +304,30 @@ Out of scope for this work. Once the hub is live and a buyer asks "can our analy
 - Cross-institution benchmarks ("PwC vs anonymised industry average") — interesting but premature; needs more institutions live first
 - Scheduled email digests / board-pack PDFs — Phase 5+
 - White-labelling the hub for institutional intranets — only worth doing if asked
+
+---
+
+## Follow-Up: Passwordless Front Door (backlog)
+
+The current SSO model requires every Insight Hub user to land via `admin.mindmeasurepro.com` first. That's a reasonable simplification for v1 (one cookie session, one source of truth for who an admin is) but it has friction: a buyer's HR analytics person who's been added to `company_authorized_users` still has to learn the existence of the admin app, sign in there, and click through. For an audience that thinks of Insight Hub as "the conversational insight product", that's an unnecessary hop.
+
+Backlog idea: a separate passwordless front door at `insight.mindmeasurepro.com/login` (and the equivalent for university). The flow:
+
+1. User enters their work email.
+2. We check the email against `company_authorized_users` (and `university_authorized_users` for the uni side). If not found: silent "if your email is on the list, we've sent you a link" response, no enumeration.
+3. If found: send a magic link (or a 6-digit code via SES) that, when clicked/entered, sets the same `insight_session` cookie the SSO path sets today.
+4. From there it's the same hub the SSO users see.
+
+Why backlog rather than scope creep on this work:
+- v1 needs zero new login surface to ship; the SSO path is the constraint.
+- Magic-link auth has its own threat model (email account compromise, link-stealing, rate-limiting, replay) that wants its own design + threat-modelling pass.
+- The fix also wants thinking about session lifetime on the hub: SSO sessions today inherit admin's session length implicitly, a standalone magic-link login probably wants a shorter explicit expiry.
+- Worth doing properly when the first buyer asks "can I just give my analyst the URL?" rather than rushing it ahead of demand.
+
+When we pick it up, the work splits roughly into:
+- New hub-side `/api/auth/email-link` route that mints + emails a single-use token (Aurora-backed table, indexed by email + token hash).
+- A small landing page at `/login` that handles both the entry form and the token-redemption return.
+- A symmetric implementation in `mind-measure-uni-insight-hub` when the university hub lands.
 
 ---
 
