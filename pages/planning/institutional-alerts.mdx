@@ -101,7 +101,9 @@ CREATE INDEX idx_alert_acks_alert ON institution_alert_acks (alert_id);
 
 ### Audience targeting (Phase 2)
 
-Phase 2 uses the existing per-company `profile_fields` JSONB config as the targeting vocabulary. Whatever fields the company has configured for employees (Country, City, Office, Division, Grade, Practice…) become the same dropdowns admins use to pick an audience. Admins don't learn a new schema — they target on the same dimensions they already use for the dashboard's `CohortFilters`.
+Phase 2 uses the existing per-company `profile_fields` JSONB config as the targeting vocabulary. Whatever fields the company has configured for employees (Office, Division, Grade, Practice…) become the same dropdowns admins use to pick an audience. Admins don't learn a new schema — they target on the same dimensions they already use for the dashboard's `CohortFilters`.
+
+> **Note (May 2026):** Country and City are no longer asked as separate employee questions — `office_location` is the single location question and implies both. The dashboard's `CohortFilters` *derives* Country/City filter options from the company's offices, but the alerts `AudiencePicker` does **not** yet do this derivation: it reads `profile_fields` directly. So for a company that only asks Primary office, audience targeting is by **Office** (Country/City won't appear). Mirroring the office→city/country derivation into `AudiencePicker` is a tracked follow-up.
 
 The `audience` JSONB shape:
 

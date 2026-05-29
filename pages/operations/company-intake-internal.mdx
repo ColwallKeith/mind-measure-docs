@@ -54,7 +54,8 @@ honest empty state (per the live-only fix).
 ### Section 4: Employee profile fields
 
 This maps to the `companies.profile_fields` JSONB column (added in
-migration 013). Edit via the **Employee Profile Fields** tab in the CMS.
+migration 013). Edit via the **Employee fields** tab in the CMS (the editor
+itself is titled "Employee questions").
 
 | Question | Field key | Field type |
 |---|---|---|
@@ -65,9 +66,22 @@ migration 013). Edit via the **Employee Profile Fields** tab in the CMS.
 | 4.5 Primary office label | `office_location` | `select_from_company_offices` |
 | 4.6 Bespoke fields | new key per field | `select` or `text`, add to `fields[]` array |
 
-For each field, decide whether `showInCohortFilter` should be true based on
-the customer's answer. Set `required: true` for division, department and
-seniority by default.
+**One decision per question.** The editor now exposes a single switch —
+**Add to profile** — per question. Anything you add is asked of employees
+*and* automatically available as a dashboard filter; there is no separate
+"ask everyone" or "use as filter" toggle to set. Sensible defaults are
+baked into the catalogue (`required: true` for division, department and
+seniority; `showInCohortFilter: true` for everything except the free-text
+`role` field), so you normally just choose which questions to include and
+edit their wording/options.
+
+**Location is one question.** Do not add separate Country or City questions.
+`office_location` is the only location question — each office in the org
+structure carries its own city and country, so the dashboard's cohort
+builder derives Country and City filters from the chosen office. Country
+and City are retired from the question catalogue; if an older config still
+contains them the editor renders them with a "covered by Primary office,
+safe to remove" note, but never offers them as new questions.
 
 ### Section 5: Sign-in
 
@@ -150,9 +164,10 @@ launch.
    sections 1.1-1.6 and the slug.
 2. **Org structure**, Organisational Structure tab. Paste section 3.1
    (divisions and their departments) and section 3.2 (offices).
-3. **Employee Profile Fields**, paste any customer overrides from
+3. **Employee fields**, paste any customer overrides from
    section 4. If the customer didn't change anything, the corporate
-   default from migration 013 is already in place.
+   default from migration 013 is already in place. Use "Reset to
+   recommended" in the editor to restore that default at any time.
 4. **Allowed email domains**, Settings tab. Paste section 5.1 and 5.2 in.
 5. **Emergency Resources**, paste sections 6.1, 6.2, 6.3, 6.5 and 7.
 6. **Hierarchy of Help**, paste section 8.
