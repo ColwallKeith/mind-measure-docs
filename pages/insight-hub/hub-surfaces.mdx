@@ -1,0 +1,83 @@
+# Hub Surfaces
+
+Every page in `mind-measure-pro-insight-hub`, what it renders, and where its data comes from. The sidebar (`HubShell`) exposes four: **Home, Questions, Cohort Compare, Archive**. The deep dive and login pages are reached contextually.
+
+---
+
+## `/dashboard` — Home
+
+The landing surface (`DashboardClient`). Server-renders 30 days of `question-responses` on first paint, then layers in the rest client-side. Top to bottom:
+
+1. **Page header** — company name, date, a window selector (30 / 90 / 365 days) that drives the whole page, "Ask a new question", a CSV export button for the selected window, refresh.
+2. **Headline insight card** — the featured question (chosen by most responses → most asked → has a summary): response count, sentiment bar, Bedrock summary, paraphrased samples. Footer KPIs:
+   - **Active questions** — count of live questions
+   - **Total responses** — sum of answered across visible questions
+   - **Response rate** — `answered ÷ asked` as a percentage
+3. **Other live questions** — a grid of the remaining active questions, each expandable to its sentiment, summary and samples, with a 14-day response sparkline and a "View full details" link to the deep dive.
+4. **Voice of the workforce** — cross-question themes from `cross-question-themes`: a "Most discussed" column, an "Emerging signals" column, and a carousel of up to six paraphrased quotes.
+5. **Cohort divergence** — a heatmap from `question-cohort-divergence` across dimensions (division, office, location, seniority, work mode, role, department), sorted by divergence score, so an admin can see where one part of the org feels differently.
+
+<br />
+
+> **Response rate.** `asked` is populated by the per-check-in resolver (`POST /api/agents/session-questions`) writing the `institutional_question_asks` ledger at check-in start — see [How Questions Are Asked](/insight-hub/asking-questions). The response-rate KPI (`answered ÷ asked`) is therefore meaningful once the resolver rollout is live (pro-core deployed, agents re-synced, updated app shipped).
+
+The same insight data is mirrored read-only inside admin via `ConversationalInsightCard.tsx`, which calls `/api/companies/question-responses` directly.
+
+---
+
+## `/questions` — Question library
+
+Authoring surface (`QuestionsClient`). Tabs for **Live / Drafts / Archived**. Compose and edit with:
+
+- Question text + internal note
+- Priority (`required` / `optional`)
+- Active duration
+- `AudiencePicker` with a live reach estimate (k-anon floor enforced — publish blocked under five)
+
+Actions: **publish** (`status: 'active'`), **pause** (back to `draft`), **archive**, **restore**. Publishing or archiving an active question triggers an ElevenLabs agent re-sync (`syncAgentForCompany`). Hard cap of 200 active questions.
+
+---
+
+## `/cohorts` — Cohort Compare
+
+The cohort insight report builder (`CohortsClient`):
+
+1. Pick a live question (preselected from a `?question={id}` deep link if present).
+2. Define **2–6 cohorts**, each with a label and a full `AudiencePicker` audience.
+3. Generate → `cohort-insight-report` returns per-cohort sentiment, themes, quotes, plus a Bedrock executive summary and recommendations.
+
+The result is a **printable report** (`window.print()` with dedicated print CSS in `CohortReportStyles`), suitable for a board pack. The k-anonymity floor applies per cohort — a cohort under five shows "Awaiting more".
+
+---
+
+## `/archive` — Archive
+
+Retired questions (`ArchiveClient`). Loads `question-responses?days=365`, filters to `status === 'archived'`, and lists each with its lifetime aggregates (asked / answered / response rate / cohort). Each row expands to its sentiment, summary and paraphrased samples, and offers a **per-row CSV export** (aggregate + up to three sample quotes when above the floor). Each row also deep-links into `/cohorts?question={id}`.
+
+---
+
+## `/responses/[id]` — Deep dive
+
+A single question in full (`ResponseDeepDiveClient`). Server-renders the 30-day aggregate and a 90-day daily timeline in parallel:
+
+- Header: prompt, status pill, audience summary, active dates, "Compare cohorts" CTA
+- KPI strip: asked / answered / response rate / cohort
+- 90-day response timeline (peak day, daily average, active-day count)
+- "What employees told us": sentiment bar + Bedrock summary + paraphrased samples
+- Audience reach breakdown (k-anon-clamped)
+
+Below the floor, detail sections collapse to the same "Awaiting more responses" lock used elsewhere — so a narrow-cohort question stays opaque even when permalinked. An unknown or wrong-company question ID returns `notFound()`, not a 500.
+
+---
+
+## `/login` — Front door
+
+The passwordless sign-in page for institutional admins arriving directly at the hub. Two-step email + 6-digit code, reusing pro-core's access-code stack with two hub-side entitlement gates (see [Architecture](/insight-hub/architecture#path-2--passwordless-front-door)). If the visitor is already signed in, it bypasses the form straight to `/dashboard`.
+
+---
+
+## Shared infrastructure
+
+- **`src/lib/csv.ts`** — `escapeCsv` / `rowsToCsv` / `downloadCsv`, RFC-4180-compliant with formula-injection guarding; shared by the dashboard bulk export and the archive per-row export.
+- **`src/components/charts/Sparkline.tsx`** — native SVG sparkline (no chart-library dependency), shared by Live Question cards and the deep-dive timeline.
+- **`HubShell`** — sidebar + layout shell mirroring the Content Hub pattern.

@@ -9,6 +9,7 @@
   "assessment": "Assessment System",
   "admin": "Admin Dashboard",
   "content-hub": "University Content Hub",
+  "insight-hub": "Insight Hub",
   "api-reference": "API Reference",
   "security": "Security & Compliance",
   "adr": "Architecture Decisions",

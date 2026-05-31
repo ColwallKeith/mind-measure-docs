@@ -1,0 +1,96 @@
+# API Reference
+
+Two layers: the **pro-core** endpoints that hold the logic, and the **hub** routes that proxy onto them with the tenant pinned from the session. All pro-core endpoints resolve the company from the authenticated caller and enforce the k-anonymity floor of five.
+
+---
+
+## pro-core — Conversational Insight endpoints
+
+All under `mind-measure-pro-core/api/`. University equivalents mirror under `/api/universities/...`.
+
+### Questions
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/companies/questions` | GET | List the institution's questions (live / drafts / archived) |
+| `/api/companies/questions` | POST | Create a question; validates `audience` via `parseAudience`; sets `thread_id = id` |
+| `/api/companies/questions` | PATCH | Update text / status / audience; status changes to/from `active` trigger `syncAgentForCompany` |
+| `/api/companies/questions-reach-estimate` | POST | Live audience size for the compose UI; clamps to the floor and returns `belowFloor`. Sibling-file route to avoid Vercel collision with `/questions` |
+
+### Responses & aggregation (read path)
+
+| Endpoint | Method | Returns |
+|---|---|---|
+| `/api/companies/question-responses` | GET | Per-question `asked`, `total`, sentiment buckets, up to 3 paraphrased samples, Bedrock summary (above floor), cohort size (k-anon clamped), `cohortBelowFloor` / `pending` |
+| `/api/companies/question-responses-timeline` | GET | Daily response counts per question over a window (uses `generate_series`, so zero-days appear) |
+| `/api/companies/cross-question-themes` | GET | Corpus-level Bedrock themes across all active questions → `discussed` + `emerging`; corpus floor of five |
+| `/api/companies/question-cohort-divergence` | GET | Question × cohort-value matrix from `cohort_snapshot`; sentiment lean + divergence score; per-cell `belowFloor` |
+| `/api/companies/cohort-insight-report` | POST | Full per-cohort report (sentiment, themes, quotes) + Bedrock executive summary & recommendations; per-cohort floor |
+
+### Capture (mobile)
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/agents/session-questions` | POST | Called at check-in start. Resolves caller + company server-side, runs `pickQuestionsForUser` (max 2, cohort-matched, ask-once), writes the asks ledger, and returns the picked questions formatted for the `checkin_questions` dynamic variable. Degrades to an empty set on any error |
+| `/api/agents/questions/responses` | POST | `{ fusionOutputId }` → loads transcript, runs Bedrock `extractAnswers`, writes anonymised rows with `cohort_snapshot`. Fired fire-and-forget by mobile after a check-in |
+| `/api/agents/resolve` | GET | `?university_id={companyId}` → resolves the institution's ElevenLabs agent for the check-in |
+
+### Hub access & gating
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/companies/insight-hub-token` | POST | Verifies company-admin access + `conversational_insight_enabled`; returns the base64 handoff token and hub redirect URL (403 if disabled) |
+| `/api/companies/public-branding` | GET | Branding (name, slug, logos) for the hub shell |
+
+import { Callout } from 'nextra/components'
+
+<Callout type="warning">
+**Legacy endpoint.** `/api/companies/question-cohort-comparison` predates the v2 migration and still selects the dropped `user_id` column, so it is effectively broken. The hub's Cohort Compare uses **`cohort-insight-report`** instead. Treat `question-cohort-comparison` as deprecated.
+</Callout>
+
+---
+
+## Internal helpers (pro-core)
+
+| Symbol | File | Role |
+|---|---|---|
+| `pickQuestionsForUser` | `api/_lib/questions.ts` | The per-check-in resolver: max 2, audience-matched, ask-once. Wired into the live check-in via `POST /api/agents/session-questions` |
+| `parseAudience` / `profileMatchesAudience` | `api/_lib/audience.ts` | Audience shape parsing and in-memory cohort matching (shared with Alerts) |
+| `AUDIENCE_MIN_FLOOR` | `api/_lib/audience.ts` | The k-anonymity constant (`5`) |
+| `buildAgentPrompt` / `syncAgentForCompany` | `src/services/InstitutionalAgentService.ts` | Compiles active questions into the ElevenLabs agent prompt and pushes it |
+| `resolveCompanyAdmin` | `api/_lib/company-admin.ts` | Authorises the caller; exposes `canEnterInsightHub` / `canViewInsightData` / `canEditInsightData` |
+| `verifyInsightHubBridgeToken` | `api/_lib/auth-middleware.ts` | Verifies the hub's short-lived bridge JWT |
+
+---
+
+## Hub — proxy routes
+
+All under `mind-measure-pro-insight-hub/src/app/api/`. They pin `companyId` from the `insight_session` cookie and forward over the bridge JWT.
+
+| Hub route | Method | Forwards to |
+|---|---|---|
+| `/api/questions` | GET / POST / PATCH | `/api/companies/questions` |
+| `/api/question-responses` | GET | `/api/companies/question-responses` |
+| `/api/question-responses-timeline` | GET | `/api/companies/question-responses-timeline` |
+| `/api/questions-reach-estimate` | POST | `/api/companies/questions-reach-estimate` |
+| `/api/cross-question-themes` | GET | `/api/companies/cross-question-themes` |
+| `/api/question-cohort-divergence` | GET | `/api/companies/question-cohort-divergence` |
+| `/api/cohort-insight-report` | POST | `/api/companies/cohort-insight-report` |
+| `/api/branding` | GET | `/api/companies/public-branding` |
+| `/api/auth/email-login/request` | POST | pro-core `send-access-code` |
+| `/api/auth/email-login/verify` | POST | pro-core `verify-access-code` (+ hub gates) |
+| `/api/auth/session` | GET | sets `insight_session` cookie (local) |
+| `/api/auth/logout` | GET | clears cookie (local) |
+| `/api/auth/me` | GET | `getInsightUser()` (local) |
+| `/api/health` | GET | local health check |
+
+---
+
+## Auth & session summary
+
+| Mechanism | Where | Lifetime |
+|---|---|---|
+| `insight_session` cookie (SSO handoff) | hub, httpOnly + secure + sameSite=Lax | 7 days |
+| `insight_session` cookie (email front door) | hub | 24 hours |
+| Handoff token | base64 JSON, re-validated server-side | single use |
+| Bridge JWT | hub → pro-core, `iss: mindmeasure-insight-hub` | ~60 seconds |

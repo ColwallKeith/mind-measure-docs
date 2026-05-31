@@ -1,7 +1,7 @@
 # Conversational Insight v2 — Cohort Filtering, Library, Archive
 
 **Priority**: High — extends the highest-engagement paid-tier feature
-**Status**: Phase 1 (schema + authoring) and Phase 2 (dashboard surface) shipped to both products. Phase 3 (per-session resolver wiring through to mobile) pending mobile sign-off.
+**Status**: Phase 1 (schema + authoring) and Phase 2 (dashboard surface) shipped to both products. Phase 4 (per-check-in resolver wiring) implemented on Pro via dynamic-variable delivery — see below; University parity pending.
 **Platforms**: Pro admin + mobile, University admin + mobile
 **Last Updated**: May 2026
 **Builds on**: [Conversational Insight v1](/planning/conversational-insight) (shipped)
@@ -244,7 +244,7 @@ The university variant swaps "employees' check-ins" for "students' check-ins". T
 
 **State B — questions configured, waiting on responses (n < 5 for all live questions).**
 
-Same `QuestionPanel` list as v1, expanded with the v2 running-stats strip. While `total < 5` the expanded panel renders a `PendingNotice` ("We need at least 5 employees to answer before showing themes — currently N"). For panels with `asked > 0 && total === 0` we instead render a `NoResponsesYet` strip that distinguishes "Jodie hasn't presented this yet" from "Jodie has presented this but no one engaged" — the latter is a Phase 4 signal (today, with no resolver wiring, every question reads `asked = 0`).
+Same `QuestionPanel` list as v1, expanded with the v2 running-stats strip. While `total < 5` the expanded panel renders a `PendingNotice` ("We need at least 5 employees to answer before showing themes — currently N"). For panels with `asked > 0 && total === 0` we instead render a `NoResponsesYet` strip that distinguishes "Jodie hasn't presented this yet" from "Jodie has presented this but no one engaged" — this signal is live on Pro now that the resolver populates `institutional_question_asks` at check-in start (University still reads `asked = 0` until its parity lands).
 
 **State C — questions configured with data.** v1's panel, plus a running-stats pill row on every question header showing the three numbers that drive housekeeping:
 
@@ -370,18 +370,18 @@ Mirrored to `mind-measure-core`:
 - Admin UI mirrored in `CustomQuestionsManager` (uni variant), `AudiencePicker`, `useReachEstimate`.
 - Dashboard `ConversationalInsightCard` mirrored: same always-on behaviour, running stats, audience summary; tone adjusted for student framing.
 
-Still pending Phase 4 (resolver wiring) which applies to both products.
+Phase 4 (resolver wiring) is now implemented on Pro (see below); University parity is pending.
 
-### Phase 4 — Per-session prompt override wiring (mobile + agent sync) — pending sign-off
+### Phase 4 — Per-check-in resolver wiring (Pro shipped, via dynamic variable)
 
-This is the work that makes the cohort filtering and ask-once rotation actually FIRE during a check-in. Currently the schema and resolver exist (`pickQuestionsForUser`), the dashboard reports `Asked / Answered / Cohort`, but nothing populates the `institutional_question_asks` table because the resolver isn't wired into the mobile check-in start.
+This is the work that makes the cohort filtering and ask-once rotation actually FIRE during a check-in. It was implemented on Pro using a **dynamic-variable delivery** rather than the prompt override the original spec assumed — the chosen questions ride the same per-check-in context channel that already carries division/department/seniority. With zero customers live, the static all-questions fallback was dropped and a mobile update forced.
 
-- `/api/agents/session-prompt` endpoint (both repos) — calls `pickQuestionsForUser`, returns `{ promptOverride, agentId, askedQuestionIds }`. Logs the asks in `institutional_question_asks` atomically.
-- Mobile change in `CheckinAssessmentSDK.tsx` — call the new endpoint before `conversation.startSession`, pass returned prompt as `overrides.agent.prompt`. Existing `overrides: { agent: { firstMessage } }` already extends this exact shape, so it's a one-key addition.
-- ElevenLabs agent sync (`InstitutionalAgentService`) — enable `Allow prompt overrides` on every institutional agent so the override isn't silently dropped at the SDK boundary.
-- Old mobile builds (pre-update) keep working: they don't call the new endpoint, ElevenLabs falls back to the agent's stored prompt (which lists all live questions), every question goes to every user. v1 behaviour preserved.
+- **`POST /api/agents/session-questions`** (pro-core) — resolves the caller and company server-side, calls `pickQuestionsForUser` (max 2, cohort-matched, ask-once), atomically writes `institutional_question_asks`, and returns the picked questions pre-formatted. Degrades to an empty set on any error so a check-in is never blocked.
+- **`buildAgentPrompt`** now emits a static framing block with a `{{checkin_questions}}` placeholder instead of listing the questions. Institutional agents must be re-synced (`POST /api/agents/sync-all`) after deploy so the placeholder is present.
+- **Mobile** (`CheckinAssessmentSDK.tsx`) — calls `session-questions` just before `conversation.startSession` and sets the result on `dynamicVars.checkin_questions`. No prompt override, so no "Allow prompt overrides" agent setting is needed.
+- Unit-tested (`api/_lib/questions.test.ts`, `InstitutionalAgentService.test.ts`). Rollout sequence: deploy pro-core → `sync-all` → ship mobile.
 
-Requires explicit sign-off because it touches the check-in code path even if surgically.
+**University parity** (`mind-measure-core` + `mind-measure-mobile-final`) mirrors the same four changes and is pending.
 
 ### Phase 5 — Stretch / deferred
 

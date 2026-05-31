@@ -1,0 +1,73 @@
+# Privacy & Anonymity
+
+Conversational Insight is built so that an institution learns how its people feel **in aggregate**, and never who said what. Three mechanisms enforce that: anonymised storage, a k-anonymity floor, and audience-floor gating at authoring time.
+
+import { Callout } from 'nextra/components'
+
+---
+
+## 1. Responses are stored anonymised
+
+`institutional_question_responses` holds the Bedrock **paraphrase** of an answer, a sentiment label, a confidence, and a `cohort_snapshot` of the profile dimensions that mattered for cohorting — and nothing that identifies the person.
+
+The `user_id` column was deliberately **dropped** in migration 030. The reasoning:
+
+- **Cohort filtering no longer needs it.** Cohorting is now driven by the `cohort_snapshot` JSONB captured at answer time and by the question's own `audience` — no per-response identity join is required.
+- **Deletion no longer needs it.** A Bedrock-paraphrased fragment with no identifier attached is, by construction, not personal data — the same standing as an anonymous comment in an aggregate report.
+
+<Callout type="info">
+**Consequence:** anonymised responses are retained indefinitely as institutional intelligence and survive staff turnover. Last quarter's response patterns stay comparable to this quarter even after the people who said them have moved on. The privacy policy reflects this.
+</Callout>
+
+The **asks ledger** (`institutional_question_asks`) does keep `user_id` — but it holds only `(question_id, user_id, asked_at)`, no content, and is cascade-deleted when a user is removed in the standard GDPR cleanup. It is operational tracking, not insight data.
+
+---
+
+## 2. The k-anonymity floor (n ≥ 5)
+
+Nothing about a group surfaces until at least **five** responses exist for it. The constant is defined once:
+
+```ts
+// api/_lib/audience.ts
+export const AUDIENCE_MIN_FLOOR = 5;
+```
+
+It is enforced at every read and authoring point:
+
+| Point | Behaviour below the floor |
+|---|---|
+| `question-responses` | `pending: true`; no samples, sentiment or summary shown; cohort size clamped to 5 |
+| `cross-question-themes` | Corpus floor of 5 total responses across all active questions before themes render |
+| `question-cohort-divergence` | Per-cell `belowFloor` flag when a cohort has 1–4 responses |
+| `cohort-insight-report` | Per-cohort `belowFloor`; narrative only for cohorts above the floor |
+| `questions-reach-estimate` | Publish blocked; "Broaden the filters before publishing" |
+| Hub UI (dashboard, archive, deep dive) | "Awaiting more responses" lock state |
+
+Two subtleties worth knowing:
+
+- **Cohort sizes are clamped, not just hidden.** A narrow filtered audience reports its size as `5` rather than its true small number, so the reach figure itself cannot reveal a small headcount.
+- **The floor is applied per cohort, not just per question.** In cohort comparison and divergence views, a question that clears the floor overall can still show "Awaiting more" for an individual cohort that hasn't reached five.
+
+---
+
+## 3. Audience floor at authoring time
+
+The floor is also applied *before* data exists. When an admin targets a question at a cohort, the live reach estimate (`questions-reach-estimate`) clamps the count and flags `belowFloor`. If fewer than five people match, the publish button is disabled. This stops a narrow audience from ever being created — you cannot author a question that could only ever be answered by an identifiable handful of people.
+
+---
+
+## 4. Samples are paraphrased, never verbatim
+
+Every "sample quote" shown anywhere — dashboard carousel, deep dive, archive, cohort report — is a **Bedrock paraphrase**, not a transcript fragment. The raw conversation transcript is never copied into the insight tables; only the paraphrase is stored. CSV exports follow the same rule: aggregates and paraphrased samples only, never verbatim transcripts, never user IDs. Exports are additionally CSV-injection-guarded (cells starting with `=`, `+`, `-`, `@` get a leading apostrophe).
+
+---
+
+## 5. Tenant isolation
+
+Every endpoint resolves the company from the authenticated caller, never from a client-supplied parameter:
+
+- Hub routes pin `companyId` from the `insight_session` cookie before proxying.
+- pro-core verifies the hub's short-lived bridge JWT and re-resolves the company admin via `resolveCompanyAdmin()`.
+- The entitlement flag `conversational_insight_enabled` is re-checked on every hub request by `getInsightUser()`.
+
+A hub client cannot request another organisation's data, and a disabled organisation cannot reach any data even with a stale cookie.

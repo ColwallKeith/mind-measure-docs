@@ -1,0 +1,143 @@
+# Data Model
+
+Conversational Insight is three tables plus one gating column on `companies`. All live in the pro-core Aurora database; the University product mirrors the same schema.
+
+---
+
+## `institutional_questions`
+
+The question library. One row per authored question. Created in `012_create_institutional_agents.sql`, extended by migration 030.
+
+```sql
+CREATE TABLE institutional_questions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    institutional_agent_id UUID NOT NULL REFERENCES institutional_agents(id) ON DELETE CASCADE,
+    question_text TEXT NOT NULL,
+    question_context TEXT,
+    category TEXT NOT NULL DEFAULT 'localized_knowledge'
+        CHECK (category IN ('localized_knowledge', 'strategic_insight')),
+    status TEXT NOT NULL DEFAULT 'draft'
+        CHECK (status IN ('draft', 'active', 'archived')),
+    priority TEXT NOT NULL DEFAULT 'optional'
+        CHECK (priority IN ('required', 'optional')),
+    created_by TEXT NOT NULL,
+    approved_by TEXT,
+    active_from TIMESTAMPTZ,
+    active_until TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- migration 030: cohort targeting + thread lineage
+ALTER TABLE institutional_questions
+    ADD COLUMN audience JSONB NOT NULL DEFAULT '{"all": true}'::JSONB;
+ALTER TABLE institutional_questions
+    ADD COLUMN thread_id UUID;   -- backfilled to id, then SET NOT NULL
+
+-- partial index the resolver leans on
+CREATE INDEX idx_iquest_active_per_inst
+    ON institutional_questions (institutional_agent_id, status)
+ WHERE status = 'active';
+```
+
+- **`audience`** — `{ all: true }` (default; v1 rows auto-receive this) or a cohort filter. Same shape and parser (`parseAudience`) as `institution_alerts.audience`: OR within a field, AND across fields, empty array ignores the field.
+- **`thread_id`** — groups clones of the same question across time so a future "compare runs of this question" view is a single `WHERE thread_id = X` query. New questions self-reference; clones inherit their parent's thread.
+- **`priority`** — `required` is asked preferentially; `optional` fills remaining slots.
+- **`status`** — `draft` → `active` → `archived`. Archived is terminal (clone-then-edit to re-run).
+
+### Audience shape
+
+```jsonc
+// Everyone
+{ "all": true }
+
+// Cohort-targeted
+{
+  "all": false,
+  "filters": {
+    "department": ["tax", "audit"],
+    "office_location": ["london", "dubai"]
+  }
+}
+```
+
+---
+
+## `institutional_question_responses`
+
+One row per **answered** question per check-in. Created in migration 029, anonymised in 030, cohort-stamped in 033.
+
+```sql
+CREATE TABLE institutional_question_responses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    question_id UUID NOT NULL REFERENCES institutional_questions(id) ON DELETE CASCADE,
+    fusion_output_id UUID NOT NULL,
+    answer_text TEXT NOT NULL,         -- Bedrock paraphrase, never verbatim
+    confidence INT,
+    sentiment TEXT CHECK (sentiment IN ('positive', 'neutral', 'negative', 'mixed')),
+    cohort_snapshot JSONB NOT NULL DEFAULT '{}'::JSONB,  -- migration 033
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- one response per (check-in, question)
+CREATE UNIQUE INDEX uq_iqr_fusion_question
+    ON institutional_question_responses (fusion_output_id, question_id);
+
+-- migration 033: cohort matrix support
+CREATE INDEX idx_iqr_cohort_snapshot_gin
+    ON institutional_question_responses USING gin (cohort_snapshot);
+```
+
+- **No `user_id`.** Dropped in migration 030 — the response is anonymous by construction (see [Privacy](/insight-hub/privacy)). v1 rows were anonymised retroactively in the same migration.
+- **`answer_text`** is the AI paraphrase only. A row exists only if there was an answer to log.
+- **`cohort_snapshot`** freezes the answerer's relevant profile dimensions at answer time, so cohort comparison and divergence work without a per-response identity join.
+
+---
+
+## `institutional_question_asks`
+
+The per-user ask ledger — operational tracking for the resolver. Created in migration 030.
+
+```sql
+CREATE TABLE institutional_question_asks (
+    question_id  UUID NOT NULL REFERENCES institutional_questions(id) ON DELETE CASCADE,
+    user_id      UUID NOT NULL,
+    asked_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (question_id, user_id)
+);
+CREATE INDEX idx_iqasks_user ON institutional_question_asks (user_id);
+```
+
+- The `(question_id, user_id)` primary key makes a duplicate ask **impossible at the database level** — this is what guarantees "asked-once, then rotate off". Anything that bypasses this table is a bug.
+- Holds no content; cascade-deleted when a user is removed.
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+**Written at check-in start.** This table is populated by `pickQuestionsForUser` when the mobile calls `POST /api/agents/session-questions` at the start of a check-in — before the user speaks. That is what drives the dashboard `asked` counts and the "never re-ask" rotation. See [How Questions Are Asked](/insight-hub/asking-questions).
+</Callout>
+
+---
+
+## `companies.conversational_insight_enabled`
+
+The per-organisation entitlement gate. Migration 031.
+
+```sql
+ALTER TABLE companies
+    ADD COLUMN conversational_insight_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+```
+
+Set per company by a Mind Measure superuser. Re-checked on every hub request by `getInsightUser()` and at token issuance.
+
+---
+
+## Migration reference
+
+| Migration | Adds |
+|---|---|
+| `012_create_institutional_agents.sql` | `institutional_questions` base table |
+| `029_institutional_question_responses.sql` | responses table + unique `(fusion_output_id, question_id)` |
+| `030_conversational_insight_v2.sql` | `audience` + `thread_id`; `institutional_question_asks`; **drops `user_id`** from responses; partial active index |
+| `031_conversational_insight_hub_gating.sql` | `companies.conversational_insight_enabled` |
+| `033_cohort_snapshot.sql` | `cohort_snapshot` JSONB + GIN index on responses |
