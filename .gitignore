@@ -100,3 +100,6 @@ temp/
 # Vercel
 .vercel
 ~$*.docx
+
+# Handbook screenshot drop folder (originals; committed copies live in public/images/handbook)
+HandBook screenshots*/
