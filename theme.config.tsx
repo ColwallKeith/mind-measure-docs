@@ -136,6 +136,9 @@ export default {
 
           img { max-width: 100% !important; page-break-inside: avoid !important; }
 
+          /* Phone screenshots must stay small in print; the rule above would otherwise blow them up to full page width and clip them. */
+          img.print-narrow { max-width: 300px !important; display: block !important; margin: 0.5rem auto !important; }
+
           a { color: inherit !important; text-decoration: none !important; }
 
           .nextra-callout, [class*="callout"] {
