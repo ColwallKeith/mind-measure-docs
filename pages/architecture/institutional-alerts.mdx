@@ -1,0 +1,129 @@
+# Institutional Alerts
+
+The Alerts system is an institutional broadcast channel. It lets a company admin push a short, severity-tagged message straight onto every matching employee's mobile dashboard within seconds, with a push notification for the higher tiers. It is not a chat and not a nudge: it is a fast, one-way message from the institution to its people, framed for wellbeing.
+
+**Status**: Live (Phase 1 shipped; Phase 2 audience targeting shipped)
+**Repositories**: `mind-measure-pro-core` (admin UI and API), `mind-measure-pro-mobile` (dashboard card and push)
+**Surfaces**: Pro admin dashboard and CMS (`admin.mindmeasurepro.com`), Pro mobile app (`mobile.mindmeasurepro.app`)
+**User guide**: [Pro handbook, section 9](/handbook-pro)
+**Original spec**: [Planning: Institutional Alerts](/planning/institutional-alerts)
+
+---
+
+## What it is, and what it is not
+
+A wellbeing app is the right surface for time-sensitive institutional messages: staff already have it installed, and it is not noisy with marketing. Used carefully, alerts strengthen the wellbeing relationship rather than diluting it.
+
+The positioning principle is that Mind Measure is not the source of truth for what is happening in the world; the institution is. Alerts are the channel that gets the institution's message in front of staff fast, with their wellbeing in mind. That shapes the whole design:
+
+- Default to plain, calm language. Severity is communicated by colour and icon, never by shouting in the body copy.
+- Distressing messages are paired with a path to help: welfare alerts must carry at least one support link.
+- Aggregation and the anonymity floor protect the data flowing the other way. Admins see who an alert reached only as an anonymous aggregate count, never as a named list.
+
+Typical uses: office closed for severe weather, town hall reminder, lift maintenance, a phishing warning, or a supportive "we are thinking of you" after community tragedy.
+
+## Severity model
+
+Admins pick one of four tiers at compose time. Each tier has a fixed visual treatment on the mobile card, a default and maximum lifetime, and a push behaviour. Colours are pulled from the Mind Measure wellbeing scale so the treatment is consistent with the rest of the product.
+
+| Severity | Use case | Mobile card | Icon | Push | Default expiry | Max expiry |
+|---|---|---|---|---|---|---|
+| **Urgent** | Safety: shelter, evacuate, do not come in | Solid red (`#EF4444`) | Alert octagon | Yes | 12 hours | ~84 hours |
+| **Welfare** | Support after distressing news | Solid violet (`#8B5CF6`) | Heart | Yes | 72 hours | ~504 hours |
+| **Notice** | Schedule change, parking, early closing | Solid amber (`#F59E0B`) | Bell | Yes | 48 hours | ~336 hours |
+| **Info** | Town hall, FYI, event reminder | Solid blue (`#2563EB`) | Info circle | No | 24 hours | ~168 hours |
+
+Every card renders as a solid colour block with white text and a 3px white halo, so it stays legible on top of the score-tinted dashboard hero regardless of the recipient's own score band. The mobile labels read "Urgent", "A note of care" (welfare), "Heads up" (notice), and "For your info" (info).
+
+The maximum lifetime is seven times the tier default. The create endpoint caps `ends_at` against this so a typo (for example a welfare alert set to 100 days) cannot camp on the dashboard.
+
+### Welfare alerts are special
+
+A welfare-tier alert must include at least one support link. The compose UI requires it before sending, and the API rejects a welfare alert with no links. The card renders each link as a pinned button beneath the body (for example "Talk to someone confidentially, Employee Assistance: 0800 ..."). This is the guard-rail that makes the channel a wellbeing tool rather than a generic broadcast utility.
+
+## Audience targeting
+
+An alert is sent either to **Everyone** or to a **specific cohort** built from the company's own profile fields (office, division, department, team, seniority, working mode, country, city, and any custom fields). For companies that only capture a primary office, an office facet index lets country and city targeting resolve against the employee's office.
+
+Two safeguards apply at send time:
+
+- **Minimum audience floor.** A targeted audience that would reach fewer than five employees is rejected, so an alert can never be effectively addressed to one identifiable person. An audience matching zero people is also rejected. "Everyone" audiences bypass the floor (they are not a way to single anyone out).
+- **Audience-size snapshot.** The number of matching profiles at send time is stored on the alert (`resolved_audience_size`). Reach percentages divide against this snapshot, so they stay honest as the cohort shifts in the days after the broadcast.
+
+Audience matching for delivery runs in TypeScript (`profileMatchesAudience`), shared by the create, active, and push paths so they stay in lockstep. Per-company alert volumes are tiny, so pulling the active rows and filtering in process is cheaper than variable-shape SQL.
+
+## Privacy and safety guard-rails
+
+- **Broadcasts, not surveys.** Alerts flow from the institution to staff, so the anonymity floor applies to the audience size, not to a response threshold.
+- **Reach is anonymous and aggregate.** The reach view returns counts only (sent, seen, dismissed) and never a named list of who saw or ignored an alert.
+- **Cross-tenant isolation.** Mobile endpoints resolve the caller's company from their profile, never from a query parameter, so a token from one company can never enumerate or acknowledge another company's alerts. Probing a foreign alert id returns the same response as the success path, leaking nothing.
+- **Audit trail.** Every alert records `created_by` (the admin email or MM staff actor) and timestamps.
+
+## Lifecycle
+
+```
+Compose (admin)  ->  Publish (/api/alerts/create)  ->  Active window
+                                                          |  starts_at <= now < ends_at
+                                                          |  push fan-out (non-info tiers)
+                                                          v
+Mobile card shown  ->  seen ack (/api/alerts/seen)  ->  dismiss (/api/alerts/dismiss)
+                                                          |
+                          ends_at passes (natural)  OR  admin archives (/api/alerts/archive)
+                                                          v
+                                                   Out of circulation (row preserved for reach)
+```
+
+An alert leaves circulation either when `ends_at` passes or when an admin archives it early. The row is preserved in both cases so reach metrics remain queryable afterwards.
+
+## Data model
+
+Two tables, added in migration `027_institution_alerts.sql` (audience-size snapshot column added in `028`).
+
+### `institution_alerts`
+
+One row per broadcast.
+
+| Column | Notes |
+|---|---|
+| `id` | UUID primary key |
+| `company_id` | Owning company |
+| `severity` | `welfare` \| `info` \| `notice` \| `urgent` (CHECK constrained) |
+| `title`, `body` | Up to 120 and 1000 characters |
+| `support_links` | JSONB array of `{ label, url }`; required for welfare |
+| `audience` | JSONB targeting shape; defaults to `{"all": true}` |
+| `starts_at`, `ends_at` | Active window; `ends_at` computed from the tier default unless overridden |
+| `push_sent`, `push_sent_at` | Set after the FCM batch completes (skipped for info) |
+| `dismissable` | Defaults TRUE (see urgent note below) |
+| `resolved_audience_size` | Matching profile count at send time; NULL for pre-Phase-2 rows |
+| `created_by` | Admin email or MM staff actor |
+| `created_at`, `archived_at` | `archived_at` set when pulled early |
+
+### `institution_alert_acks`
+
+One row per `(alert, user)`. `seen_at` is set the first time the mobile renders the alert; `dismissed_at` is set on explicit dismiss. Reach metrics read straight from this table: `seen` is the row count for an alert, `dismissed` is the subset with `dismissed_at` set, and `sent` is the alert's audience-size snapshot (falling back to live company headcount for legacy rows).
+
+## API reference
+
+All endpoints live under `/api/alerts/` in `mind-measure-pro-core`. Permissions use the company-admin capabilities: `canEditInsightData` for write actions, `canViewInsightData` for admin reads. Mobile endpoints accept any authenticated user and resolve the company from their profile.
+
+| Endpoint | Method | Caller | Purpose |
+|---|---|---|---|
+| `/api/alerts/create` | POST | Admin (`canEditInsightData`) | Compose and immediately publish an alert; runs the audience floor check, snapshots audience size, fans out push |
+| `/api/alerts/list` | GET | Admin (`canViewInsightData`) | All alerts for a company (reverse chronological), with a `live` / `expired` / `archived` status flag |
+| `/api/alerts/reach` | GET | Admin (`canViewInsightData`) | Anonymous aggregate reach for one alert: sent, seen, dismissed, and percentages |
+| `/api/alerts/archive` | POST | Admin (`canEditInsightData`) | Pull an alert from circulation early; row preserved |
+| `/api/alerts/active` | GET | Any authenticated user | Alerts currently visible to the caller, audience-filtered, with their own seen/dismiss state attached |
+| `/api/alerts/seen` | POST | Any authenticated user | Idempotent seen acknowledgement |
+| `/api/alerts/dismiss` | POST | Any authenticated user | Dismiss; rejected with 403 if the alert is non-dismissable |
+
+`create` validates input with zod (severity enum, title and body lengths, up to three support links). It computes `ends_at` server-side from the tier default when the client does not supply one, and rejects an `ends_at` in the past or beyond the tier maximum.
+
+## Mobile rendering and push
+
+The alert card renders inside the dashboard hero, beneath the score and above the check-in button (`InstitutionAlertCard`, driven by the `useInstitutionAlerts` hook polling `/api/alerts/active`). Multiple active alerts stack in severity order (urgent first). The card uses `role="alert"` with `aria-live="assertive"` for urgent and `polite` otherwise. Urgent cards carry a subtle repeating pulse on the icon chip. The admin compose screen shows a pixel-matched mobile preview so admins are never surprised by what employees see.
+
+Push fan-out happens on create for every tier except **Info**. It is audience-aware: only the push tokens of profiles that match the alert's audience are notified (using the same audience clause as the size snapshot), so a "Dubai office closed" alert does not buzz phones in London. Push is best-effort: the in-app card is always the primary delivery surface, so a push failure never fails the alert itself, and invalid tokens are deactivated as a side effect.
+
+## Known deferrals
+
+- **Non-dismissable urgent.** The spec calls for urgent alerts to be non-dismissable (re-dismissable only after first view). The `dismissable` column and the dismiss-endpoint guard (403 when `dismissable` is false) are wired, but every alert is currently created dismissable. Enabling the rule is a compose-UI and client change only; no schema work.
